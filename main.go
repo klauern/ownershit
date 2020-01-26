@@ -13,19 +13,20 @@ import (
 
 var GithubToken = os.Getenv("GITHUB_TOKEN")
 
-const DefaultOrg= "zendesk"
+const DefaultOrg = "zendesk"
 
 const (
-	AffiliationAll = "all"
-	AffiliationDirect = "direct"
+	AffiliationAll     = "all"
+	AffiliationDirect  = "direct"
 	AffiliationOutside = "outside"
 )
 
 type PermissionsLevel string
+
 const (
 	PermissionsAdmin PermissionsLevel = "admin"
-	PermissionsPull PermissionsLevel = "pull"
-	PermissionsPush PermissionsLevel = "push"
+	PermissionsPull  PermissionsLevel = "pull"
+	PermissionsPush  PermissionsLevel = "push"
 )
 
 type Permissions struct {
@@ -36,7 +37,7 @@ type Permissions struct {
 
 type PermissionsSettings struct {
 	TeamPermissions []*Permissions `yaml:"team"`
-	Repositories    []string      `yaml:"repositories"`
+	Repositories    []string       `yaml:"repositories"`
 }
 
 var repoConfigurationPath string
@@ -48,7 +49,6 @@ func init() {
 func setFlags() {
 	flag.StringVar(&repoConfigurationPath, "config", "repositories.yaml", "configuration of repository updates to perform")
 }
-
 
 func main() {
 	flag.Parse()
@@ -75,11 +75,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Team ID: %v\n", *t.ID)
+		fmt.Printf("Team: %v ID: %v\n", team.Team, *t.ID)
 		team.ID = *t.ID
 
 	}
-
 
 	for _, repo := range settings.Repositories {
 		if len(settings.TeamPermissions) > 0 {
