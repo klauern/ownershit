@@ -15,14 +15,7 @@ var GithubToken = os.Getenv("GITHUB_TOKEN")
 
 const DefaultOrg = "zendesk"
 
-const (
-	AffiliationAll     = "all"
-	AffiliationDirect  = "direct"
-	AffiliationOutside = "outside"
-)
-
 type PermissionsLevel string
-
 const (
 	PermissionsAdmin PermissionsLevel = "admin"
 	PermissionsPull  PermissionsLevel = "pull"
@@ -59,7 +52,6 @@ func main() {
 	}
 
 	settings := &PermissionsSettings{}
-	//fmt.Println(string(file))
 	if err = yaml.Unmarshal(file, settings); err != nil {
 		panic(err)
 	}
