@@ -13,13 +13,12 @@ import (
 
 var GithubToken = os.Getenv("GITHUB_TOKEN")
 
-const DefaultOrg = "zendesk"
-
 type PermissionsLevel string
+
 const (
 	PermissionsAdmin PermissionsLevel = "admin"
-	PermissionsPull  PermissionsLevel = "pull"
-	PermissionsPush  PermissionsLevel = "push"
+	PermissionsRead  PermissionsLevel = "pull"
+	PermissionsWrite PermissionsLevel = "push"
 )
 
 type Permissions struct {
@@ -31,6 +30,7 @@ type Permissions struct {
 type PermissionsSettings struct {
 	TeamPermissions []*Permissions `yaml:"team"`
 	Repositories    []string       `yaml:"repositories"`
+	Organization    string         `yaml:"organization"`
 }
 
 var repoConfigurationPath string
@@ -63,7 +63,7 @@ func main() {
 	client := github.NewClient(tc)
 
 	for _, team := range settings.TeamPermissions {
-		t, _, err := client.Teams.GetTeamBySlug(ctx, DefaultOrg, team.Team)
+		t, _, err := client.Teams.GetTeamBySlug(ctx, settings.Organization, team.Team)
 		if err != nil {
 			panic(err)
 		}
@@ -76,14 +76,14 @@ func main() {
 		if len(settings.TeamPermissions) > 0 {
 			for _, perm := range settings.TeamPermissions {
 				fmt.Printf("Repo: %v, Permission: %+v\n", repo, perm)
-				addPermissions(client, ctx, repo, *perm)
+				addPermissions(client, ctx, repo, settings.Organization, *perm)
 			}
 		}
 	}
 }
 
-func addPermissions(client *github.Client, ctx context.Context, repo string, perm Permissions) {
-	resp, err := client.Teams.AddTeamRepo(ctx, perm.ID, "zendesk", repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
+func addPermissions(client *github.Client, ctx context.Context, repo string, organization string, perm Permissions) {
+	resp, err := client.Teams.AddTeamRepo(ctx, perm.ID, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
 	if err != nil {
 		fmt.Printf("error adding %v as collaborator to %v: %v\n", perm.Team, repo, resp.Status)
 		resp, err := ioutil.ReadAll(resp.Body)
