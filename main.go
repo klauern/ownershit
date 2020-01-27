@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
-	"github.com/google/go-github/v29/github"
-	"golang.org/x/oauth2"
-	yaml "gopkg.in/yaml.v3"
 	"io/ioutil"
+	"log"
 	"os"
+
+	"github.com/google/go-github/v29/github"
+	"github.com/urfave/cli"
+	"golang.org/x/oauth2"
+	"gopkg.in/yaml.v3"
 )
 
 var GithubToken = os.Getenv("GITHUB_TOKEN")
@@ -33,27 +35,55 @@ type PermissionsSettings struct {
 	Organization    string         `yaml:"organization"`
 }
 
-var repoConfigurationPath string
-
-func init() {
-	setFlags()
-}
-
-func setFlags() {
-	flag.StringVar(&repoConfigurationPath, "config", "repositories.yaml", "configuration of repository updates to perform")
-}
+var repositoriesYAMLConfig string
 
 func main() {
-	flag.Parse()
 
-	file, err := ioutil.ReadFile(repoConfigurationPath)
+	app := &cli.App{
+		Name:  "ownershit",
+		Usage: "fix up team ownership of your repositories in an organization",
+		UsageText: "ownershit --config repositories.yaml",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "config",
+				Value:       "repositories.yaml",
+				Usage:       "configuration of repository updates to perform",
+				Destination: &repositoriesYAMLConfig,
+			},
+		},
+		Action: runApp,
+		Author: "Nick Klauer (klauern)",
+	}
+
+	err := app.Run(os.Args)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+
+}
+
+func addPermissions(client *github.Client, ctx context.Context, repo string, organization string, perm Permissions) error {
+	resp, err := client.Teams.AddTeamRepo(ctx, perm.ID, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
+	if err != nil {
+		fmt.Printf("error adding %v as collaborator to %v: %v\n", perm.Team, repo, resp.Status)
+		resp, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("Unable to read response body: %w", err)
+		}
+		fmt.Println(string(resp))
+	}
+	return nil
+}
+
+func runApp(c *cli.Context) error {
+	file, err := ioutil.ReadFile(repositoriesYAMLConfig)
+	if err != nil {
+		return fmt.Errorf("config file error: %w", err)
 	}
 
 	settings := &PermissionsSettings{}
 	if err = yaml.Unmarshal(file, settings); err != nil {
-		panic(err)
+		return fmt.Errorf("config file yaml unmarshal error: %w", err)
 	}
 
 	ctx := context.Background()
@@ -65,7 +95,7 @@ func main() {
 	for _, team := range settings.TeamPermissions {
 		t, _, err := client.Teams.GetTeamBySlug(ctx, settings.Organization, team.Team)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("Unable to get Team from organization: %w", err)
 		}
 		fmt.Printf("Team: %v ID: %v\n", team.Team, *t.ID)
 		team.ID = *t.ID
@@ -76,21 +106,13 @@ func main() {
 		if len(settings.TeamPermissions) > 0 {
 			for _, perm := range settings.TeamPermissions {
 				fmt.Printf("Repo: %v, Permission: %+v\n", repo, perm)
-				addPermissions(client, ctx, repo, settings.Organization, *perm)
+				if err = addPermissions(client, ctx, repo, settings.Organization, *perm); err != nil {
+					return err
+				}
+
 			}
 		}
 	}
-}
 
-func addPermissions(client *github.Client, ctx context.Context, repo string, organization string, perm Permissions) {
-	resp, err := client.Teams.AddTeamRepo(ctx, perm.ID, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
-	if err != nil {
-		fmt.Printf("error adding %v as collaborator to %v: %v\n", perm.Team, repo, resp.Status)
-		resp, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-
-		}
-		fmt.Println(string(resp))
-	}
+	return nil
 }
