@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/google/go-github/v29/github"
-	"github.com/urfave/cli"
+	cli "github.com/urfave/cli/v2"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
 )
@@ -52,13 +52,14 @@ func main() {
 			},
 		},
 		Action: runApp,
-		Author: "Nick Klauer (klauern)",
+		Authors: []*cli.Author{{Name:  "Nick Klauer", Email: "klauer@gmail.com",}},
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 
 }
 
