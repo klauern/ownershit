@@ -65,7 +65,7 @@ func main() {
 }
 
 func addPermissions(client *github.Client, ctx context.Context, repo string, organization string, perm Permissions) error {
-	resp, err := client.Teams.AddTeamRepo(ctx, perm.ID, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
+	resp, err := client.Teams.AddTeamRepoBySlug(ctx, organization, perm.Team, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
 	if err != nil {
 		fmt.Printf("error adding %v as collaborator to %v: %v\n", perm.Team, repo, resp.Status)
 		resp, err := ioutil.ReadAll(resp.Body)
