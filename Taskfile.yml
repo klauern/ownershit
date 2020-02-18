@@ -1,0 +1,18 @@
+# https://taskfile.dev
+
+version: "2"
+
+tasks:
+  dev:
+    desc: set up development environment
+    cmds:
+
+  build:
+    desc: Build locally
+    cmds:
+      - go build main.go
+
+  run:
+    desc: run off of source
+    cmds:
+      - go run main.go
