@@ -3,7 +3,7 @@ module github.com/klauern/ownershit
 go 1.13
 
 require (
-	github.com/google/go-github/v29 v29.0.2
+	github.com/google/go-github/v29 v29.0.3
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/urfave/cli/v2 v2.1.1
 	golang.org/x/crypto v0.0.0-20190510104115-cbcb75029529 // indirect
