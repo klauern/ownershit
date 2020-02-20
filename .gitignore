@@ -149,3 +149,4 @@ fabric.properties
 .idea/.gitignore
 
 repositories.yaml
+dist/

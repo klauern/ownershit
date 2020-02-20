@@ -3,15 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
-	"sync"
-
 	"github.com/google/go-github/v29/github"
 	cli "github.com/urfave/cli/v2"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"log"
+	"os"
 )
 
 var GithubToken = os.Getenv("GITHUB_TOKEN")
@@ -94,27 +92,28 @@ func runApp(c *cli.Context) error {
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
 
-	var wg sync.WaitGroup
 	for _, team := range settings.TeamPermissions {
-		wg.Add(1)
-		go getTeamSlug(&wg, client, ctx, settings, team)
+		err = getTeamSlug(client, ctx, settings, team)
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
-	wg.Wait()
 
 	for _, repo := range settings.Repositories {
 		if len(settings.TeamPermissions) > 0 {
 			for _, perm := range settings.TeamPermissions {
 				fmt.Printf("Repo: %v, Permission: %+v\n", repo, perm)
-				go addPermissions(client, ctx, repo, settings.Organization, *perm)
+					err = addPermissions(client, ctx, repo, settings.Organization, *perm)
+					if err != nil {
+						fmt.Println(err)
+					}
 			}
 		}
 	}
-
 	return nil
 }
 
-func getTeamSlug(wg *sync.WaitGroup, client *github.Client, ctx context.Context, settings *PermissionsSettings, team *Permissions) error {
-	defer wg.Done()
+func getTeamSlug(client *github.Client, ctx context.Context, settings *PermissionsSettings, team *Permissions) error {
 	t, _, err := client.Teams.GetTeamBySlug(ctx, settings.Organization, team.Team)
 	if err != nil {
 		return fmt.Errorf("Unable to get Team from organization: %w", err)
