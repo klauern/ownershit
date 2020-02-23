@@ -14,7 +14,7 @@ func addPermissions(client *github.Client, ctx context.Context, repo string, org
 		fmt.Printf("error adding %v as collaborator to %v: %v\n", perm.Team, repo, resp.Status)
 		resp, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("Unable to read response body: %w", err)
+			return fmt.Errorf("unable to read response body: %w", err)
 		}
 		fmt.Println(string(resp))
 	}
@@ -24,7 +24,7 @@ func addPermissions(client *github.Client, ctx context.Context, repo string, org
 func getTeamSlug(client *github.Client, ctx context.Context, settings *PermissionsSettings, team *Permissions) error {
 	t, _, err := client.Teams.GetTeamBySlug(ctx, settings.Organization, team.Team)
 	if err != nil {
-		return fmt.Errorf("Unable to get Team from organization: %w", err)
+		return fmt.Errorf("unable to get Team from organization: %w", err)
 	}
 	fmt.Printf("Team: %v ID: %v\n", team.Team, *t.ID)
 	team.ID = *t.ID
@@ -48,7 +48,8 @@ func GetRepository(client *githubv4.Client, ctx context.Context, name, owner str
 		fmt.Printf("error retrieving %s/%s: %v\n", owner, name, err)
 		return nil, err
 	}
-	fmt.Printf("repository %s/%s: wiki:%v,issues:%v,projects:%v\n", owner, name, query.Repository.HasWikiEnabled, query.Repository.HasIssuesEnabled, query.Repository.HasProjectsEnabled)
+	fmt.Printf("repository %s/%s: wiki:%v,issues:%v,projects:%v\n",
+		owner, name, query.Repository.HasWikiEnabled, query.Repository.HasIssuesEnabled, query.Repository.HasProjectsEnabled)
 	return &query.Repository.ID, nil
 }
 
