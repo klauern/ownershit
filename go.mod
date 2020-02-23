@@ -8,7 +8,6 @@ require (
 	github.com/google/go-github/v29 v29.0.3
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20191127044304-8f68eb5628d0
-	github.com/shurcooL/go v0.0.0-20191216061654-b114cc39af9f // indirect
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f // indirect
 	github.com/urfave/cli/v2 v2.1.1
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d // indirect
