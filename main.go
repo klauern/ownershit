@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/google/go-github/v29/github"
 	"github.com/shurcooL/githubv4"
-	cli "github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v2"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -26,7 +26,7 @@ const (
 type Permissions struct {
 	Team  string `yaml:"name"`
 	ID    int64
-	Level PermissionsLevel `yaml:"level`
+	Level PermissionsLevel `yaml:"level"`
 }
 
 type PermissionsSettings struct {
@@ -152,7 +152,7 @@ func GetRepository(client *githubv4.Client, ctx context.Context, name, owner str
 		"name":  githubv4.String(name),
 	})
 	if err != nil {
-		fmt.Printf("error retrieving %s/%s: %w\n", owner, name, err)
+		fmt.Printf("error retrieving %s/%s: %v\n", owner, name, err)
 		return nil, err
 	}
 	fmt.Printf("repository %s/%s: wiki:%v,issues:%v,projects:%v\n", owner, name, query.Repository.HasWikiEnabled, query.Repository.HasIssuesEnabled, query.Repository.HasProjectsEnabled)
