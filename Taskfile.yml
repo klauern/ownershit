@@ -10,9 +10,9 @@ tasks:
   build:
     desc: Build locally
     cmds:
-      - go build main.go
+      - go build *.go
 
   run:
     desc: run off of source
     cmds:
-      - go run main.go
+      - go run *.go
