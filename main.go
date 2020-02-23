@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/go-github/v29/github"
+	"github.com/shurcooL/githubv4"
 	cli "github.com/urfave/cli/v2"
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
@@ -30,8 +31,13 @@ type Permissions struct {
 
 type PermissionsSettings struct {
 	TeamPermissions []*Permissions `yaml:"team"`
-	Repositories    []string       `yaml:"repositories"`
-	Organization    string         `yaml:"organization"`
+	Repositories    []struct {
+		Name     string
+		Wiki     bool
+		Issues   bool
+		Projects bool
+	} `yaml:"repositories"`
+	Organization string `yaml:"organization"`
 }
 
 var repositoriesYAMLConfig string
@@ -39,8 +45,8 @@ var repositoriesYAMLConfig string
 func main() {
 
 	app := &cli.App{
-		Name:  "ownershit",
-		Usage: "fix up team ownership of your repositories in an organization",
+		Name:      "ownershit",
+		Usage:     "fix up team ownership of your repositories in an organization",
 		UsageText: "ownershit --config repositories.yaml",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -50,15 +56,14 @@ func main() {
 				Destination: &repositoriesYAMLConfig,
 			},
 		},
-		Action: runApp,
-		Authors: []*cli.Author{{Name:  "Nick Klauer", Email: "klauer@gmail.com",}},
+		Action:  runApp,
+		Authors: []*cli.Author{{Name: "Nick Klauer", Email: "klauer@gmail.com",}},
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 
 }
 
@@ -91,6 +96,7 @@ func runApp(c *cli.Context) error {
 		&oauth2.Token{AccessToken: GithubToken})
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
+	ghv4Client := githubv4.NewClient(tc)
 
 	for _, team := range settings.TeamPermissions {
 		err = getTeamSlug(client, ctx, settings, team)
@@ -102,11 +108,20 @@ func runApp(c *cli.Context) error {
 	for _, repo := range settings.Repositories {
 		if len(settings.TeamPermissions) > 0 {
 			for _, perm := range settings.TeamPermissions {
-				fmt.Printf("Repo: %v, Permission: %+v\n", repo, perm)
-					err = addPermissions(client, ctx, repo, settings.Organization, *perm)
-					if err != nil {
-						fmt.Println(err)
-					}
+				fmt.Printf("Repo: %v, Permission: %+v\n", repo.Name, perm)
+				err = addPermissions(client, ctx, repo.Name, settings.Organization, *perm)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+		}
+		repoID, err := GetRepository(ghv4Client, ctx, repo.Name, settings.Organization)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			err := SetRepository(ghv4Client, ctx, repoID, repo.Wiki, repo.Issues, repo.Projects)
+			if err != nil {
+				fmt.Println(err)
 			}
 		}
 	}
@@ -123,3 +138,49 @@ func getTeamSlug(client *github.Client, ctx context.Context, settings *Permissio
 	return nil
 }
 
+func GetRepository(client *githubv4.Client, ctx context.Context, name, owner string) (*githubv4.ID, error) {
+	var query struct {
+		Repository struct {
+			ID                 githubv4.ID
+			HasWikiEnabled     githubv4.Boolean
+			HasIssuesEnabled   githubv4.Boolean
+			HasProjectsEnabled githubv4.Boolean
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+	err := client.Query(ctx, &query, map[string]interface{}{
+		"owner": githubv4.String(owner),
+		"name":  githubv4.String(name),
+	})
+	if err != nil {
+		fmt.Printf("error retrieving %s/%s: %w\n", owner, name, err)
+		return nil, err
+	}
+	fmt.Printf("repository %s/%s: wiki:%v,issues:%v,projects:%v\n", owner, name, query.Repository.HasWikiEnabled, query.Repository.HasIssuesEnabled, query.Repository.HasProjectsEnabled)
+	return &query.Repository.ID, nil
+}
+
+func SetRepository(client *githubv4.Client, ctx context.Context, id githubv4.ID, wiki, issues, project bool) error {
+	var mutation struct {
+		UpdateRepository struct {
+			ClientMutationID githubv4.String
+			Repository struct {
+				ID githubv4.ID
+				HasWikiEnabled githubv4.Boolean
+				HasIssuesEnabled githubv4.Boolean
+				HasProjectsEnabled githubv4.Boolean
+			}
+		} `graphql:"updateRepository(input: $input)"`
+	}
+	input := githubv4.UpdateRepositoryInput{
+		RepositoryID:       id,
+		HasWikiEnabled:     githubv4.NewBoolean(githubv4.Boolean(wiki)),
+		HasIssuesEnabled:   githubv4.NewBoolean(githubv4.Boolean(issues)),
+		HasProjectsEnabled: githubv4.NewBoolean(githubv4.Boolean(project)),
+	}
+	err := client.Mutate(ctx, &mutation, input, nil)
+	if err != nil {
+		fmt.Printf("error updating repository ID %v: %v", id, err)
+		return err
+	}
+	return nil
+}
