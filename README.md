@@ -22,8 +22,12 @@ team:
     level: push
 
 repositories:
-  - my-repo
-  - another-one
+  - name: my-repo
+    wiki: true # enables wiki on repo (default: false)
+    issues: true # enables issues on the repo (default: false)
+    projects: true # enables projects on the repo (default: false)
+  - name: another-one
+    # wiki, issues, and projects are disabled if not specified
 ```
 
 ## Running
