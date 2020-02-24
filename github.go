@@ -8,8 +8,14 @@ import (
 	"io/ioutil"
 )
 
-func addPermissions(client *github.Client, ctx context.Context, repo string, organization string, perm Permissions) error {
-	resp, err := client.Teams.AddTeamRepoBySlug(ctx, organization, perm.Team, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
+type GitHubClient struct {
+	V3 *github.Client
+	V4 *githubv4.Client
+	Context context.Context
+}
+
+func (c *GitHubClient) addPermissions(repo string, organization string, perm Permissions) error {
+	resp, err := c.V3.Teams.AddTeamRepoBySlug(c.Context, organization, perm.Team, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
 	if err != nil {
 		fmt.Printf("error adding %v as collaborator to %v: %v\n", perm.Team, repo, resp.Status)
 		resp, err := ioutil.ReadAll(resp.Body)
@@ -21,8 +27,8 @@ func addPermissions(client *github.Client, ctx context.Context, repo string, org
 	return nil
 }
 
-func getTeamSlug(client *github.Client, ctx context.Context, settings *PermissionsSettings, team *Permissions) error {
-	t, _, err := client.Teams.GetTeamBySlug(ctx, settings.Organization, team.Team)
+func (c *GitHubClient) getTeamSlug(settings *PermissionsSettings, team *Permissions) error {
+	t, _, err := c.V3.Teams.GetTeamBySlug(c.Context, settings.Organization, team.Team)
 	if err != nil {
 		return fmt.Errorf("unable to get Team from organization: %w", err)
 	}
@@ -31,7 +37,7 @@ func getTeamSlug(client *github.Client, ctx context.Context, settings *Permissio
 	return nil
 }
 
-func GetRepository(client *githubv4.Client, ctx context.Context, name, owner string) (*githubv4.ID, error) {
+func (c *GitHubClient) GetRepository(name, owner string) (*githubv4.ID, error) {
 	var query struct {
 		Repository struct {
 			ID                 githubv4.ID
@@ -40,7 +46,7 @@ func GetRepository(client *githubv4.Client, ctx context.Context, name, owner str
 			HasProjectsEnabled githubv4.Boolean
 		} `graphql:"repository(owner: $owner, name: $name)"`
 	}
-	err := client.Query(ctx, &query, map[string]interface{}{
+	err := c.V4.Query(c.Context, &query, map[string]interface{}{
 		"owner": githubv4.String(owner),
 		"name":  githubv4.String(name),
 	})
@@ -53,7 +59,7 @@ func GetRepository(client *githubv4.Client, ctx context.Context, name, owner str
 	return &query.Repository.ID, nil
 }
 
-func SetRepository(client *githubv4.Client, ctx context.Context, id githubv4.ID, wiki, issues, project bool) error {
+func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project bool) error {
 	var mutation struct {
 		UpdateRepository struct {
 			ClientMutationID githubv4.ID
@@ -71,15 +77,10 @@ func SetRepository(client *githubv4.Client, ctx context.Context, id githubv4.ID,
 		HasIssuesEnabled:   githubv4.NewBoolean(githubv4.Boolean(issues)),
 		HasProjectsEnabled: githubv4.NewBoolean(githubv4.Boolean(project)),
 	}
-	err := client.Mutate(ctx, &mutation, input, nil)
-	if err != nil {
-		fmt.Printf("error updating repository ID %v: %v", id, err)
-		return err
-	}
-	return nil
+	return c.mutate("updating repository", &mutation, input)
 }
 
-func SetBranchRules(client *githubv4.Client, ctx context.Context, id githubv4.ID, branchPattern string, approverCount int, requireCodeOwners, requiresApprovingReviews bool) error {
+func (c *GitHubClient) SetBranchRules(id githubv4.ID, branchPattern string, approverCount int, requireCodeOwners, requiresApprovingReviews bool) error {
 	var mutation struct {
 		CreateBranchProtectionRule struct {
 			ClientMutationID     githubv4.ID
@@ -99,11 +100,16 @@ func SetBranchRules(client *githubv4.Client, ctx context.Context, id githubv4.ID
 		RequiredApprovingReviewCount: githubv4.NewInt(githubv4.Int(approverCount)),
 		RequiresCodeOwnerReviews:     githubv4.NewBoolean(githubv4.Boolean(requireCodeOwners)),
 	}
-	err := client.Mutate(ctx, &mutation, input, nil)
+	return c.mutate("updating repository branch protection", &mutation, input)
+}
+
+func (c *GitHubClient) mutate(errString string, mutation interface{}, input githubv4.Input) error {
+	err := c.V4.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
-		fmt.Printf("error updating repository branch protection rule %v: %v", id, err)
+		fmt.Printf("error with mutation: %v: %v", errString, err)
 		return err
 	}
 	return nil
+
 }
 
