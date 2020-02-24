@@ -56,7 +56,7 @@ func GetRepository(client *githubv4.Client, ctx context.Context, name, owner str
 func SetRepository(client *githubv4.Client, ctx context.Context, id githubv4.ID, wiki, issues, project bool) error {
 	var mutation struct {
 		UpdateRepository struct {
-			ClientMutationID githubv4.String
+			ClientMutationID githubv4.ID
 			Repository       struct {
 				ID                 githubv4.ID
 				HasWikiEnabled     githubv4.Boolean
@@ -78,3 +78,32 @@ func SetRepository(client *githubv4.Client, ctx context.Context, id githubv4.ID,
 	}
 	return nil
 }
+
+func SetBranchRules(client *githubv4.Client, ctx context.Context, id githubv4.ID, branchPattern string, requireCodeOwners, requiresApprovingReviews bool) error {
+	var mutation struct {
+		CreateBranchProtectionRule struct {
+			ClientMutationID     githubv4.ID
+			BranchProtectionRule struct {
+				RepositoryID                 githubv4.ID
+				Pattern                      githubv4.String
+				RequiresApprovingReviews     githubv4.Boolean
+				RequiresApprovingReviewCount githubv4.Int
+				RequiresCodeOwnerReviews     githubv4.Boolean
+			}
+		} `graphql:"createBranchProtectionRule(input: $input)"`
+	}
+	input := githubv4.CreateBranchProtectionRuleInput{
+		RepositoryID:                 id,
+		Pattern:                      *githubv4.NewString(githubv4.String(branchPattern)),
+		RequiresApprovingReviews:     githubv4.NewBoolean(githubv4.Boolean(requiresApprovingReviews)),
+		RequiredApprovingReviewCount: githubv4.NewInt(githubv4.Int(1)),
+		RequiresCodeOwnerReviews:     githubv4.NewBoolean(githubv4.Boolean(requireCodeOwners)),
+	}
+	err := client.Mutate(ctx, &mutation, input, nil)
+	if err != nil {
+		fmt.Printf("error updating repository branch protection rule %v: %v", id, err)
+		return err
+	}
+	return nil
+}
+
