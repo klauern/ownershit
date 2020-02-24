@@ -79,7 +79,7 @@ func SetRepository(client *githubv4.Client, ctx context.Context, id githubv4.ID,
 	return nil
 }
 
-func SetBranchRules(client *githubv4.Client, ctx context.Context, id githubv4.ID, branchPattern string, requireCodeOwners, requiresApprovingReviews bool) error {
+func SetBranchRules(client *githubv4.Client, ctx context.Context, id githubv4.ID, branchPattern string, approverCount int, requireCodeOwners, requiresApprovingReviews bool) error {
 	var mutation struct {
 		CreateBranchProtectionRule struct {
 			ClientMutationID     githubv4.ID
@@ -96,7 +96,7 @@ func SetBranchRules(client *githubv4.Client, ctx context.Context, id githubv4.ID
 		RepositoryID:                 id,
 		Pattern:                      *githubv4.NewString(githubv4.String(branchPattern)),
 		RequiresApprovingReviews:     githubv4.NewBoolean(githubv4.Boolean(requiresApprovingReviews)),
-		RequiredApprovingReviewCount: githubv4.NewInt(githubv4.Int(1)),
+		RequiredApprovingReviewCount: githubv4.NewInt(githubv4.Int(approverCount)),
 		RequiresCodeOwnerReviews:     githubv4.NewBoolean(githubv4.Boolean(requireCodeOwners)),
 	}
 	err := client.Mutate(ctx, &mutation, input, nil)
