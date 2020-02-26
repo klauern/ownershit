@@ -82,11 +82,14 @@ func runApp(c *cli.Context) error {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: GithubToken})
 	tc := oauth2.NewClient(ctx, ts)
-	client := github.NewClient(tc)
-	ghv4Client := githubv4.NewClient(tc)
+	client := GitHubClient{
+		V3:      github.NewClient(tc),
+		V4:      githubv4.NewClient(tc),
+		Context: context.Background(),
+	}
 
 	for _, team := range settings.TeamPermissions {
-		err = getTeamSlug(client, ctx, settings, team)
+		err = client.getTeamSlug(settings, team)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -96,17 +99,17 @@ func runApp(c *cli.Context) error {
 		if len(settings.TeamPermissions) > 0 {
 			for _, perm := range settings.TeamPermissions {
 				fmt.Printf("Repo: %v, Permission: %+v\n", repo.Name, perm)
-				err = addPermissions(client, ctx, repo.Name, settings.Organization, *perm)
+				err = client.addPermissions(repo.Name, settings.Organization, *perm)
 				if err != nil {
 					fmt.Println(err)
 				}
 			}
 		}
-		repoID, err := GetRepository(ghv4Client, ctx, repo.Name, settings.Organization)
+		repoID, err := client.GetRepository(repo.Name, settings.Organization)
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			err := SetRepository(ghv4Client, ctx, repoID, repo.Wiki, repo.Issues, repo.Projects)
+			err := client.SetRepository(repoID, repo.Wiki, repo.Issues, repo.Projects)
 			if err != nil {
 				fmt.Println(err)
 			}
