@@ -9,7 +9,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20191127044304-8f68eb5628d0
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f // indirect
-	github.com/urfave/cli/v2 v2.1.1
+	github.com/urfave/cli/v2 v2.2.0
 	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d // indirect
 	golang.org/x/net v0.0.0-20200222033325-078779b8f2d8 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
