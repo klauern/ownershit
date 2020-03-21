@@ -92,10 +92,22 @@ func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project bool)
 		HasIssuesEnabled:   githubv4.NewBoolean(githubv4.Boolean(issues)),
 		HasProjectsEnabled: githubv4.NewBoolean(githubv4.Boolean(project)),
 	}
-	return c.mutate("updating repository", &mutation, input)
+	log.
+		Debug().
+		Interface("mutation", mutation).
+		Interface("input", input).
+		Interface("repositoryID", id).
+		Msg("GitHubClient.SetRepository()")
+	err := c.V4.Mutate(c.Context, &mutation, input, nil)
+	if err != nil {
+		log.Err(err).
+			Msg("updating repository")
+		return err
+	}
+	return nil
 }
 
-func (c *GitHubClient) SetBranchRules(id githubv4.ID, branchPattern string, approverCount int, requireCodeOwners, requiresApprovingReviews bool) error {
+func (c *GitHubClient) SetBranchRules(id *githubv4.ID, branchPattern string, approverCount int, requireCodeOwners, requiresApprovingReviews bool) error {
 	var mutation struct {
 		CreateBranchProtectionRule struct {
 			ClientMutationID     githubv4.ID
@@ -115,10 +127,12 @@ func (c *GitHubClient) SetBranchRules(id githubv4.ID, branchPattern string, appr
 		RequiredApprovingReviewCount: githubv4.NewInt(githubv4.Int(approverCount)),
 		RequiresCodeOwnerReviews:     githubv4.NewBoolean(githubv4.Boolean(requireCodeOwners)),
 	}
-	return c.mutate("updating repository branch protection", &mutation, input)
-}
-
-func (c *GitHubClient) mutate(errString string, mutation interface{}, input githubv4.Input) error {
+	log.
+		Debug().
+		Interface("mutation", mutation).
+		Interface("input", input).
+		Interface("repositoryID", id).
+		Msg("GitHubClient.SetBranchRules()")
 	err := c.V4.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
 		log.Err(err).
