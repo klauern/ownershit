@@ -7,6 +7,7 @@ require (
 	github.com/golang/protobuf v1.3.3 // indirect
 	github.com/google/go-github/v29 v29.0.3
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/rs/zerolog v1.18.0
 	github.com/shurcooL/githubv4 v0.0.0-20191127044304-8f68eb5628d0
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f // indirect
 	github.com/urfave/cli/v2 v2.1.1
