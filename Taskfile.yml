@@ -6,6 +6,7 @@ tasks:
   dev:
     desc: set up development environment
     cmds:
+      - go get ./...
 
   build:
     desc: Build locally
