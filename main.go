@@ -41,8 +41,6 @@ type PermissionsSettings struct {
 	Organization string `yaml:"organization"`
 }
 
-var repositoriesYAMLConfig string
-
 func main() {
 
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -57,7 +55,6 @@ func main() {
 				Name:        "config",
 				Value:       "repositories.yaml",
 				Usage:       "configuration of repository updates to perform",
-				Destination: &repositoriesYAMLConfig,
 				//Destination: &repositoriesYAMLConfig,
 			},
 			&cli.BoolFlag{
@@ -78,7 +75,7 @@ func main() {
 }
 
 func runApp(c *cli.Context) error {
-	file, err := ioutil.ReadFile(repositoriesYAMLConfig)
+	file, err := ioutil.ReadFile(c.String("config"))
 	if err != nil {
 		log.Err(err).Msg("config file error")
 		return fmt.Errorf("config file error: %w", err)
