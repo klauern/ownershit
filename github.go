@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/go-github/v29/github"
+	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"io/ioutil"
 )
@@ -17,12 +18,19 @@ type GitHubClient struct {
 func (c *GitHubClient) addPermissions(repo string, organization string, perm Permissions) error {
 	resp, err := c.V3.Teams.AddTeamRepoBySlug(c.Context, organization, perm.Team, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
 	if err != nil {
-		fmt.Printf("error adding %v as collaborator to %v: %v\n", perm.Team, repo, resp.Status)
+		log.Err(err).
+			Str("team", perm.Team).
+			Str("repo", repo).
+			Str("response-status", resp.Status).
+			Msg("error adding team as collaborator to repo")
 		resp, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
+			log.Err(err).
+				Msg("unable to read response body")
 			return fmt.Errorf("unable to read response body: %w", err)
 		}
-		fmt.Println(string(resp))
+		log.Debug().
+			Str("response-body", string(resp))
 	}
 	return nil
 }
@@ -51,11 +59,18 @@ func (c *GitHubClient) GetRepository(name, owner string) (*githubv4.ID, error) {
 		"name":  githubv4.String(name),
 	})
 	if err != nil {
-		fmt.Printf("error retrieving %s/%s: %v\n", owner, name, err)
+		log.Err(err).
+			Str("owner", owner).
+			Str("name", name).
+			Msg("error retrieving repository")
 		return nil, err
 	}
-	fmt.Printf("repository %s/%s: wiki:%v,issues:%v,projects:%v\n",
-		owner, name, query.Repository.HasWikiEnabled, query.Repository.HasIssuesEnabled, query.Repository.HasProjectsEnabled)
+	log.Info().
+		Str("repository", fmt.Sprintf("%s/%s", owner, name)).
+		Bool("wiki", bool(query.Repository.HasWikiEnabled)).
+		Bool("issues", bool(query.Repository.HasIssuesEnabled)).
+		Bool("project", bool(query.Repository.HasProjectsEnabled)).
+		Msg("get repository results")
 	return &query.Repository.ID, nil
 }
 
@@ -106,10 +121,10 @@ func (c *GitHubClient) SetBranchRules(id githubv4.ID, branchPattern string, appr
 func (c *GitHubClient) mutate(errString string, mutation interface{}, input githubv4.Input) error {
 	err := c.V4.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
-		fmt.Printf("error with mutation: %v: %v", errString, err)
+		log.Err(err).
+			Msg("setting branch rules")
 		return err
 	}
 	return nil
-
 }
 
