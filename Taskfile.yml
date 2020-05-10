@@ -5,15 +5,34 @@ version: "2"
 tasks:
   dev:
     desc: set up development environment
+    env:
+      GO111MODULE: on
     cmds:
       - go get ./...
+      - go get github.com/golang/mock/mockgen@latest
 
   build:
     desc: Build locally
+    deps:
+      - mocks
     cmds:
       - go build *.go
 
+  mocks:
+    desc: generate the mocks for use with testing and stubbing
+    cmds:
+      - go generate
+
   run:
     desc: run off of source
+    deps:
+      - mocks
     cmds:
       - go run *.go
+
+  test:
+    desc: run tests
+    deps:
+      - mocks
+    cmds:
+      - go test -race ./...

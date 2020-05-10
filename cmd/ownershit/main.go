@@ -3,43 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v29/github"
-	"github.com/rs/zerolog"
-	"github.com/shurcooL/githubv4"
-	"github.com/rs/zerolog/log"
-	"github.com/urfave/cli/v2"
-	"golang.org/x/oauth2"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
+
+	shit "github.com/klauern/ownershit"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v3"
 )
 
 var GithubToken = os.Getenv("GITHUB_TOKEN")
-
-type PermissionsLevel string
-
-const (
-	PermissionsAdmin PermissionsLevel = "admin"
-	PermissionsRead  PermissionsLevel = "pull"
-	PermissionsWrite PermissionsLevel = "push"
-)
-
-type Permissions struct {
-	Team  string `yaml:"name"`
-	ID    int64
-	Level PermissionsLevel `yaml:"level"`
-}
-
-type PermissionsSettings struct {
-	TeamPermissions []*Permissions `yaml:"team"`
-	Repositories    []struct {
-		Name     string
-		Wiki     bool
-		Issues   bool
-		Projects bool
-	} `yaml:"repositories"`
-	Organization string `yaml:"organization"`
-}
 
 func main() {
 
@@ -52,19 +27,19 @@ func main() {
 		UsageText: "ownershit --config repositories.yaml",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "config",
-				Value:       "repositories.yaml",
-				Usage:       "configuration of repository updates to perform",
+				Name:  "config",
+				Value: "repositories.yaml",
+				Usage: "configuration of repository updates to perform",
 				//Destination: &repositoriesYAMLConfig,
 			},
 			&cli.BoolFlag{
-				Name:        "debug",
-				Usage:       "set output to debug logging",
-				Value:       false,
+				Name:  "debug",
+				Usage: "set output to debug logging",
+				Value: false,
 			},
 		},
 		Action:  runApp,
-		Authors: []*cli.Author{{Name: "Nick Klauer", Email: "klauer@gmail.com",}},
+		Authors: []*cli.Author{{Name: "Nick Klauer", Email: "klauer@gmail.com"}},
 	}
 
 	err := app.Run(os.Args)
@@ -83,24 +58,17 @@ func runApp(c *cli.Context) error {
 	if c.Bool("debug") {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
-	settings := &PermissionsSettings{}
+	settings := &shit.PermissionsSettings{}
 	if err = yaml.Unmarshal(file, settings); err != nil {
 		log.Err(err).Msg("YAML unmarshal error with config file")
 		return fmt.Errorf("config file yaml unmarshal error: %w", err)
 	}
 
 	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: GithubToken})
-	tc := oauth2.NewClient(ctx, ts)
-	client := GitHubClient{
-		V3:      github.NewClient(tc),
-		V4:      githubv4.NewClient(tc),
-		Context: context.Background(),
-	}
+	client := shit.NewGitHubClient(ctx, GithubToken)
 
 	for _, team := range settings.TeamPermissions {
-		err = client.getTeamSlug(settings, team)
+		err = client.GetTeamSlug(settings, team)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -116,7 +84,7 @@ func runApp(c *cli.Context) error {
 					Interface("repository", repo.Name).
 					Interface("permissions", perm).
 					Msg("permissions to add to repository")
-				err = client.addPermissions(repo.Name, settings.Organization, *perm)
+				err = client.AddPermissions(repo.Name, settings.Organization, *perm)
 				if err != nil {
 					log.Err(err).
 						Interface("repository", repo.Name).
