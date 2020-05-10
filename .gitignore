@@ -146,7 +146,5 @@ fabric.properties
 
 .idea/
 
-.idea/.gitignore
-
 repositories.yaml
 dist/
