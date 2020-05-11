@@ -30,7 +30,6 @@ func main() {
 				Name:  "config",
 				Value: "repositories.yaml",
 				Usage: "configuration of repository updates to perform",
-				//Destination: &repositoriesYAMLConfig,
 			},
 			&cli.BoolFlag{
 				Name:  "debug",
@@ -58,59 +57,31 @@ func runApp(c *cli.Context) error {
 	if c.Bool("debug") {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
+	settings, err, client, err2 := MapTeams(err, file)
+	if err2 != nil {
+		return err2
+	}
+
+	shit.MapPermissions(settings, err, client)
+	return nil
+}
+
+func MapTeams(err error, file []byte) (*shit.PermissionsSettings, error, *shit.GitHubClient, error) {
 	settings := &shit.PermissionsSettings{}
 	if err = yaml.Unmarshal(file, settings); err != nil {
 		log.Err(err).Msg("YAML unmarshal error with config file")
-		return fmt.Errorf("config file yaml unmarshal error: %w", err)
+		return nil, nil, nil, fmt.Errorf("config file yaml unmarshal error: %w", err)
 	}
 
 	ctx := context.Background()
 	client := shit.NewGitHubClient(ctx, GithubToken)
 
 	for _, team := range settings.TeamPermissions {
-		err = client.GetTeamSlug(settings, team)
+		err = client.SetTeamSlug(settings, team)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
-
-	for _, repo := range settings.Repositories {
-		if len(settings.TeamPermissions) > 0 {
-			for _, perm := range settings.TeamPermissions {
-				log.Info().
-					Interface("repository", repo.Name).
-					Msg("Adding Permissions to repository")
-				log.Debug().
-					Interface("repository", repo.Name).
-					Interface("permissions", perm).
-					Msg("permissions to add to repository")
-				err = client.AddPermissions(repo.Name, settings.Organization, *perm)
-				if err != nil {
-					log.Err(err).
-						Interface("repository", repo.Name).
-						Interface("permissions", perm).
-						Msg("setting team permissions")
-				}
-			}
-		}
-		repoID, err := client.GetRepository(repo.Name, settings.Organization)
-		if err != nil {
-			log.Err(err).Str("repository", repo.Name).Msg("getting repository")
-		} else {
-			log.Debug().
-				Interface("repoID", repoID).
-				Msg("Repository ID")
-			err := client.SetRepository(&repoID, repo.Wiki, repo.Issues, repo.Projects)
-			if err != nil {
-				log.
-					Err(err).
-					Interface("repoID", repoID).
-					Bool("wikiEnabled", repo.Wiki).
-					Bool("issuesEnabled", repo.Issues).
-					Bool("projectsEnabled", repo.Projects).
-					Msg("setting repository fields")
-			}
-		}
-	}
-	return nil
+	return settings, err, client, nil
 }
+
