@@ -21,6 +21,7 @@ type GitHubClient struct {
 	Context context.Context
 }
 
+// TeamsService is a wrapepr interface for the GitHub V3 API to support mocking and testing.
 type TeamsService interface {
 	GetTeamBySlug(ctx context.Context, org, slug string) (*github.Team, *github.Response, error)
 	AddTeamRepoBySlug(ctx context.Context, org, slug, owner, repo string, opts *github.TeamAddTeamRepoOptions) (*github.Response, error)
@@ -67,7 +68,7 @@ func (c *GitHubClient) AddPermissions(repo string, organization string, perm Per
 	return nil
 }
 
-func (c *GitHubClient) GetTeamSlug(settings *PermissionsSettings, team *Permissions) error {
+func (c *GitHubClient) SetTeamSlug(settings *PermissionsSettings, team *Permissions) error {
 	t, _, err := c.Teams.GetTeamBySlug(c.Context, settings.Organization, team.Team)
 	if err != nil {
 		return fmt.Errorf("unable to get Team from organization: %w", err)
