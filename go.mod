@@ -9,7 +9,7 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/rs/zerolog v1.18.0
+	github.com/rs/zerolog v1.19.0
 	github.com/shurcooL/githubv4 v0.0.0-20200414012201-bbc966b061dd
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f // indirect
 	github.com/urfave/cli/v2 v2.2.0
