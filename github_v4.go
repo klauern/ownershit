@@ -109,4 +109,3 @@ func (c *GitHubClient) GetRepository(name, owner string) (*githubv4.ID, error) {
 		Msg("get repository results")
 	return &query.Repository.ID, nil
 }
-
