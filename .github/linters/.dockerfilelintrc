@@ -1,0 +1,3 @@
+rules:
+  apt-get-recommends: off
+  sudo_usage: off
