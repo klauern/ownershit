@@ -44,8 +44,15 @@ func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	}
 }
 
-func (c *GitHubClient) AddPermissions(repo string, organization string, perm Permissions) error {
-	resp, err := c.Teams.AddTeamRepoBySlug(c.Context, organization, perm.Team, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
+func (c *GitHubClient) AddPermissions(repo, organization string, perm Permissions) error {
+	resp, err := c.Teams.
+		AddTeamRepoBySlug(
+			c.Context,
+			organization,
+			perm.Team,
+			organization,
+			repo,
+			&github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
 	if err != nil {
 		log.Err(err).
 			Str("team", perm.Team).

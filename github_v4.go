@@ -47,7 +47,12 @@ func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project bool)
 	return nil
 }
 
-func (c *GitHubClient) SetBranchRules(id *githubv4.ID, branchPattern string, approverCount int, requireCodeOwners, requiresApprovingReviews bool) error {
+func (c *GitHubClient) SetBranchRules(
+	id githubv4.ID,
+	branchPattern string,
+	approverCount int,
+	requireCodeOwners,
+	requiresApprovingReviews bool) error {
 	var mutation struct {
 		CreateBranchProtectionRule struct {
 			ClientMutationID     githubv4.ID
@@ -81,7 +86,7 @@ func (c *GitHubClient) SetBranchRules(id *githubv4.ID, branchPattern string, app
 	return nil
 }
 
-func (c *GitHubClient) GetRepository(name, owner string) (*githubv4.ID, error) {
+func (c *GitHubClient) GetRepository(name, owner string) (githubv4.ID, error) {
 	var query struct {
 		Repository struct {
 			ID                 githubv4.ID
@@ -107,5 +112,5 @@ func (c *GitHubClient) GetRepository(name, owner string) (*githubv4.ID, error) {
 		Bool("issues", bool(query.Repository.HasIssuesEnabled)).
 		Bool("project", bool(query.Repository.HasProjectsEnabled)).
 		Msg("get repository results")
-	return &query.Repository.ID, nil
+	return query.Repository.ID, nil
 }
