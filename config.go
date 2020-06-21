@@ -30,7 +30,7 @@ type PermissionsSettings struct {
 	Organization string `yaml:"organization"`
 }
 
-func MapPermissions(settings *PermissionsSettings, err error, client *GitHubClient) {
+func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 	for _, repo := range settings.Repositories {
 		if len(settings.TeamPermissions) > 0 {
 			for _, perm := range settings.TeamPermissions {
@@ -41,7 +41,7 @@ func MapPermissions(settings *PermissionsSettings, err error, client *GitHubClie
 					Interface("repository", repo.Name).
 					Interface("permissions", perm).
 					Msg("permissions to add to repository")
-				err = client.AddPermissions(repo.Name, settings.Organization, *perm)
+				err := client.AddPermissions(repo.Name, settings.Organization, *perm)
 				if err != nil {
 					log.Err(err).
 						Interface("repository", repo.Name).

@@ -17,6 +17,7 @@ tasks:
       - mocks
     cmds:
       - go build *.go
+
   fmt:
     desc: format
     cmds:

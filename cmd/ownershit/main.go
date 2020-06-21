@@ -57,31 +57,30 @@ func runApp(c *cli.Context) error {
 	if c.Bool("debug") {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
-	settings, err, client, err2 := MapTeams(err, file)
+	settings, client, err2 := MapTeams(file)
 	if err2 != nil {
 		return err2
 	}
 
-	shit.MapPermissions(settings, err, client)
+	shit.MapPermissions(settings, client)
 	return nil
 }
 
-func MapTeams(err error, file []byte) (*shit.PermissionsSettings, error, *shit.GitHubClient, error) {
+func MapTeams(file []byte) (*shit.PermissionsSettings, *shit.GitHubClient, error) {
 	settings := &shit.PermissionsSettings{}
-	if err = yaml.Unmarshal(file, settings); err != nil {
+	if err := yaml.Unmarshal(file, settings); err != nil {
 		log.Err(err).Msg("YAML unmarshal error with config file")
-		return nil, nil, nil, fmt.Errorf("config file yaml unmarshal error: %w", err)
+		return nil, nil, fmt.Errorf("config file yaml unmarshal error: %w", err)
 	}
 
 	ctx := context.Background()
 	client := shit.NewGitHubClient(ctx, GithubToken)
 
 	for _, team := range settings.TeamPermissions {
-		err = client.SetTeamSlug(settings, team)
+		err := client.SetTeamSlug(settings, team)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
-	return settings, err, client, nil
+	return settings, client, nil
 }
-

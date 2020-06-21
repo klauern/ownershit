@@ -16,14 +16,13 @@ func TestMapPermissions(t *testing.T) {
 			name: "default",
 			args: args{
 				settings: &PermissionsSettings{},
-				err:      nil,
 				client:   nil,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			MapPermissions(tt.args.settings, tt.args.err, tt.args.client)
+			MapPermissions(tt.args.settings, tt.args.client)
 		})
 	}
 }
