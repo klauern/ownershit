@@ -17,7 +17,6 @@ import (
 var GithubToken = os.Getenv("GITHUB_TOKEN")
 
 func main() {
-
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
@@ -45,7 +44,6 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("running app")
 	}
-
 }
 
 func runApp(c *cli.Context) error {

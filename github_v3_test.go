@@ -97,7 +97,7 @@ func TestGitHubClient_AddPermissions2(t *testing.T) {
 		any,
 		"klauern",
 		"ownershit",
-		&github.TeamAddTeamRepoOptions{""},
+		&github.TeamAddTeamRepoOptions{},
 	).Return(&github.Response{
 		Response: &http.Response{
 			StatusCode: 0,
