@@ -17,14 +17,13 @@ import (
 func TestGitHubClient_AddPermissions(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	teamMock := mocks.NewMockTeamsService(ctrl)
 
 	teamMock.EXPECT().AddTeamRepoBySlug(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&github.Response{
-		Response:      &http.Response{
+		Response: &http.Response{
 			StatusCode: 200,
-			Body:   ioutil.NopCloser(bytes.NewReader([]byte("something"))),
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte("something"))),
 		},
 	}, nil)
 
@@ -49,18 +48,18 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "",
-			fields:  fields{
+			name: "",
+			fields: fields{
 				Teams:   teamMock,
 				Graph:   graphMock,
 				V3:      nil,
 				V4:      nil,
 				Context: nil,
 			},
-			args:    args{
+			args: args{
 				repo:         "junk",
 				organization: "junk",
-				perm:         Permissions{
+				perm: Permissions{
 					Team:  "me",
 					ID:    0,
 					Level: "PUSH",
@@ -84,4 +83,33 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGitHubClient_AddPermissions2(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	teamMock := mocks.NewMockTeamsService(ctrl)
+
+	any := gomock.Any()
+
+	teamMock.EXPECT().AddTeamRepoBySlug(
+		any,
+		any,
+		any,
+		"klauern",
+		"ownershit",
+		&github.TeamAddTeamRepoOptions{""},
+	).Return(&github.Response{
+		Response: &http.Response{
+			StatusCode: 0,
+		},
+	})
+
+	_ = &GitHubClient{
+		Teams:   teamMock,
+		Graph:   nil,
+		V3:      nil,
+		V4:      nil,
+		Context: nil,
+	}
+
 }

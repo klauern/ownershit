@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/google/go-github/v31/github"
+	"github.com/google/go-github/v32/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
