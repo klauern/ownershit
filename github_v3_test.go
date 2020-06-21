@@ -10,22 +10,31 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-github/v32/github"
 	"github.com/shurcooL/githubv4"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/klauern/ownershit/mocks"
 )
 
 func TestGitHubClient_AddPermissions(t *testing.T) {
-
 	ctrl := gomock.NewController(t)
 
 	teamMock := mocks.NewMockTeamsService(ctrl)
 
-	teamMock.EXPECT().AddTeamRepoBySlug(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&github.Response{
-		Response: &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte("something"))),
-		},
-	}, nil)
+	teamMock.
+		EXPECT().
+		AddTeamRepoBySlug(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).
+		Return(&github.Response{
+			Response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(bytes.NewReader([]byte("something"))),
+			},
+		}, nil)
 
 	graphMock := mocks.NewMockGraphQLClient(ctrl)
 
@@ -91,20 +100,23 @@ func TestGitHubClient_AddPermissions2(t *testing.T) {
 
 	any := gomock.Any()
 
-	teamMock.EXPECT().AddTeamRepoBySlug(
-		any,
-		any,
-		any,
-		"klauern",
-		"ownershit",
-		&github.TeamAddTeamRepoOptions{},
-	).Return(&github.Response{
-		Response: &http.Response{
-			StatusCode: 0,
-		},
-	})
+	teamMock.
+		EXPECT().
+		AddTeamRepoBySlug(
+			any,
+			any,
+			any,
+			"klauern",
+			"ownershit",
+			&github.TeamAddTeamRepoOptions{Permission: "push"},
+		).
+		Return(&github.Response{
+			Response: &http.Response{
+				StatusCode: 0,
+			},
+		}, nil)
 
-	_ = &GitHubClient{
+	client := &GitHubClient{
 		Teams:   teamMock,
 		Graph:   nil,
 		V3:      nil,
@@ -112,4 +124,12 @@ func TestGitHubClient_AddPermissions2(t *testing.T) {
 		Context: nil,
 	}
 
+	_, err := client.Teams.AddTeamRepoBySlug(context.Background(), "", "", "klauern", "ownershit", &github.TeamAddTeamRepoOptions{
+		Permission: "push",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.NoError(t, err)
 }
