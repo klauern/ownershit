@@ -17,6 +17,15 @@ tasks:
       - mocks
     cmds:
       - go build *.go
+  fmt:
+    desc: format
+    cmds:
+      - go fmt
+
+  lint:
+    desc: run GolangCI-Lint
+    cmds:
+    - golangci-lint run
 
   mocks:
     desc: generate the mocks for use with testing and stubbing
