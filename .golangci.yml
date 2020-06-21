@@ -87,7 +87,6 @@ linters:
     - nakedret
     - nolintlint
     - rowserrcheck
-    - scopelint
     - staticcheck
     - structcheck
     - stylecheck
@@ -97,19 +96,25 @@ linters:
     - unused
     - varcheck
     - whitespace
+    - exportloopref
+    - gomodguard
+    - goerr113
 
-  # don't enable:
-  # - asciicheck
-  # - gochecknoglobals
-  # - gocognit
-  # - godot
-  # - godox
-  # - goerr113
-  # - maligned
-  # - nestif
-  # - prealloc
-  # - testpackage
-  # - wsl
+    # Disabled by your configuration linters:
+    # - asciicheck: Simple linter to check that your code does not contain non-ASCII identifiers [fast: true, auto-fix: false]
+    # - exhaustive: check exhaustiveness of enum switch statements [fast: true, auto-fix: false]
+    # - gochecknoglobals: Checks that no globals are present in Go code [fast: true, auto-fix: false]
+    # - gocognit: Computes and checks the cognitive complexity of functions [fast: true, auto-fix: false]
+    # - godot: Check if comments end in a period [fast: true, auto-fix: true]
+    # - godox: Tool for detection of FIXME, TODO and other comment keywords [fast: true, auto-fix: false]
+    # - gofumpt: Gofumpt checks whether code was gofumpt-ed. [fast: true, auto-fix: false]
+    # - maligned: Tool to detect Go structs that would take less memory if their fields were sorted [fast: true, auto-fix: false]
+    # - nestif: Reports deeply nested if statements [fast: true, auto-fix: false]
+    # - noctx: noctx finds sending http request without context.Context [fast: true, auto-fix: false]
+    # - prealloc: Finds slice declarations that could potentially be preallocated [fast: true, auto-fix: false]
+    # - scopelint: Scopelint checks for unpinned variables in go programs [fast: true, auto-fix: false]
+    # - testpackage: linter that makes you use a separate _test package [fast: true, auto-fix: false]
+    # - wsl: Whitespace Linter - Forces you to use empty lines! [fast: true, auto-fix: false]
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source

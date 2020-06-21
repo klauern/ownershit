@@ -79,7 +79,13 @@ func TestGitHubClient_SetBranchRules(t *testing.T) {
 				V4:      tt.fields.V4,
 				Context: tt.fields.Context,
 			}
-			if err := c.SetBranchRules(tt.args.id, tt.args.branchPattern, tt.args.approverCount, tt.args.requireCodeOwners, tt.args.requiresApprovingReviews); (err != nil) != tt.wantErr {
+			if err := c.
+				SetBranchRules(
+					tt.args.id,
+					tt.args.branchPattern,
+					tt.args.approverCount,
+					tt.args.requireCodeOwners,
+					tt.args.requiresApprovingReviews); (err != nil) != tt.wantErr {
 				t.Errorf("GitHubClient.SetBranchRules() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
