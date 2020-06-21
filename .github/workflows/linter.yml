@@ -51,4 +51,5 @@ jobs:
           VALIDATE_DOCKER: true
           VALIDATE_BASH: true
           VALIDATE_YAML: true
-          VALIDATE_JSON: true
+          # without being able to ignore VSCode's version of comment-support in JSON, there's no customization allowed
+          VALIDATE_JSON: false
