@@ -1,13 +1,15 @@
 package ownershit
 
-import "github.com/rs/zerolog/log"
+import (
+	"github.com/rs/zerolog/log"
+)
 
 type PermissionsLevel string
 
 const (
-	PermissionsAdmin PermissionsLevel = "admin"
-	PermissionsRead  PermissionsLevel = "pull"
-	PermissionsWrite PermissionsLevel = "push"
+	Admin PermissionsLevel = "admin"
+	Read  PermissionsLevel = "pull"
+	Write PermissionsLevel = "push"
 )
 
 type Permissions struct {
