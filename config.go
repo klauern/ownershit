@@ -18,9 +18,19 @@ type Permissions struct {
 	Level PermissionsLevel `yaml:"level"`
 }
 
+type BranchPermissions struct {
+	RequireCodeOwners         bool `yaml:"require_code_owners"`
+	ApproverCount             int  `yaml:"require_approving_count"`
+	RequirePullRequestReviews bool `yaml:"require_pull_request_reviews"`
+	AllowMergeCommit          bool `yaml:"allow_merge_commit"`
+	AllowSquashMerge          bool `yaml:"allow_squash_merge"`
+	AllowRebaseMerge          bool `yaml:"allow_rebase_merge"`
+}
+
 type PermissionsSettings struct {
-	TeamPermissions []*Permissions `yaml:"team"`
-	Repositories    []struct {
+	BranchPermissions `yaml:"branches"`
+	TeamPermissions   []*Permissions `yaml:"team"`
+	Repositories      []struct {
 		Name      string
 		Wiki      bool
 		Issues    bool
@@ -49,6 +59,9 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 						Msg("setting team permissions")
 				}
 			}
+		}
+		if err := client.UpdateRepositorySettings(settings.Organization, repo.Name, &settings.BranchPermissions); err != nil {
+			log.Err(err).Str("repository", repo.Name).Str("organization", settings.Organization).Msg("updating repository settings")
 		}
 		repoID, err := client.GetRepository(repo.Name, settings.Organization)
 		if err != nil {
