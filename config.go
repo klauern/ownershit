@@ -41,7 +41,7 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 					Interface("repository", repo.Name).
 					Interface("permissions", perm).
 					Msg("permissions to add to repository")
-				err := client.AddPermissions(repo.Name, settings.Organization, *perm)
+				err := client.AddPermissions(settings.Organization, repo.Name, *perm)
 				if err != nil {
 					log.Err(err).
 						Interface("repository", repo.Name).

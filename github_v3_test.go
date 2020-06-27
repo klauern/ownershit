@@ -87,7 +87,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 				V4:      tt.fields.V4,
 				Context: tt.fields.Context,
 			}
-			if err := c.AddPermissions(tt.args.repo, tt.args.organization, tt.args.perm); (err != nil) != tt.wantErr {
+			if err := c.AddPermissions(tt.args.organization, tt.args.repo, tt.args.perm); (err != nil) != tt.wantErr {
 				t.Errorf("AddPermissions() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
