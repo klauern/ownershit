@@ -31,11 +31,10 @@ type PermissionsSettings struct {
 	BranchPermissions `yaml:"branches"`
 	TeamPermissions   []*Permissions `yaml:"team"`
 	Repositories      []struct {
-		Name      string
-		Wiki      bool
-		Issues    bool
-		Projects  bool
-		RepoPerms []*Permissions `yaml:"perms"`
+		Name     string
+		Wiki     bool
+		Issues   bool
+		Projects bool
 	} `yaml:"repositories"`
 	Organization string `yaml:"organization"`
 }
@@ -79,6 +78,14 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 					Bool("projectsEnabled", repo.Projects).
 					Msg("setting repository fields")
 			}
+		}
+	}
+}
+
+func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubClient) {
+	for _, repo := range settings.Repositories {
+		if err := client.UpdateRepositorySettings(settings.Organization, repo.Name, &settings.BranchPermissions); err != nil {
+			log.Err(err).Str("repository", repo.Name).Str("organization", settings.Organization).Msg("updating repository settings")
 		}
 	}
 }
