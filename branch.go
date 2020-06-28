@@ -20,7 +20,10 @@ func (c *GitHubClient) SetDefaultBranch(ctx context.Context, owner, repo, defaul
 	return nil
 }
 
-func (c *GitHubClient) SetRepositoryDefaults(ctx context.Context, owner, repo string, wiki, issues, projects bool) error {
+func (c *GitHubClient) SetRepositoryDefaults(
+	ctx context.Context,
+	owner, repo string,
+	wiki, issues, projects bool) error {
 	r := &github.Repository{
 		HasWiki:     github.Bool(wiki),
 		HasIssues:   github.Bool(issues),
@@ -28,7 +31,7 @@ func (c *GitHubClient) SetRepositoryDefaults(ctx context.Context, owner, repo st
 	}
 	_, _, err := c.V3.Repositories.Edit(ctx, owner, repo, r)
 	if err != nil {
-		return fmt.Errorf("SetRepositoryDefaults(%v, %v): %w", owner, repo, err)
+		return fmt.Errorf("setting defaults for %v/%v: %w", owner, repo, err)
 	}
 
 	return nil

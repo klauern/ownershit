@@ -83,6 +83,7 @@ func readConfigs(c *cli.Context) error {
 }
 
 func runApp(c *cli.Context) error {
+	log.Info().Msg("mapping all permissions for repositories")
 	shit.MapPermissions(settings, githubClient)
 	for _, team := range settings.TeamPermissions {
 		err := githubClient.SetTeamSlug(settings, team)
@@ -94,10 +95,11 @@ func runApp(c *cli.Context) error {
 }
 
 func branchCommand(c *cli.Context) error {
+	log.Info().Msg("performing branch updates on repositories")
 	shit.UpdateBranchMergeStrategies(settings, githubClient)
 	return nil
 }
 
-func SetGithubClient(context context.Context) {
-	githubClient = shit.NewGitHubClient(context, GithubToken)
+func SetGithubClient(ctx context.Context) {
+	githubClient = shit.NewGitHubClient(ctx, GithubToken)
 }

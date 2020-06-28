@@ -84,6 +84,12 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 
 func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubClient) {
 	for _, repo := range settings.Repositories {
+		log.Info().
+			Str("repository", repo.Name).
+			Bool("squash-commits", settings.AllowSquashMerge).
+			Bool("merges", settings.AllowMergeCommit).
+			Bool("rebase-merge", settings.AllowRebaseMerge).
+			Msg("Updating settings")
 		if err := client.UpdateRepositorySettings(settings.Organization, repo.Name, &settings.BranchPermissions); err != nil {
 			log.Err(err).Str("repository", repo.Name).Str("organization", settings.Organization).Msg("updating repository settings")
 		}

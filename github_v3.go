@@ -99,7 +99,7 @@ func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchP
 	})
 	if err != nil {
 		log.Err(err).
-			Str("org", org).Str("repo", repo).Str("repsonse-status", resp.Status).Msg("Error updating repository settings")
+			Str("org", org).Str("repo", repo).Str("response-status", resp.Status).Msg("Error updating repository settings")
 		respBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Err(err).
