@@ -1,6 +1,8 @@
 package ownershit
 
 import (
+	"os"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,6 +40,9 @@ type PermissionsSettings struct {
 	} `yaml:"repositories"`
 	Organization *string `yaml:"organization"`
 }
+
+// GitHubTokenEnv sets the GitHub Token from the environment variable.
+var GitHubTokenEnv = os.Getenv("GITHUB_TOKEN")
 
 func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 	for _, repo := range settings.Repositories {

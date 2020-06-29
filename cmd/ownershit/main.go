@@ -14,7 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var GithubToken = os.Getenv("GITHUB_TOKEN")
 var settings *shit.PermissionsSettings
 var githubClient *shit.GitHubClient
 
@@ -101,5 +100,5 @@ func branchCommand(c *cli.Context) error {
 }
 
 func SetGithubClient(ctx context.Context) {
-	githubClient = shit.NewGitHubClient(ctx, GithubToken)
+	githubClient = shit.NewGitHubClient(ctx, shit.GitHubTokenEnv)
 }
