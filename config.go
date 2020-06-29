@@ -16,7 +16,6 @@ const (
 
 type Permissions struct {
 	Team  *string `yaml:"name"`
-	ID    *int64
 	Level *string `yaml:"level"`
 }
 
@@ -49,27 +48,34 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 		if len(settings.TeamPermissions) > 0 {
 			for _, perm := range settings.TeamPermissions {
 				log.Info().
-					Interface("repository", repo.Name).
+					Str("repository", *repo.Name).
 					Msg("Adding Permissions to repository")
 				log.Debug().
-					Interface("repository", repo.Name).
-					Interface("permissions", perm).
+					Str("repository", *repo.Name).
+					Str("permissions-level", *perm.Level).
+					Str("permissions-team", *perm.Team).
 					Msg("permissions to add to repository")
-				err := client.AddPermissions(settings.Organization, repo.Name, perm)
+				err := client.AddPermissions(*settings.Organization, *repo.Name, perm)
 				if err != nil {
 					log.Err(err).
-						Interface("repository", repo.Name).
-						Interface("permissions", perm).
+						Str("repository", *repo.Name).
+						Str("permissions-level", *perm.Level).
+						Str("permissions-team", *perm.Team).
 						Msg("setting team permissions")
 				}
 			}
 		}
-		if err := client.UpdateRepositorySettings(settings.Organization, repo.Name, &settings.BranchPermissions); err != nil {
-			log.Err(err).Str("repository", *repo.Name).Str("organization", *settings.Organization).Msg("updating repository settings")
+		if err := client.UpdateRepositorySettings(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
+			log.Err(err).
+				Str("repository", *repo.Name).
+				Str("organization", *settings.Organization).
+				Msg("updating repository settings")
 		}
 		repoID, err := client.GetRepository(repo.Name, settings.Organization)
 		if err != nil {
-			log.Err(err).Str("repository", *repo.Name).Msg("getting repository")
+			log.Err(err).
+				Str("repository", *repo.Name).
+				Msg("getting repository")
 		} else {
 			log.Debug().
 				Interface("repoID", repoID).
@@ -95,7 +101,7 @@ func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubCl
 			Bool("merges", *settings.AllowMergeCommit).
 			Bool("rebase-merge", *settings.AllowRebaseMerge).
 			Msg("Updating settings")
-		if err := client.UpdateRepositorySettings(settings.Organization, repo.Name, &settings.BranchPermissions); err != nil {
+		if err := client.UpdateRepositorySettings(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
 			log.Err(err).Str("repository", *repo.Name).Str("organization", *settings.Organization).Msg("updating repository settings")
 		}
 	}

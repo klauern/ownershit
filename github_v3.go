@@ -50,56 +50,47 @@ func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	}
 }
 
-func (c *GitHubClient) AddPermissions(organization, repo *string, perm *Permissions) error {
+func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissions) error {
 	resp, err := c.Teams.
 		AddTeamRepoBySlug(
 			c.Context,
-			*organization,
+			organization,
 			*perm.Team,
-			*organization,
-			*repo,
+			organization,
+			repo,
 			&github.TeamAddTeamRepoOptions{Permission: *perm.Level})
 	if err != nil {
 		log.Err(err).
 			Str("team", *perm.Team).
-			Str("repo", *repo).
+			Str("repo", repo).
 			Str("response-status", resp.Status).
 			Msg("error adding team as collaborator to repo")
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
+		respBody, respErr := ioutil.ReadAll(resp.Body)
+		if respErr != nil {
 			log.Err(err).
 				Msg("unable to read response body")
-			return fmt.Errorf("unable to read response body: %w", err)
+			return fmt.Errorf("unable to read response body: %w", respErr)
 		}
 		log.Debug().
 			Str("response-body", string(respBody))
+		return fmt.Errorf("adding team as collaborator to repo: %w", err)
 	}
-	log.Info().Fields(map[string]interface{}{
-		"code": resp.StatusCode,
-	})
-
+	log.Info().Int("status-code", resp.StatusCode).Msg("Successfully set repo")
 	return nil
 }
 
-func (c *GitHubClient) SetTeamSlug(settings *PermissionsSettings, team *Permissions) error {
-	t, _, err := c.Teams.GetTeamBySlug(c.Context, *settings.Organization, *team.Team)
-	if err != nil {
-		return fmt.Errorf("unable to get Team from organization: %w", err)
-	}
-	fmt.Printf("Team: %v ID: %v\n", team.Team, *t.ID)
-	team.ID = t.ID
-	return nil
-}
-
-func (c *GitHubClient) UpdateRepositorySettings(org, repo *string, perms *BranchPermissions) error {
-	_, resp, err := c.Repositories.Edit(c.Context, *org, *repo, &github.Repository{
+func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchPermissions) error {
+	_, resp, err := c.Repositories.Edit(c.Context, org, repo, &github.Repository{
 		AllowMergeCommit: github.Bool(*perms.AllowMergeCommit),
 		AllowRebaseMerge: github.Bool(*perms.AllowRebaseMerge),
 		AllowSquashMerge: github.Bool(*perms.AllowMergeCommit),
 	})
 	if err != nil {
 		log.Err(err).
-			Str("org", *org).Str("repo", *repo).Str("response-status", resp.Status).Msg("Error updating repository settings")
+			Str("org", org).
+			Str("repo", repo).
+			Str("response-status", resp.Status).
+			Msg("Error updating repository settings")
 		respBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Err(err).
