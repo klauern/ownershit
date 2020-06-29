@@ -3,12 +3,15 @@ package ownershit
 import (
 	"bytes"
 	"context"
+	"flag"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-github/v32/github"
+	"github.com/rs/zerolog"
 	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 
@@ -19,8 +22,41 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-func int64Ptr(i int64) *int64 {
-	return &i
+func defaultGitHubClient() *GitHubClient {
+	return NewGitHubClient(context.TODO(), GitHubTokenEnv)
+}
+
+var (
+	githubv3 = flag.Bool("githubv3", false, "run GitHub V3 Integration Tests")
+)
+
+func TestMain(m *testing.M) {
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	flag.Parse()
+	result := m.Run()
+	os.Exit(result)
+}
+
+func TestMapPermsWithGitHub(t *testing.T) {
+	if !*githubv3 {
+		t.Skip("no testing")
+	}
+	owner := "klauern"
+	repo := "ownershit"
+	perms := &Permissions{
+		Level: stringPtr(string(Admin)),
+		Team:  &owner,
+	}
+
+	client := defaultGitHubClient()
+	err := client.AddPermissions(owner, repo, perms)
+	if err != nil {
+		t.Errorf("adding permissions: %w", err)
+	}
+	err = client.AddPermissions(owner, "non-existent-repo", perms)
+	if err == nil {
+		t.Error("expected error on non-existent repo")
+	}
 }
 
 func TestGitHubClient_AddPermissions(t *testing.T) {
@@ -78,7 +114,6 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 				organization: "junk",
 				perm: Permissions{
 					Team:  stringPtr("me"),
-					ID:    int64Ptr(0),
 					Level: stringPtr("PUSH"),
 				},
 			},
@@ -94,7 +129,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 				V4:      tt.fields.V4,
 				Context: tt.fields.Context,
 			}
-			if err := c.AddPermissions(&tt.args.organization, &tt.args.repo, &tt.args.perm); (err != nil) != tt.wantErr {
+			if err := c.AddPermissions(tt.args.organization, tt.args.repo, &tt.args.perm); (err != nil) != tt.wantErr {
 				t.Errorf("AddPermissions() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

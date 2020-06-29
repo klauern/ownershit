@@ -1,6 +1,8 @@
 package ownershit
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestMapPermissions(t *testing.T) {
 	type args struct {
