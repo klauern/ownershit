@@ -15,6 +15,14 @@ import (
 	"github.com/klauern/ownershit/mocks"
 )
 
+func stringPtr(s string) *string {
+	return &s
+}
+
+func int64Ptr(i int64) *int64 {
+	return &i
+}
+
 func TestGitHubClient_AddPermissions(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -69,14 +77,13 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 				repo:         "junk",
 				organization: "junk",
 				perm: Permissions{
-					Team:  "me",
-					ID:    0,
-					Level: "PUSH",
+					Team:  stringPtr("me"),
+					ID:    int64Ptr(0),
+					Level: stringPtr("PUSH"),
 				},
 			},
 			wantErr: false,
 		},
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -87,7 +94,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 				V4:      tt.fields.V4,
 				Context: tt.fields.Context,
 			}
-			if err := c.AddPermissions(tt.args.organization, tt.args.repo, tt.args.perm); (err != nil) != tt.wantErr {
+			if err := c.AddPermissions(&tt.args.organization, &tt.args.repo, &tt.args.perm); (err != nil) != tt.wantErr {
 				t.Errorf("AddPermissions() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

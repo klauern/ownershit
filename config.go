@@ -13,30 +13,30 @@ const (
 )
 
 type Permissions struct {
-	Team  string `yaml:"name"`
-	ID    int64
-	Level PermissionsLevel `yaml:"level"`
+	Team  *string `yaml:"name"`
+	ID    *int64
+	Level *string `yaml:"level"`
 }
 
 type BranchPermissions struct {
-	RequireCodeOwners         bool `yaml:"require_code_owners"`
-	ApproverCount             int  `yaml:"require_approving_count"`
-	RequirePullRequestReviews bool `yaml:"require_pull_request_reviews"`
-	AllowMergeCommit          bool `yaml:"allow_merge_commit"`
-	AllowSquashMerge          bool `yaml:"allow_squash_merge"`
-	AllowRebaseMerge          bool `yaml:"allow_rebase_merge"`
+	RequireCodeOwners         *bool `yaml:"require_code_owners"`
+	ApproverCount             *int  `yaml:"require_approving_count"`
+	RequirePullRequestReviews *bool `yaml:"require_pull_request_reviews"`
+	AllowMergeCommit          *bool `yaml:"allow_merge_commit"`
+	AllowSquashMerge          *bool `yaml:"allow_squash_merge"`
+	AllowRebaseMerge          *bool `yaml:"allow_rebase_merge"`
 }
 
 type PermissionsSettings struct {
 	BranchPermissions `yaml:"branches"`
 	TeamPermissions   []*Permissions `yaml:"team"`
 	Repositories      []struct {
-		Name     string
-		Wiki     bool
-		Issues   bool
-		Projects bool
+		Name     *string
+		Wiki     *bool
+		Issues   *bool
+		Projects *bool
 	} `yaml:"repositories"`
-	Organization string `yaml:"organization"`
+	Organization *string `yaml:"organization"`
 }
 
 func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
@@ -50,7 +50,7 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 					Interface("repository", repo.Name).
 					Interface("permissions", perm).
 					Msg("permissions to add to repository")
-				err := client.AddPermissions(settings.Organization, repo.Name, *perm)
+				err := client.AddPermissions(settings.Organization, repo.Name, perm)
 				if err != nil {
 					log.Err(err).
 						Interface("repository", repo.Name).
@@ -60,11 +60,11 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 			}
 		}
 		if err := client.UpdateRepositorySettings(settings.Organization, repo.Name, &settings.BranchPermissions); err != nil {
-			log.Err(err).Str("repository", repo.Name).Str("organization", settings.Organization).Msg("updating repository settings")
+			log.Err(err).Str("repository", *repo.Name).Str("organization", *settings.Organization).Msg("updating repository settings")
 		}
 		repoID, err := client.GetRepository(repo.Name, settings.Organization)
 		if err != nil {
-			log.Err(err).Str("repository", repo.Name).Msg("getting repository")
+			log.Err(err).Str("repository", *repo.Name).Msg("getting repository")
 		} else {
 			log.Debug().
 				Interface("repoID", repoID).
@@ -73,9 +73,9 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 			if err != nil {
 				log.Err(err).
 					Interface("repoID", repoID).
-					Bool("wikiEnabled", repo.Wiki).
-					Bool("issuesEnabled", repo.Issues).
-					Bool("projectsEnabled", repo.Projects).
+					Bool("wikiEnabled", *repo.Wiki).
+					Bool("issuesEnabled", *repo.Issues).
+					Bool("projectsEnabled", *repo.Projects).
 					Msg("setting repository fields")
 			}
 		}
@@ -85,13 +85,13 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubClient) {
 	for _, repo := range settings.Repositories {
 		log.Info().
-			Str("repository", repo.Name).
-			Bool("squash-commits", settings.AllowSquashMerge).
-			Bool("merges", settings.AllowMergeCommit).
-			Bool("rebase-merge", settings.AllowRebaseMerge).
+			Str("repository", *repo.Name).
+			Bool("squash-commits", *settings.AllowSquashMerge).
+			Bool("merges", *settings.AllowMergeCommit).
+			Bool("rebase-merge", *settings.AllowRebaseMerge).
 			Msg("Updating settings")
 		if err := client.UpdateRepositorySettings(settings.Organization, repo.Name, &settings.BranchPermissions); err != nil {
-			log.Err(err).Str("repository", repo.Name).Str("organization", settings.Organization).Msg("updating repository settings")
+			log.Err(err).Str("repository", *repo.Name).Str("organization", *settings.Organization).Msg("updating repository settings")
 		}
 	}
 }

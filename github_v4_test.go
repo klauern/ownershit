@@ -40,7 +40,7 @@ func TestGitHubClient_SetRepository(t *testing.T) {
 				V4:      tt.fields.V4,
 				Context: tt.fields.Context,
 			}
-			if err := c.SetRepository(tt.args.id, tt.args.wiki, tt.args.issues, tt.args.project); (err != nil) != tt.wantErr {
+			if err := c.SetRepository(&tt.args.id, &tt.args.wiki, &tt.args.issues, &tt.args.project); (err != nil) != tt.wantErr {
 				t.Errorf("GitHubClient.SetRepository() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -82,10 +82,10 @@ func TestGitHubClient_SetBranchRules(t *testing.T) {
 			if err := c.
 				SetBranchRules(
 					tt.args.id,
-					tt.args.branchPattern,
-					tt.args.approverCount,
-					tt.args.requireCodeOwners,
-					tt.args.requiresApprovingReviews); (err != nil) != tt.wantErr {
+					&tt.args.branchPattern,
+					&tt.args.approverCount,
+					&tt.args.requireCodeOwners,
+					&tt.args.requiresApprovingReviews); (err != nil) != tt.wantErr {
 				t.Errorf("GitHubClient.SetBranchRules() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -122,7 +122,7 @@ func TestGitHubClient_GetRepository(t *testing.T) {
 				V4:      tt.fields.V4,
 				Context: tt.fields.Context,
 			}
-			got, err := c.GetRepository(tt.args.name, tt.args.owner)
+			got, err := c.GetRepository(&tt.args.name, &tt.args.owner)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GitHubClient.GetRepository() error = %v, wantErr %v", err, tt.wantErr)
 				return
