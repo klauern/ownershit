@@ -40,9 +40,14 @@ tasks:
     cmds:
       - go run *.go
 
-  test:
-    desc: run tests
+  test-all:
+    desc: run all tests with integration tests enabled
     deps:
       - mocks
+    cmds:
+      - go test -race ./... -githubv3
+
+  test:
+    desc: run tests
     cmds:
       - go test -race ./...
