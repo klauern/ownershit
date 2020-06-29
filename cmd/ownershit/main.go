@@ -32,7 +32,7 @@ func main() {
 				Name:      "sync",
 				Usage:     "Synchronize branch, repo, owner and other configs on repositories",
 				UsageText: "ownershit sync --config repositories.yaml",
-				Action:    runApp,
+				Action:    syncCommand,
 			},
 		},
 		Flags: []cli.Flag{
@@ -81,15 +81,9 @@ func readConfigs(c *cli.Context) error {
 	return nil
 }
 
-func runApp(c *cli.Context) error {
+func syncCommand(c *cli.Context) error {
 	log.Info().Msg("mapping all permissions for repositories")
 	shit.MapPermissions(settings, githubClient)
-	for _, team := range settings.TeamPermissions {
-		err := githubClient.SetTeamSlug(settings, team)
-		if err != nil {
-			log.Error().AnErr("team", err).Msg("setting Team Slug")
-		}
-	}
 	return nil
 }
 
