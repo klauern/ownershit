@@ -9,9 +9,23 @@ before:
     # you may remove this if you don't need go generate
     # - go generate ./...
 builds:
+
 - env:
   - CGO_ENABLED=0
   - GO111MODULE=on
+
+  main: ./cmd/ownershit/main.go
+  binary: ownershit
+
+  goos:
+  - linux
+  - darwin
+
+  goarch:
+  - amd64
+  - arm
+
+
 archives:
 - replacements:
     darwin: Darwin
