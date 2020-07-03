@@ -4,6 +4,7 @@ before:
   hooks:
     # you may remove this if you don't use vgo
     - go mod tidy
+    - GO111MODULE=on go get github.com/golang/mock/mockgen@latest
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
