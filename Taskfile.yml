@@ -17,6 +17,7 @@ tasks:
       - mocks
     cmds:
       - go build *.go
+
   fmt:
     desc: format
     cmds:
@@ -39,9 +40,18 @@ tasks:
     cmds:
       - go run *.go
 
-  test:
-    desc: run tests
+  test-all:
+    desc: run all tests with integration tests enabled
     deps:
       - mocks
     cmds:
-      - go test -race ./...
+      - go test -race -cover ./... -githubv3
+  test:
+    desc: run tests
+    cmds:
+      - go test -race -coverprofile=coverage.out ./...
+  test-cover:
+    desc: run tests, and then show coverage output
+    cmds:
+      - task: test
+      - cmd: go tool cover -html=coverage.out

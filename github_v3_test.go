@@ -3,29 +3,121 @@ package ownershit
 import (
 	"bytes"
 	"context"
+	"flag"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-github/v32/github"
-	"github.com/shurcooL/githubv4"
-
 	"github.com/klauern/ownershit/mocks"
+	"github.com/rs/zerolog"
+	"github.com/shurcooL/githubv4"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestGitHubClient_AddPermissions(t *testing.T) {
+func stringPtr(s string) *string {
+	return &s
+}
 
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+func defaultGitHubClient() *GitHubClient {
+	return NewGitHubClient(context.TODO(), "")
+}
+
+var (
+	githubv3 = flag.Bool("githubv3", false, "run GitHub V3 Integration Tests")
+)
+
+func TestMain(m *testing.M) {
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	flag.Parse()
+	result := m.Run()
+	os.Exit(result)
+}
+
+func TestMapPermsWithGitHub(t *testing.T) {
+	if !*githubv3 {
+		t.Skip("no testing")
+	}
+	owner := "klauern"
+	perms := &Permissions{
+		Level: stringPtr(string(Admin)),
+		Team:  &owner,
+	}
+
+	client := defaultGitHubClient()
+	err := client.AddPermissions(owner, "non-existent-repo", perms)
+	if err == nil {
+		t.Error("expected error on non-existent repo")
+	}
+}
+
+func TestOmitPermFixes(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := defaultGitHubClient()
+	repoSvc := mocks.NewMockRepositoriesService(ctrl)
+	client.Repositories = repoSvc
+
+	defaultGoodResponse := &github.Response{
+		Response: &http.Response{
+			StatusCode: 200,
+		},
+	}
+
+	repoSvc.
+		EXPECT().
+		Edit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, defaultGoodResponse, nil)
+
+	repoSvc.
+		EXPECT().
+		Edit(gomock.Any(), gomock.Eq("klauern"), gomock.Eq("ownershit"), gomock.Eq(&github.Repository{
+			AllowMergeCommit: github.Bool(false),
+		})).Return(nil, defaultGoodResponse, nil)
+
+	// set default true for everything
+	err := client.UpdateRepositorySettings("klauern", "ownershit", &BranchPermissions{
+		AllowMergeCommit: boolPtr(true),
+		AllowRebaseMerge: boolPtr(true),
+		AllowSquashMerge: boolPtr(true),
+	})
+	if err != nil {
+		t.Error("did not expect error")
+	}
+
+	err = client.UpdateRepositorySettings("klauern", "ownershit", &BranchPermissions{
+		AllowMergeCommit: boolPtr(false),
+	})
+	if err != nil {
+		t.Error("error not expected")
+	}
+}
+
+func TestGitHubClient_AddPermissions(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	teamMock := mocks.NewMockTeamsService(ctrl)
 
-	teamMock.EXPECT().AddTeamRepoBySlug(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&github.Response{
-		Response: &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte("something"))),
-		},
-	}, nil)
+	teamMock.
+		EXPECT().
+		AddTeamRepoBySlug(
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any(),
+			gomock.Any()).
+		Return(&github.Response{
+			Response: &http.Response{
+				StatusCode: 200,
+				Body:       ioutil.NopCloser(bytes.NewReader([]byte("something"))),
+			},
+		}, nil)
 
 	graphMock := mocks.NewMockGraphQLClient(ctrl)
 
@@ -60,14 +152,12 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 				repo:         "junk",
 				organization: "junk",
 				perm: Permissions{
-					Team:  "me",
-					ID:    0,
-					Level: "PUSH",
+					Team:  stringPtr("me"),
+					Level: stringPtr("PUSH"),
 				},
 			},
 			wantErr: false,
 		},
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,7 +168,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 				V4:      tt.fields.V4,
 				Context: tt.fields.Context,
 			}
-			if err := c.AddPermissions(tt.args.repo, tt.args.organization, tt.args.perm); (err != nil) != tt.wantErr {
+			if err := c.AddPermissions(tt.args.organization, tt.args.repo, &tt.args.perm); (err != nil) != tt.wantErr {
 				t.Errorf("AddPermissions() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -91,20 +181,23 @@ func TestGitHubClient_AddPermissions2(t *testing.T) {
 
 	any := gomock.Any()
 
-	teamMock.EXPECT().AddTeamRepoBySlug(
-		any,
-		any,
-		any,
-		"klauern",
-		"ownershit",
-		&github.TeamAddTeamRepoOptions{""},
-	).Return(&github.Response{
-		Response: &http.Response{
-			StatusCode: 0,
-		},
-	})
+	teamMock.
+		EXPECT().
+		AddTeamRepoBySlug(
+			any,
+			any,
+			any,
+			"klauern",
+			"ownershit",
+			&github.TeamAddTeamRepoOptions{Permission: "push"},
+		).
+		Return(&github.Response{
+			Response: &http.Response{
+				StatusCode: 0,
+			},
+		}, nil)
 
-	_ = &GitHubClient{
+	client := &GitHubClient{
 		Teams:   teamMock,
 		Graph:   nil,
 		V3:      nil,
@@ -112,4 +205,12 @@ func TestGitHubClient_AddPermissions2(t *testing.T) {
 		Context: nil,
 	}
 
+	_, err := client.Teams.AddTeamRepoBySlug(context.Background(), "", "", "klauern", "ownershit", &github.TeamAddTeamRepoOptions{
+		Permission: "push",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	assert.NoError(t, err)
 }
