@@ -11,19 +11,22 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-github/v32/github"
+	"github.com/klauern/ownershit/mocks"
 	"github.com/rs/zerolog"
 	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/klauern/ownershit/mocks"
 )
 
 func stringPtr(s string) *string {
 	return &s
 }
 
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 func defaultGitHubClient() *GitHubClient {
-	return NewGitHubClient(context.TODO(), GitHubTokenEnv)
+	return NewGitHubClient(context.TODO(), "")
 }
 
 var (
@@ -42,20 +45,56 @@ func TestMapPermsWithGitHub(t *testing.T) {
 		t.Skip("no testing")
 	}
 	owner := "klauern"
-	repo := "ownershit"
 	perms := &Permissions{
 		Level: stringPtr(string(Admin)),
 		Team:  &owner,
 	}
 
 	client := defaultGitHubClient()
-	err := client.AddPermissions(owner, repo, perms)
-	if err != nil {
-		t.Errorf("adding permissions: %w", err)
-	}
-	err = client.AddPermissions(owner, "non-existent-repo", perms)
+	err := client.AddPermissions(owner, "non-existent-repo", perms)
 	if err == nil {
 		t.Error("expected error on non-existent repo")
+	}
+}
+
+func TestOmitPermFixes(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	client := defaultGitHubClient()
+	repoSvc := mocks.NewMockRepositoriesService(ctrl)
+	client.Repositories = repoSvc
+
+	defaultGoodResponse := &github.Response{
+		Response: &http.Response{
+			StatusCode: 200,
+		},
+	}
+
+	repoSvc.
+		EXPECT().
+		Edit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, defaultGoodResponse, nil)
+
+	repoSvc.
+		EXPECT().
+		Edit(gomock.Any(), gomock.Eq("klauern"), gomock.Eq("ownershit"), gomock.Eq(&github.Repository{
+			AllowMergeCommit: github.Bool(false),
+		})).Return(nil, defaultGoodResponse, nil)
+
+	// set default true for everything
+	err := client.UpdateRepositorySettings("klauern", "ownershit", &BranchPermissions{
+		AllowMergeCommit: boolPtr(true),
+		AllowRebaseMerge: boolPtr(true),
+		AllowSquashMerge: boolPtr(true),
+	})
+	if err != nil {
+		t.Error("did not expect error")
+	}
+
+	err = client.UpdateRepositorySettings("klauern", "ownershit", &BranchPermissions{
+		AllowMergeCommit: boolPtr(false),
+	})
+	if err != nil {
+		t.Error("error not expected")
 	}
 }
 
