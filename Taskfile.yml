@@ -45,9 +45,13 @@ tasks:
     deps:
       - mocks
     cmds:
-      - go test -race ./... -githubv3
-
+      - go test -race -cover ./... -githubv3
   test:
     desc: run tests
     cmds:
-      - go test -race ./...
+      - go test -race -coverprofile=coverage.out ./...
+  test-cover:
+    desc: run tests, and then show coverage output
+    cmds:
+      - task: test
+      - cmd: go tool cover -html=coverage.out

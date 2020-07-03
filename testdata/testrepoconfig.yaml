@@ -1,0 +1,64 @@
+organization: zendesk
+
+branches:
+  require_code_owners: true
+  require_approving_count: 1
+  require_pull_request_reviews: true
+  allow_merge_commit: false
+  allow_squash_merge: true
+  allow_rebase_merge: true
+
+team:
+  - name: secure
+    level: admin
+    jira_prefix: SECURE
+  - name: deploy
+    level: pull
+  - name: ci
+    level: push
+  - name: ci-admin
+    level: push
+  - name: engineering
+    level: push
+
+# repositories:
+  #- name: Fnd-QAR #wiki: true #issues: true #projects: true #- name: access-provisioner-operator #issues: true #- name: account_vending_machine #wiki: false #issues: false #projects: false #- name: aws-adminuser #wiki: false #issues: false #projects: false #- name: aws_organizations #wiki: true #- name: base_amis #- name: bless #wiki: true #projects: true #- name: docker-images-base #- name: docker-images-community #- name: gcr-cleaner-go #wiki: false #issues: false #projects: false #- name: kritis #wiki: true #issues: true #projects: true #- name: ldap_service #- name: org_account_mapper #wiki: true #issues: true #projects: true #- name: secure-spinnaker-demo #- name: secure_aws_scripts
+    #wiki: true
+  #- name: secure_compliance_benchmarking
+    #wiki: false
+    #issues: false
+    #projects: false
+  #- name: zendesk_container_scanner
+    #wiki: false
+    #issues: false
+    #projects: false
+  #- name: zendesk_gcp_terraform
+    #wiki: false
+    #issues: false
+    #projects: false
+  #- name: engineering_identity_governance
+    #wiki: false
+    #issues: false
+    #projects: false
+  #- name: zendesk-iam-operator
+    #wiki: false
+    #issues: false
+    #projects: false
+  #- name: zendesk-identity-governance-test
+    #wiki: false
+    #issues: false
+    #projects: false
+  #- name: zendesk-identity-governance
+    #wiki: false
+    #issues: false
+    #projects: false
+  # - name: identity-sync-tool
+    #wiki: false
+    #issues: false
+    #projects: false
+
+repositories:
+  - name: github-actions
+    wiki: false
+    issues: false
+    projects: false

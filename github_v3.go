@@ -80,11 +80,17 @@ func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissio
 }
 
 func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchPermissions) error {
-	_, resp, err := c.Repositories.Edit(c.Context, org, repo, &github.Repository{
-		AllowMergeCommit: github.Bool(*perms.AllowMergeCommit),
-		AllowRebaseMerge: github.Bool(*perms.AllowRebaseMerge),
-		AllowSquashMerge: github.Bool(*perms.AllowMergeCommit),
-	})
+	r := &github.Repository{}
+	if perms.AllowMergeCommit != nil {
+		r.AllowMergeCommit = perms.AllowMergeCommit
+	}
+	if perms.AllowRebaseMerge != nil {
+		r.AllowRebaseMerge = perms.AllowRebaseMerge
+	}
+	if perms.AllowSquashMerge != nil {
+		r.AllowSquashMerge = perms.AllowSquashMerge
+	}
+	_, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
 	if err != nil {
 		log.Err(err).
 			Str("org", org).
