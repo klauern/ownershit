@@ -5,6 +5,7 @@ before:
     # you may remove this if you don't use vgo
     - go mod tidy
     - go get github.com/golang/mock/mockgen@latest
+    - go install github.com/golang/mock/mockgen
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
