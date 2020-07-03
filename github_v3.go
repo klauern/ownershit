@@ -14,17 +14,22 @@ import (
 )
 
 type GitHubClient struct {
-	Teams   TeamsService
-	Graph   GraphQLClient
-	V3      *github.Client
-	V4      *githubv4.Client
-	Context context.Context
+	Teams        TeamsService
+	Repositories RepositoriesService
+	Graph        GraphQLClient
+	V3           *github.Client
+	V4           *githubv4.Client
+	Context      context.Context
 }
 
 // TeamsService is a wrapepr interface for the GitHub V3 API to support mocking and testing.
 type TeamsService interface {
 	GetTeamBySlug(ctx context.Context, org, slug string) (*github.Team, *github.Response, error)
 	AddTeamRepoBySlug(ctx context.Context, org, slug, owner, repo string, opts *github.TeamAddTeamRepoOptions) (*github.Response, error)
+}
+
+type RepositoriesService interface {
+	Edit(ctx context.Context, org, repo string, repository *github.Repository) (*github.Repository, *github.Response, error)
 }
 
 func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
@@ -36,44 +41,74 @@ func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	clientV4 := githubv4.NewClient(tc)
 
 	return &GitHubClient{
-		Teams:   client.Teams,
-		V3:      client,
-		V4:      clientV4,
-		Graph:   clientV4,
-		Context: ctx,
+		Teams:        client.Teams,
+		Repositories: client.Repositories,
+		V3:           client,
+		V4:           clientV4,
+		Graph:        clientV4,
+		Context:      ctx,
 	}
 }
 
-func (c *GitHubClient) AddPermissions(repo string, organization string, perm Permissions) error {
-	resp, err := c.Teams.AddTeamRepoBySlug(c.Context, organization, perm.Team, organization, repo, &github.TeamAddTeamRepoOptions{Permission: string(perm.Level)})
+func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissions) error {
+	resp, err := c.Teams.
+		AddTeamRepoBySlug(
+			c.Context,
+			organization,
+			*perm.Team,
+			organization,
+			repo,
+			&github.TeamAddTeamRepoOptions{Permission: *perm.Level})
 	if err != nil {
 		log.Err(err).
-			Str("team", perm.Team).
+			Str("team", *perm.Team).
 			Str("repo", repo).
 			Str("response-status", resp.Status).
 			Msg("error adding team as collaborator to repo")
-		resp, err := ioutil.ReadAll(resp.Body)
+		respBody, respErr := ioutil.ReadAll(resp.Body)
+		if respErr != nil {
+			log.Err(err).
+				Msg("unable to read response body")
+			return fmt.Errorf("unable to read response body: %w", respErr)
+		}
+		log.Debug().
+			Str("response-body", string(respBody))
+		return fmt.Errorf("adding team as collaborator to repo: %w", err)
+	}
+	log.Info().Int("status-code", resp.StatusCode).Msg("Successfully set repo")
+	return nil
+}
+
+func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchPermissions) error {
+	r := &github.Repository{}
+	if perms.AllowMergeCommit != nil {
+		r.AllowMergeCommit = perms.AllowMergeCommit
+	}
+	if perms.AllowRebaseMerge != nil {
+		r.AllowRebaseMerge = perms.AllowRebaseMerge
+	}
+	if perms.AllowSquashMerge != nil {
+		r.AllowSquashMerge = perms.AllowSquashMerge
+	}
+	_, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
+	if err != nil {
+		log.Err(err).
+			Str("org", org).
+			Str("repo", repo).
+			Str("response-status", resp.Status).
+			Msg("Error updating repository settings")
+		respBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Err(err).
 				Msg("unable to read response body")
 			return fmt.Errorf("unable to read response body: %w", err)
 		}
-		log.Debug().
-			Str("response-body", string(resp))
+		log.Debug().Str("response-body", string(respBody))
 	}
+
 	log.Info().Fields(map[string]interface{}{
 		"code": resp.StatusCode,
 	})
 
-	return nil
-}
-
-func (c *GitHubClient) SetTeamSlug(settings *PermissionsSettings, team *Permissions) error {
-	t, _, err := c.Teams.GetTeamBySlug(c.Context, settings.Organization, team.Team)
-	if err != nil {
-		return fmt.Errorf("unable to get Team from organization: %w", err)
-	}
-	fmt.Printf("Team: %v ID: %v\n", team.Team, *t.ID)
-	team.ID = *t.ID
 	return nil
 }

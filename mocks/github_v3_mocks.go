@@ -64,3 +64,42 @@ func (mr *MockTeamsServiceMockRecorder) AddTeamRepoBySlug(ctx, org, slug, owner,
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTeamRepoBySlug", reflect.TypeOf((*MockTeamsService)(nil).AddTeamRepoBySlug), ctx, org, slug, owner, repo, opts)
 }
+
+// MockRepositoriesService is a mock of RepositoriesService interface
+type MockRepositoriesService struct {
+	ctrl     *gomock.Controller
+	recorder *MockRepositoriesServiceMockRecorder
+}
+
+// MockRepositoriesServiceMockRecorder is the mock recorder for MockRepositoriesService
+type MockRepositoriesServiceMockRecorder struct {
+	mock *MockRepositoriesService
+}
+
+// NewMockRepositoriesService creates a new mock instance
+func NewMockRepositoriesService(ctrl *gomock.Controller) *MockRepositoriesService {
+	mock := &MockRepositoriesService{ctrl: ctrl}
+	mock.recorder = &MockRepositoriesServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockRepositoriesService) EXPECT() *MockRepositoriesServiceMockRecorder {
+	return m.recorder
+}
+
+// Edit mocks base method
+func (m *MockRepositoriesService) Edit(ctx context.Context, org, repo string, repository *github.Repository) (*github.Repository, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Edit", ctx, org, repo, repository)
+	ret0, _ := ret[0].(*github.Repository)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// Edit indicates an expected call of Edit
+func (mr *MockRepositoriesServiceMockRecorder) Edit(ctx, org, repo, repository interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Edit", reflect.TypeOf((*MockRepositoriesService)(nil).Edit), ctx, org, repo, repository)
+}

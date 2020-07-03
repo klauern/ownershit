@@ -14,17 +14,27 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var GithubToken = os.Getenv("GITHUB_TOKEN")
+var settings *shit.PermissionsSettings
+var githubClient *shit.GitHubClient
 
 func main() {
-
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	app := &cli.App{
-		Name:      "ownershit",
-		Usage:     "fix up team ownership of your repositories in an organization",
-		UsageText: "ownershit --config repositories.yaml",
+		Commands: []*cli.Command{
+			{
+				Name:   "branches",
+				Usage:  "Perform branch management steps from repositories.yaml",
+				Action: branchCommand,
+			},
+			{
+				Name:      "sync",
+				Usage:     "Synchronize branch, repo, owner and other configs on repositories",
+				UsageText: "ownershit sync --config repositories.yaml",
+				Action:    syncCommand,
+			},
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "config",
@@ -37,18 +47,20 @@ func main() {
 				Value: false,
 			},
 		},
-		Action:  runApp,
+		Name:    "ownershit",
+		Usage:   "fix up team ownership of your repositories in an organization",
+		Action:  cli.ShowAppHelp,
 		Authors: []*cli.Author{{Name: "Nick Klauer", Email: "klauer@gmail.com"}},
+		Before:  readConfigs,
 	}
 
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal().Err(err).Msg("running app")
 	}
-
 }
 
-func runApp(c *cli.Context) error {
+func readConfigs(c *cli.Context) error {
 	file, err := ioutil.ReadFile(c.String("config"))
 	if err != nil {
 		log.Err(err).Msg("config file error")
@@ -57,31 +69,30 @@ func runApp(c *cli.Context) error {
 	if c.Bool("debug") {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
-	settings, err, client, err2 := MapTeams(err, file)
-	if err2 != nil {
-		return err2
+
+	settings = &shit.PermissionsSettings{}
+	if err := yaml.Unmarshal(file, settings); err != nil {
+		log.Err(err).Msg("YAML unmarshal error with config file")
+		return fmt.Errorf("config file yaml unmarshal error: %w", err)
 	}
 
-	shit.MapPermissions(settings, err, client)
+	SetGithubClient(context.Background())
+
 	return nil
 }
 
-func MapTeams(err error, file []byte) (*shit.PermissionsSettings, error, *shit.GitHubClient, error) {
-	settings := &shit.PermissionsSettings{}
-	if err = yaml.Unmarshal(file, settings); err != nil {
-		log.Err(err).Msg("YAML unmarshal error with config file")
-		return nil, nil, nil, fmt.Errorf("config file yaml unmarshal error: %w", err)
-	}
-
-	ctx := context.Background()
-	client := shit.NewGitHubClient(ctx, GithubToken)
-
-	for _, team := range settings.TeamPermissions {
-		err = client.SetTeamSlug(settings, team)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-	return settings, err, client, nil
+func syncCommand(c *cli.Context) error {
+	log.Info().Msg("mapping all permissions for repositories")
+	shit.MapPermissions(settings, githubClient)
+	return nil
 }
 
+func branchCommand(c *cli.Context) error {
+	log.Info().Msg("performing branch updates on repositories")
+	shit.UpdateBranchMergeStrategies(settings, githubClient)
+	return nil
+}
+
+func SetGithubClient(ctx context.Context) {
+	githubClient = shit.NewGitHubClient(ctx, shit.GitHubTokenEnv)
+}
