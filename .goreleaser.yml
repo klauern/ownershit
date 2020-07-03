@@ -4,10 +4,10 @@ before:
   hooks:
     # you may remove this if you don't use vgo
     - go mod tidy
-    - go get github.com/golang/mock/mockgen@latest
-    - go install github.com/golang/mock/mockgen
+    # - go get github.com/golang/mock/mockgen@latest
+    # - go install github.com/golang/mock/mockgen
     # you may remove this if you don't need go generate
-    - go generate ./...
+    # - go generate ./...
 builds:
 - env:
   - CGO_ENABLED=0
