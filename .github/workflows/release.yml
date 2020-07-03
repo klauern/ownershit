@@ -17,6 +17,8 @@ jobs:
         run: git fetch --prune --unshallow
       - name: Set up Go
         uses: actions/setup-go@v2
+      - name: install mockgen
+        run: GO111MODULE=on go get github.com/golang/mock/mockgen@latest
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
