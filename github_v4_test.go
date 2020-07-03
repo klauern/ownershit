@@ -12,27 +12,43 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
-func TestGitHubClient_SetRepository(t *testing.T) {
+type testMocks struct {
+	ctrl      *gomock.Controller
+	client    *GitHubClient
+	teamMock  *mocks.MockTeamsService
+	repoMock  *mocks.MockRepositoriesService
+	graphMock *mocks.MockGraphQLClient
+}
+
+func setupMocks(t *testing.T) *testMocks {
 	ctrl := gomock.NewController(t)
-
-	graphMock := mocks.NewMockGraphQLClient(ctrl)
-
-	c := &GitHubClient{
-		Teams:        nil,
-		Graph:        graphMock,
-		Context:      context.Background(),
-		Repositories: nil,
-		V3:           nil,
-		V4:           nil,
+	teams := mocks.NewMockTeamsService(ctrl)
+	graph := mocks.NewMockGraphQLClient(ctrl)
+	repo := mocks.NewMockRepositoriesService(ctrl)
+	ghClient := &GitHubClient{
+		Teams:        teams,
+		Context:      context.TODO(),
+		Graph:        graph,
+		Repositories: repo,
 	}
+	return &testMocks{
+		ctrl:      ctrl,
+		client:    ghClient,
+		graphMock: graph,
+		repoMock:  repo,
+		teamMock:  teams,
+	}
+}
 
-	graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test error"))
+func TestGitHubClient_SetRepository(t *testing.T) {
+	mock := setupMocks(t)
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test error"))
 
-	if err := c.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr((false))); (err != nil) != false {
+	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr((false))); (err != nil) != false {
 		t.Errorf("GitHubClient.SetRepository() error = %v, wantErr %v", err, false)
 	}
-	if err := c.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr((false))); (err != nil) != true {
+	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr((false))); (err != nil) != true {
 		t.Errorf("GitHubClient.SetRepository() error = %v, wantErr %v", err, true)
 	}
 }
