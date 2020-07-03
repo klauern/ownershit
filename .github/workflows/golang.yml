@@ -1,0 +1,36 @@
+name: Go Testing, Linting, Etc.
+
+on:
+  push:
+
+env:
+  GO111MODULE: on
+  CGO_ENABLED: 0
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    - name: Install Task
+      uses: Arduino/actions/setup-taskfile@master
+    - name: Get dependencies
+      run: |
+        go get -v -t -d ./...
+
+    - name: Setup other Dependencies
+      run: task dev
+
+    - name: Build
+      run: task build
+
+    - name: Test
+      run: task test
