@@ -26,6 +26,9 @@ jobs:
       run: |
         go get -v -t -d ./...
 
+    - name: add $GOPATH/bin to path
+      run: echo "::add-path::$(go env GOPATH)/bin"
+
     - name: Setup other Dependencies
       run: |
         task dev
