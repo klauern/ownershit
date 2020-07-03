@@ -5,7 +5,8 @@ on:
 
 env:
   GO111MODULE: on
-  CGO_ENABLED: 0
+  # go test -race needs CGO set
+  # CGO_ENABLED: 0
 
 jobs:
 
