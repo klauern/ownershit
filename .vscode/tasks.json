@@ -7,13 +7,25 @@
       "label": "test",
       "type": "shell",
       "command": "task test",
-      "problemMatcher": ["$go"]
+      "problemMatcher": [
+        "$go"
+      ]
     },
     {
       "label": "lint",
       "type": "shell",
       "command": "task lint",
-      "problemMatcher": ["$go"]
-    }
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "test all (with coverage report)",
+      "type": "shell",
+      "command": "task test-cover",
+      "problemMatcher": [
+        "$go"
+      ]
+    },
   ]
 }

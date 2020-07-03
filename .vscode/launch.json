@@ -11,10 +11,13 @@
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/ownershit/main.go",
       "env": {},
-      "args": ["--config", "testrepoconfig.yaml", "sync"],
+      "args": [
+        "--config",
+        "testrepoconfig.yaml",
+        "sync"
+      ],
       "cwd": "${workspaceFolder}"
     },
-
     {
       "name": "branch run",
       "type": "go",
@@ -22,7 +25,9 @@
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/ownershit/main.go",
       "env": {},
-      "args": ["branches"],
+      "args": [
+        "branches"
+      ],
       "cwd": "${workspaceFolder}"
     },
     {
