@@ -31,13 +31,15 @@ type BranchPermissions struct {
 type PermissionsSettings struct {
 	BranchPermissions `yaml:"branches"`
 	TeamPermissions   []*Permissions `yaml:"team"`
-	Repositories      []struct {
-		Name     *string
-		Wiki     *bool
-		Issues   *bool
-		Projects *bool
-	} `yaml:"repositories"`
-	Organization *string `yaml:"organization"`
+	Repositories      []*Repository  `yaml:"repositories"`
+	Organization      *string        `yaml:"organization"`
+}
+
+type Repository struct {
+	Name     *string
+	Wiki     *bool
+	Issues   *bool
+	Projects *bool
 }
 
 // GitHubTokenEnv sets the GitHub Token from the environment variable.
