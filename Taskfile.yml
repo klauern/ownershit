@@ -13,10 +13,13 @@ tasks:
 
   build:
     desc: Build locally
-    deps:
-      - mocks
     cmds:
       - go build *.go
+
+  install:
+    desc: install binary locally
+    cmds:
+      - go install ./cmd/ownershit/main.go
 
   fmt:
     desc: format
@@ -35,19 +38,13 @@ tasks:
 
   run:
     desc: run off of source
-    deps:
-      - mocks
     cmds:
       - go run *.go
 
-  test-all:
-    desc: run all tests with integration tests enabled
-    deps:
-      - mocks
-    cmds:
-      - go test -race -cover ./... -githubv3
   test:
     desc: run tests
+    deps:
+      - mocks
     cmds:
       - go test -race -coverprofile=coverage.out ./...
   test-cover:
