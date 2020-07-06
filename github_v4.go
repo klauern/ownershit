@@ -86,16 +86,18 @@ func (c *GitHubClient) SetBranchRules(
 	return nil
 }
 
+type GetRepoQuery struct {
+	Repository struct {
+		ID                 githubv4.ID
+		HasWikiEnabled     githubv4.Boolean
+		HasIssuesEnabled   githubv4.Boolean
+		HasProjectsEnabled githubv4.Boolean
+	} `graphql:"repository(owner: $owner, name: $name)"`
+}
+
 func (c *GitHubClient) GetRepository(name, owner *string) (githubv4.ID, error) {
-	var query struct {
-		Repository struct {
-			ID                 githubv4.ID
-			HasWikiEnabled     githubv4.Boolean
-			HasIssuesEnabled   githubv4.Boolean
-			HasProjectsEnabled githubv4.Boolean
-		} `graphql:"repository(owner: $owner, name: $name)"`
-	}
-	err := c.Graph.Query(c.Context, &query, map[string]interface{}{
+	query := &GetRepoQuery{}
+	err := c.Graph.Query(c.Context, query, map[string]interface{}{
 		"owner": githubv4.String(*owner),
 		"name":  githubv4.String(*name),
 	})

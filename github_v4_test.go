@@ -3,42 +3,12 @@ package ownershit
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-github/v32/github"
-	"github.com/klauern/ownershit/mocks"
 	"github.com/shurcooL/githubv4"
 )
-
-type testMocks struct {
-	ctrl      *gomock.Controller
-	client    *GitHubClient
-	teamMock  *mocks.MockTeamsService
-	repoMock  *mocks.MockRepositoriesService
-	graphMock *mocks.MockGraphQLClient
-}
-
-func setupMocks(t *testing.T) *testMocks {
-	ctrl := gomock.NewController(t)
-	teams := mocks.NewMockTeamsService(ctrl)
-	graph := mocks.NewMockGraphQLClient(ctrl)
-	repo := mocks.NewMockRepositoriesService(ctrl)
-	ghClient := &GitHubClient{
-		Teams:        teams,
-		Context:      context.TODO(),
-		Graph:        graph,
-		Repositories: repo,
-	}
-	return &testMocks{
-		ctrl:      ctrl,
-		client:    ghClient,
-		graphMock: graph,
-		repoMock:  repo,
-		teamMock:  teams,
-	}
-}
 
 func TestGitHubClient_SetRepository(t *testing.T) {
 	mock := setupMocks(t)
@@ -54,88 +24,55 @@ func TestGitHubClient_SetRepository(t *testing.T) {
 }
 
 func TestGitHubClient_SetBranchRules(t *testing.T) {
-	type fields struct {
-		Teams   TeamsService
-		Graph   GraphQLClient
-		V3      *github.Client
-		V4      *githubv4.Client
-		Context context.Context
+	mock := setupMocks(t)
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("forced expected error"))
+
+	err := mock.client.SetBranchRules(githubv4.ID("test"), github.String("master"), github.Int(1), github.Bool(true), github.Bool(true))
+	if err != nil {
+		t.Errorf("GitHubClient.SetBranchRuels() error = %v, wantErr %v", err, false)
 	}
-	type args struct {
-		id                       *githubv4.ID
-		branchPattern            string
-		approverCount            int
-		requireCodeOwners        bool
-		requiresApprovingReviews bool
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &GitHubClient{
-				Teams:   tt.fields.Teams,
-				Graph:   tt.fields.Graph,
-				V3:      tt.fields.V3,
-				V4:      tt.fields.V4,
-				Context: tt.fields.Context,
-			}
-			if err := c.
-				SetBranchRules(
-					tt.args.id,
-					&tt.args.branchPattern,
-					&tt.args.approverCount,
-					&tt.args.requireCodeOwners,
-					&tt.args.requiresApprovingReviews); (err != nil) != tt.wantErr {
-				t.Errorf("GitHubClient.SetBranchRules() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
+	err = mock.client.SetBranchRules(githubv4.ID("test"), github.String("master"), github.Int(1), github.Bool(true), github.Bool(true))
+	if err == nil {
+		t.Errorf("GitHubClient.SetBranchRuels() error = %v, wantErr %v", err, true)
 	}
 }
 
 func TestGitHubClient_GetRepository(t *testing.T) {
-	type fields struct {
-		Teams   TeamsService
-		Graph   GraphQLClient
-		V3      *github.Client
-		V4      *githubv4.Client
-		Context context.Context
-	}
-	type args struct {
-		name  string
-		owner string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *githubv4.ID
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &GitHubClient{
-				Teams:   tt.fields.Teams,
-				Graph:   tt.fields.Graph,
-				V3:      tt.fields.V3,
-				V4:      tt.fields.V4,
-				Context: tt.fields.Context,
-			}
-			got, err := c.GetRepository(&tt.args.name, &tt.args.owner)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GitHubClient.GetRepository() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GitHubClient.GetRepository() = %v, want %v", got, tt.want)
-			}
+	mock := setupMocks(t)
+	mock.graphMock.
+		EXPECT().
+		Query(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).
+		Do(func(ctx context.Context, query *GetRepoQuery, things map[string]interface{}) {
+			query.Repository.ID = githubv4.ID("12345")
+			query.Repository.HasIssuesEnabled = githubv4.Boolean(false)
+			query.Repository.HasProjectsEnabled = githubv4.Boolean(false)
+			query.Repository.HasWikiEnabled = githubv4.Boolean(false)
 		})
+	mock.graphMock.
+		EXPECT().
+		Query(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(errors.New("forced expected error")).
+		Do(func(ctx context.Context, query *GetRepoQuery, things map[string]interface{}) {
+			query.Repository.ID = githubv4.ID("12345")
+			query.Repository.HasIssuesEnabled = githubv4.Boolean(false)
+			query.Repository.HasProjectsEnabled = githubv4.Boolean(false)
+			query.Repository.HasWikiEnabled = githubv4.Boolean(false)
+		})
+
+	id, err := mock.client.GetRepository(github.String("ownershit"), github.String("klauern"))
+	if err != nil {
+		t.Errorf("GitHubClient.GetRepository() error = %v, wantErr %v", err, false)
+	}
+	if id != githubv4.ID("12345") {
+		t.Errorf("GitHubClient.GetRepository() expected id to be %v, got %v", "12345", id)
+	}
+	id, err = mock.client.GetRepository(github.String("ownershit"), github.String("klauern"))
+	if err == nil {
+		t.Errorf("GitHubClient.GetRepository() error = %v, wantErr %v", err, true)
+	}
+	if id != nil {
+		t.Errorf("GitHubClient.GetRepository() expected id to be %v, got %v", nil, id)
 	}
 }

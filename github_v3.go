@@ -5,7 +5,7 @@ package ownershit
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"net/http/httputil"
 
 	"github.com/google/go-github/v32/github"
 	"github.com/rs/zerolog/log"
@@ -65,14 +65,10 @@ func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissio
 			Str("repo", repo).
 			Str("response-status", resp.Status).
 			Msg("error adding team as collaborator to repo")
-		respBody, respErr := ioutil.ReadAll(resp.Body)
-		if respErr != nil {
-			log.Err(err).
-				Msg("unable to read response body")
-			return fmt.Errorf("unable to read response body: %w", respErr)
+		resp, _ := httputil.DumpResponse(resp.Response, true)
+		if resp != nil {
+			log.Debug().Str("response-body", string(resp))
 		}
-		log.Debug().
-			Str("response-body", string(respBody))
 		return fmt.Errorf("adding team as collaborator to repo: %w", err)
 	}
 	log.Info().Int("status-code", resp.StatusCode).Msg("Successfully set repo")
@@ -97,13 +93,11 @@ func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchP
 			Str("repo", repo).
 			Str("response-status", resp.Status).
 			Msg("Error updating repository settings")
-		respBody, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Err(err).
-				Msg("unable to read response body")
-			return fmt.Errorf("unable to read response body: %w", err)
+		resp, _ := httputil.DumpResponse(resp.Response, true)
+		if resp != nil {
+			log.Debug().Str("response-body", string(resp))
 		}
-		log.Debug().Str("response-body", string(respBody))
+		log.Debug().Str("response-body", string(resp))
 	}
 
 	log.Info().Fields(map[string]interface{}{
