@@ -3,6 +3,7 @@ module github.com/klauern/ownershit
 go 1.14
 
 require (
+	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/mock v1.4.3
 	github.com/google/go-github/v32 v32.0.0
 	github.com/rs/zerolog v1.19.0
