@@ -7,6 +7,7 @@ import (
 	"os"
 
 	shit "github.com/klauern/ownershit"
+	"github.com/klauern/ownershit/cmd"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -33,6 +34,11 @@ func main() {
 				Usage:     "Synchronize branch, repo, owner and other configs on repositories",
 				UsageText: "ownershit sync --config repositories.yaml",
 				Action:    syncCommand,
+			},
+			{
+				Name:        "archive",
+				Usage:       "Archive repositories",
+				Subcommands: cmd.ArchiveSubcommands,
 			},
 		},
 		Flags: []cli.Flag{

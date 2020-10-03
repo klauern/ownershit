@@ -6,9 +6,10 @@ package mocks
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	githubv4 "github.com/shurcooL/githubv4"
-	reflect "reflect"
 )
 
 // MockGraphQLClient is a mock of GraphQLClient interface
