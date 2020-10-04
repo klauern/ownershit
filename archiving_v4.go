@@ -22,7 +22,12 @@ query archivableRepositories {
         name
         isFork
         forkCount
-        isArchived
+		isArchived
+		stargazersCount
+		updatedAt
+		watchers	{
+			totalCount
+		}
       }
     }
   }
@@ -43,11 +48,16 @@ type ArchivableIssuesQuery struct {
 }
 
 type RepositoryInfo struct {
-	ID         githubv4.String
-	Name       githubv4.String
-	ForkCount  githubv4.Int
-	IsArchived githubv4.Boolean
-	IsFork     githubv4.Boolean
+	ID             githubv4.String
+	Name           githubv4.String
+	ForkCount      githubv4.Int
+	IsArchived     githubv4.Boolean
+	IsFork         githubv4.Boolean
+	StargazerCount githubv4.Int
+	UpdatedAt      githubv4.DateTime
+	Watchers       struct {
+		TotalCount githubv4.Int
+	}
 }
 
 func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars int) ([]RepositoryInfo, error) {
@@ -88,7 +98,10 @@ func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars int) 
 			repos = removeElement(repos, i)
 			continue
 		}
-
+		if int(v.StargazerCount) >= stars {
+			repos = removeElement(repos, i)
+			continue
+		}
 	}
 	return repos, nil
 }

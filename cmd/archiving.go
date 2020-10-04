@@ -62,7 +62,8 @@ func queryCommand(c *cli.Context) error {
 	repos = ownershit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
 		forks := int(repo.ForkCount)
-		table.Append([]string{string(repo.Name), strconv.Itoa(forks), "0"})
+		stars := int(repo.StargazerCount)
+		table.Append([]string{string(repo.Name), strconv.Itoa(forks), strconv.Itoa(stars)})
 	}
 	table.Render()
 	fmt.Println(tableBuf.String())
