@@ -48,7 +48,7 @@ type RepositoryInfo struct {
 	IsFork     githubv4.Boolean
 }
 
-func (c *GitHubClient) QueryArchivableIssues(username string) ([]RepositoryInfo, error) {
+func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars int) ([]RepositoryInfo, error) {
 	var query ArchivableIssuesQuery
 	variables := map[string]interface{}{
 		"user":             githubv4.String("user:" + username),
@@ -78,6 +78,15 @@ func (c *GitHubClient) QueryArchivableIssues(username string) ([]RepositoryInfo,
 			repos = removeElement(repos, i)
 			continue
 		}
+		if v.IsFork {
+			repos = removeElement(repos, i)
+			continue
+		}
+		if int(v.ForkCount) >= forks {
+			repos = removeElement(repos, i)
+			continue
+		}
+
 	}
 	return repos, nil
 }
