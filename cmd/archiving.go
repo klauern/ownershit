@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 
 	"github.com/davecgh/go-spew/spew"
 	shit "github.com/klauern/ownershit"
@@ -9,10 +10,18 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var username string
+
 var ArchiveSubcommands = []*cli.Command{
 	{
 		Name:   "query",
 		Action: queryCommand,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Destination: &username,
+				Aliases:     []string{"u"},
+			},
+		},
 	},
 	{
 		Name:   "execute",
@@ -23,11 +32,13 @@ var ArchiveSubcommands = []*cli.Command{
 func queryCommand(c *cli.Context) error {
 	log.Info().Msgf("querying with parms")
 	client := shit.NewGitHubClient(context.Background(), shit.GitHubTokenEnv)
-	repos, err := client.QueryArchivableIssues("klauern")
+	if username == "" {
+		return errors.New("username not specified.  Please provide one to query.")
+	}
+	repos, err := client.QueryArchivableIssues(username)
 	if err != nil {
 		return err
 	}
-	// sb := strings.Builder{}
 	for _, repo := range repos {
 		spew.Dump(repo)
 	}

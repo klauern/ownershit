@@ -25,9 +25,7 @@ query archivableRepositories {
     }
   }
 }
-
 */
-
 type ArchivableIssuesQuery struct {
 	Search struct {
 		PageInfo struct {
@@ -91,7 +89,7 @@ func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 				ID            githubv4.String
 				NameWithOwner githubv4.String
 			}
-		} `graphql:"archiveRepository(input: $input)`
+		} `graphql:"archiveRepository(input: $input)"`
 	}
 	input := githubv4.ArchiveRepositoryInput{
 		RepositoryID: repo.ID,
@@ -105,7 +103,5 @@ func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 }
 
 func removeElement(slice []RepositoryInfo, s int) []RepositoryInfo {
-	// slice[len(slice)-1], slice[s] = slice[s], slice[len(slice)-1]
-	// return slice[:len(slice)-1]
 	return append(slice[:s], slice[s+1:]...)
 }
