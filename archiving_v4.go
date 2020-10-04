@@ -1,6 +1,8 @@
 package ownershit
 
 import (
+	"sort"
+
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 )
@@ -113,4 +115,20 @@ func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 
 func removeElement(slice []RepositoryInfo, s int) []RepositoryInfo {
 	return append(slice[:s], slice[s+1:]...)
+}
+
+type RepositoryInfos []RepositoryInfo
+
+func (r RepositoryInfos) Len() int      { return len(r) }
+func (r RepositoryInfos) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+
+type ReposByName struct{ RepositoryInfos }
+
+func (r ReposByName) Less(i, j int) bool {
+	return string(r.RepositoryInfos[i].Name) < string(r.RepositoryInfos[j].Name)
+}
+
+func SortedRepositoryInfo(repos []RepositoryInfo) []RepositoryInfo {
+	sort.Sort(ReposByName{repos})
+	return repos
 }

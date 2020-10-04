@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/klauern/ownershit"
 	shit "github.com/klauern/ownershit"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog/log"
@@ -57,6 +58,8 @@ func queryCommand(c *cli.Context) error {
 	table.SetHeader(
 		[]string{"repository", "forks", "stars"},
 	)
+
+	repos = ownershit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
 		forks := int(repo.ForkCount)
 		table.Append([]string{string(repo.Name), strconv.Itoa(forks), "0"})
