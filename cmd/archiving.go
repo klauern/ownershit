@@ -3,9 +3,12 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
+	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	shit "github.com/klauern/ownershit"
+	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
@@ -49,9 +52,17 @@ func queryCommand(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	tableBuf := strings.Builder{}
+	table := tablewriter.NewWriter(&tableBuf)
+	table.SetHeader(
+		[]string{"repository", "forks", "stars"},
+	)
 	for _, repo := range repos {
-		spew.Dump(repo)
+		forks := int(repo.ForkCount)
+		table.Append([]string{string(repo.Name), strconv.Itoa(forks), "0"})
 	}
+	table.Render()
+	fmt.Println(tableBuf.String())
 	return nil
 }
 
