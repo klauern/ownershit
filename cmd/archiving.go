@@ -21,6 +21,16 @@ var ArchiveSubcommands = []*cli.Command{
 				Destination: &username,
 				Aliases:     []string{"u"},
 			},
+			&cli.IntFlag{
+				Name:  "forks",
+				Usage: "maximum number of forks that a repo can have before it is considered archivalable",
+				Value: 0,
+			},
+			&cli.IntFlag{
+				Name:  "stars",
+				Usage: "maximum number of stars that a repository should have before it is considered archivable",
+				Value: 1,
+			},
 		},
 	},
 	{
@@ -35,7 +45,7 @@ func queryCommand(c *cli.Context) error {
 	if username == "" {
 		return errors.New("username not specified.  Please provide one to query.")
 	}
-	repos, err := client.QueryArchivableIssues(username)
+	repos, err := client.QueryArchivableIssues(username, 1, 1)
 	if err != nil {
 		return err
 	}
