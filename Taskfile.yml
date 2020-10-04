@@ -14,7 +14,7 @@ tasks:
   build:
     desc: Build locally
     cmds:
-      - go build *.go
+      - go build ./cmd/ownershit/main.go
 
   install:
     desc: install binary locally
