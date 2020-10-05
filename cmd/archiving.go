@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/klauern/ownershit"
 	shit "github.com/klauern/ownershit"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 )
 
+var ErrUsernameNotDefined = errors.New("username not defined for query")
 var username string
 
 var ArchiveSubcommands = []*cli.Command{
@@ -52,7 +52,7 @@ func queryCommand(c *cli.Context) error {
 	log.Info().Msgf("querying with parms")
 	client := shit.NewGitHubClient(context.Background(), shit.GitHubTokenEnv)
 	if username == "" {
-		return errors.New("username not specified.  Please provide one to query.")
+		return ErrUsernameNotDefined
 	}
 	repos, err := client.QueryArchivableIssues(username, c.Int("forks"), c.Int("stars"), c.Int("days"))
 	if err != nil {
@@ -64,7 +64,7 @@ func queryCommand(c *cli.Context) error {
 		[]string{"repository", "forks", "stars", "last updated"},
 	)
 
-	repos = ownershit.SortedRepositoryInfo(repos)
+	repos = shit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
 		forks := int(repo.ForkCount)
 		stars := int(repo.StargazerCount)
