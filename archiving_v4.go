@@ -115,7 +115,7 @@ func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxD
 			repos = removeElement(repos, i)
 			i--
 			continue
-		} else if repos[i].UpdatedAt.Time.Before(time.Now().Add(-time.Duration(24*maxDays) * time.Hour)) {
+		} else if repos[i].UpdatedAt.Time.After(time.Now().Add(-time.Duration(24*maxDays) * time.Hour)) {
 			log.Debug().Fields(map[string]interface{}{
 				"updatedAt": repos[i].UpdatedAt,
 			}).Msg("repository information")
@@ -151,17 +151,15 @@ func removeElement(slice []RepositoryInfo, s int) []RepositoryInfo {
 	return append(slice[:s], slice[s+1:]...)
 }
 
+// Everything behind this is related to sorting a list of RepositoryInfo.
 type RepositoryInfos []RepositoryInfo
+type ReposByName struct{ RepositoryInfos }
 
 func (r RepositoryInfos) Len() int      { return len(r) }
 func (r RepositoryInfos) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
-
-type ReposByName struct{ RepositoryInfos }
-
 func (r ReposByName) Less(i, j int) bool {
 	return string(r.RepositoryInfos[i].Name) < string(r.RepositoryInfos[j].Name)
 }
-
 func SortedRepositoryInfo(repos []RepositoryInfo) []RepositoryInfo {
 	sort.Sort(ReposByName{repos})
 	return repos
