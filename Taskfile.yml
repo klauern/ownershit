@@ -26,6 +26,7 @@ tasks:
     desc: format
     cmds:
       - go fmt
+      - gofmt -w -s .
 
   lint:
     desc: run GolangCI-Lint
