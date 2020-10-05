@@ -2,6 +2,7 @@ package ownershit
 
 import (
 	"sort"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
@@ -60,7 +61,7 @@ type RepositoryInfo struct {
 	}
 }
 
-func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars int) ([]RepositoryInfo, error) {
+func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxDays int) ([]RepositoryInfo, error) {
 	var query ArchivableIssuesQuery
 	variables := map[string]interface{}{
 		"user":             githubv4.String("user:" + username),
@@ -85,21 +86,41 @@ func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars int) 
 		}
 		variables["repositoryCursor"] = githubv4.NewString(query.Search.PageInfo.EndCursor)
 	}
-	for i, v := range repos {
-		if v.IsArchived {
+	for i := 0; i < len(repos); i++ {
+		if repos[i].IsArchived {
+			log.Debug().Fields(map[string]interface{}{
+				"isArchived": repos[i].IsArchived,
+			}).Msg("repository information")
 			repos = removeElement(repos, i)
+			i--
 			continue
-		}
-		if v.IsFork {
+		} else if repos[i].IsFork {
+			log.Debug().Fields(map[string]interface{}{
+				"isFork": repos[i].IsFork,
+			}).Msg("repository information")
 			repos = removeElement(repos, i)
+			i--
 			continue
-		}
-		if int(v.ForkCount) >= forks {
+		} else if int(repos[i].ForkCount) > forks {
+			log.Debug().Fields(map[string]interface{}{
+				"forkCount": repos[i].ForkCount,
+			}).Msg("repository information")
 			repos = removeElement(repos, i)
+			i--
 			continue
-		}
-		if int(v.StargazerCount) >= stars {
+		} else if int(repos[i].StargazerCount) > stars {
+			log.Debug().Fields(map[string]interface{}{
+				"starCount": repos[i].StargazerCount,
+			}).Msg("repository information")
 			repos = removeElement(repos, i)
+			i--
+			continue
+		} else if repos[i].UpdatedAt.Time.Before(time.Now().Add(-time.Duration(24*maxDays) * time.Hour)) {
+			log.Debug().Fields(map[string]interface{}{
+				"updatedAt": repos[i].UpdatedAt,
+			}).Msg("repository information")
+			repos = removeElement(repos, i)
+			i--
 			continue
 		}
 	}
