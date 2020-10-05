@@ -35,6 +35,11 @@ var ArchiveSubcommands = []*cli.Command{
 				Usage: "maximum number of stars that a repository should have before it is considered archivable",
 				Value: 1,
 			},
+			&cli.IntFlag{
+				Name:  "days",
+				Usage: "maximum number of days since last activity before considering for archival",
+				Value: 365,
+			},
 		},
 	},
 	{
@@ -49,21 +54,22 @@ func queryCommand(c *cli.Context) error {
 	if username == "" {
 		return errors.New("username not specified.  Please provide one to query.")
 	}
-	repos, err := client.QueryArchivableIssues(username, 1, 1)
+	repos, err := client.QueryArchivableIssues(username, c.Int("forks"), c.Int("stars"), c.Int("days"))
 	if err != nil {
 		return err
 	}
 	tableBuf := strings.Builder{}
 	table := tablewriter.NewWriter(&tableBuf)
 	table.SetHeader(
-		[]string{"repository", "forks", "stars"},
+		[]string{"repository", "forks", "stars", "last updated"},
 	)
 
 	repos = ownershit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
 		forks := int(repo.ForkCount)
 		stars := int(repo.StargazerCount)
-		table.Append([]string{string(repo.Name), strconv.Itoa(forks), strconv.Itoa(stars)})
+		lastUpdated := repo.UpdatedAt.Time
+		table.Append([]string{string(repo.Name), strconv.Itoa(forks), strconv.Itoa(stars), lastUpdated.String()})
 	}
 	table.Render()
 	fmt.Println(tableBuf.String())
