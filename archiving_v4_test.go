@@ -285,6 +285,18 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 			fields: fields{UpdatedAt: githubv4.DateTime{time.Now().Add(-oneDay)}},
 			want:   false,
 		},
+		{
+			name:   "already archived",
+			args:   args{},
+			fields: fields{IsArchived: githubv4.Boolean(true)},
+			want:   true,
+		},
+		{
+			name:   "is forked",
+			args:   args{},
+			fields: fields{IsFork: githubv4.Boolean(true)},
+			want:   true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
