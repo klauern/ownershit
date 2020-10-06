@@ -1,86 +1,15 @@
 package ownershit
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
-	"github.com/google/go-github/v32/github"
 	"github.com/shurcooL/githubv4"
 )
 
-func TestGitHubClient_QueryArchivableIssues(t *testing.T) {
-	// mocks := setupMocks(t)
-	// mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do()
-	type fields struct {
-		Teams        TeamsService
-		Repositories RepositoriesService
-		Graph        GraphQLClient
-		V3           *github.Client
-		V4           *githubv4.Client
-		Context      context.Context
-	}
-	type args struct {
-		username string
-		forks    int
-		stars    int
-		maxDays  int
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    []RepositoryInfo
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := defaultGitHubClient()
-			got, err := c.QueryArchivableIssues(tt.args.username, tt.args.forks, tt.args.stars, tt.args.maxDays)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GitHubClient.QueryArchivableIssues() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GitHubClient.QueryArchivableIssues() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestGitHubClient_MutateArchiveRepository(t *testing.T) {
-	// mocks := setupMocks()
-	type fields struct {
-		Teams        TeamsService
-		Repositories RepositoriesService
-		Graph        GraphQLClient
-		V3           *github.Client
-		V4           *githubv4.Client
-		Context      context.Context
-	}
-	type args struct {
-		repo RepositoryInfo
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := defaultGitHubClient()
-			if err := c.MutateArchiveRepository(tt.args.repo); (err != nil) != tt.wantErr {
-				t.Errorf("GitHubClient.MutateArchiveRepository() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
+const oneDay = time.Hour * 24
 
 func Test_removeElement(t *testing.T) {
 	type args struct {
@@ -293,6 +222,108 @@ func TestSortedRepositoryInfo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := SortedRepositoryInfo(tt.args.repos); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SortedRepositoryInfo() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRepositoryInfo_IsArchivable(t *testing.T) {
+	type fields struct {
+		ID             githubv4.String
+		Name           githubv4.String
+		ForkCount      githubv4.Int
+		IsArchived     githubv4.Boolean
+		IsFork         githubv4.Boolean
+		StargazerCount githubv4.Int
+		UpdatedAt      githubv4.DateTime
+		Watchers       struct{ TotalCount githubv4.Int }
+	}
+	type args struct {
+		forks   int
+		stars   int
+		maxDays int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			name: "with stars",
+			args: args{},
+			fields: fields{
+				Name:           githubv4.String("starry"),
+				StargazerCount: githubv4.Int(1),
+			},
+			want: true,
+		},
+		{
+			name: "with forks",
+			args: args{},
+			fields: fields{
+				Name:      githubv4.String("forky"),
+				ForkCount: githubv4.Int(1),
+			},
+			want: true,
+		},
+		{
+			name: "with days",
+			args: args{},
+			fields: fields{
+				Name:      githubv4.String("forky"),
+				ForkCount: githubv4.Int(1),
+			},
+			want: true,
+		},
+		{
+			name: "not with stars",
+			args: args{
+				stars: 1,
+			},
+			fields: fields{
+				Name:           githubv4.String("starry"),
+				StargazerCount: githubv4.Int(1),
+			},
+			want: false,
+		},
+		{
+			name: "not with forks",
+			args: args{
+				forks: 1,
+			},
+			fields: fields{
+				Name:      githubv4.String("forky"),
+				ForkCount: githubv4.Int(1),
+			},
+			want: false,
+		},
+		{
+			name: "not with days",
+			args: args{
+				maxDays: 1,
+			},
+			fields: fields{
+				Name:      githubv4.String("day-y"),
+				UpdatedAt: githubv4.DateTime{time.Now().Add(-oneDay)},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RepositoryInfo{
+				ID:             tt.fields.ID,
+				Name:           tt.fields.Name,
+				ForkCount:      tt.fields.ForkCount,
+				IsArchived:     tt.fields.IsArchived,
+				IsFork:         tt.fields.IsFork,
+				StargazerCount: tt.fields.StargazerCount,
+				UpdatedAt:      tt.fields.UpdatedAt,
+				Watchers:       tt.fields.Watchers,
+			}
+			if got := r.IsArchivable(tt.args.forks, tt.args.stars, tt.args.maxDays); got != tt.want {
+				t.Errorf("RepositoryInfo.IsArchivable() = %v, want %v", got, tt.want)
 			}
 		})
 	}
