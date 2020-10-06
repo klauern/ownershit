@@ -61,6 +61,9 @@ type RepositoryInfo struct {
 	}
 }
 
+const PerPage = 100
+const OneDay = time.Hour * 24
+
 func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays int) bool {
 	log.Debug().Fields(map[string]interface{}{
 		"isArchived":  r.IsArchived,
@@ -81,7 +84,7 @@ func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays int) bool {
 	if int(r.StargazerCount) > stars {
 		return true
 	}
-	if r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(24*maxDays) * time.Hour)) {
+	if r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(maxDays) * OneDay)) {
 		return true
 	}
 	return false
@@ -91,7 +94,7 @@ func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxD
 	var query ArchivableIssuesQuery
 	variables := map[string]interface{}{
 		"user":             githubv4.String("user:" + username),
-		"first":            githubv4.Int(100),
+		"first":            githubv4.Int(PerPage),
 		"repositoryCursor": (*githubv4.String)(nil),
 	}
 	var repos []RepositoryInfo
