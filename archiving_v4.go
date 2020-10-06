@@ -61,6 +61,32 @@ type RepositoryInfo struct {
 	}
 }
 
+func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays int) bool {
+	log.Debug().Fields(map[string]interface{}{
+		"isArchived":  r.IsArchived,
+		"isFork":      r.IsFork,
+		"forks":       r.ForkCount,
+		"stars":       r.StargazerCount,
+		"lastUpdated": r.UpdatedAt,
+	})
+	if r.IsArchived {
+		return true
+	}
+	if r.IsFork {
+		return true
+	}
+	if int(r.ForkCount) > forks {
+		return true
+	}
+	if int(r.StargazerCount) > stars {
+		return true
+	}
+	if r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(24*maxDays) * time.Hour)) {
+		return true
+	}
+	return false
+}
+
 func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxDays int) ([]RepositoryInfo, error) {
 	var query ArchivableIssuesQuery
 	variables := map[string]interface{}{
@@ -87,38 +113,7 @@ func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxD
 		variables["repositoryCursor"] = githubv4.NewString(query.Search.PageInfo.EndCursor)
 	}
 	for i := 0; i < len(repos); i++ {
-		if repos[i].IsArchived {
-			log.Debug().Fields(map[string]interface{}{
-				"isArchived": repos[i].IsArchived,
-			}).Msg("repository information")
-			repos = removeElement(repos, i)
-			i--
-			continue
-		} else if repos[i].IsFork {
-			log.Debug().Fields(map[string]interface{}{
-				"isFork": repos[i].IsFork,
-			}).Msg("repository information")
-			repos = removeElement(repos, i)
-			i--
-			continue
-		} else if int(repos[i].ForkCount) > forks {
-			log.Debug().Fields(map[string]interface{}{
-				"forkCount": repos[i].ForkCount,
-			}).Msg("repository information")
-			repos = removeElement(repos, i)
-			i--
-			continue
-		} else if int(repos[i].StargazerCount) > stars {
-			log.Debug().Fields(map[string]interface{}{
-				"starCount": repos[i].StargazerCount,
-			}).Msg("repository information")
-			repos = removeElement(repos, i)
-			i--
-			continue
-		} else if repos[i].UpdatedAt.Time.After(time.Now().Add(-time.Duration(24*maxDays) * time.Hour)) {
-			log.Debug().Fields(map[string]interface{}{
-				"updatedAt": repos[i].UpdatedAt,
-			}).Msg("repository information")
+		if repos[i].IsArchivable(forks, stars, maxDays) {
 			repos = removeElement(repos, i)
 			i--
 			continue
