@@ -16,6 +16,8 @@ import (
 var ErrUsernameNotDefined = errors.New("username not defined for query")
 var username string
 
+var client *shit.GitHubClient
+
 var archiveFlags = []cli.Flag{
 	&cli.StringFlag{
 		Name:        "username",
@@ -45,6 +47,13 @@ var ArchiveSubcommands = []*cli.Command{
 		Name:   "query",
 		Action: queryCommand,
 		Flags:  archiveFlags,
+		Before: func(c *cli.Context) error {
+			if username == "" {
+				return ErrUsernameNotDefined
+			}
+			client = shit.NewGitHubClient(context.Background(), shit.GitHubTokenEnv)
+			return nil
+		},
 	},
 	{
 		Name:   "execute",
@@ -55,10 +64,6 @@ var ArchiveSubcommands = []*cli.Command{
 
 func queryCommand(c *cli.Context) error {
 	log.Info().Msgf("querying with parms")
-	client := shit.NewGitHubClient(context.Background(), shit.GitHubTokenEnv)
-	if username == "" {
-		return ErrUsernameNotDefined
-	}
 	repos, err := client.QueryArchivableIssues(username, c.Int("forks"), c.Int("stars"), c.Int("days"))
 	if err != nil {
 		return err
