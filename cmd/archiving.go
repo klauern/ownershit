@@ -18,6 +18,8 @@ var username string
 
 var archiveFlags = []cli.Flag{
 	&cli.StringFlag{
+		Name:        "username",
+		Usage:       "GitHub username",
 		Destination: &username,
 		Aliases:     []string{"u"},
 	},
