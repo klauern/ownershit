@@ -250,64 +250,40 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 		want   bool
 	}{
 		{
-			name: "with stars",
-			args: args{},
-			fields: fields{
-				Name:           githubv4.String("starry"),
-				StargazerCount: githubv4.Int(1),
-			},
-			want: true,
+			name:   "with stars",
+			args:   args{},
+			fields: fields{StargazerCount: githubv4.Int(1)},
+			want:   true,
 		},
 		{
-			name: "with forks",
-			args: args{},
-			fields: fields{
-				Name:      githubv4.String("forky"),
-				ForkCount: githubv4.Int(1),
-			},
-			want: true,
+			name:   "with forks",
+			args:   args{},
+			fields: fields{ForkCount: githubv4.Int(1)},
+			want:   true,
 		},
 		{
-			name: "with days",
-			args: args{},
-			fields: fields{
-				Name:      githubv4.String("forky"),
-				ForkCount: githubv4.Int(1),
-			},
-			want: true,
+			name:   "with days",
+			args:   args{},
+			fields: fields{UpdatedAt: githubv4.DateTime{time.Now().Add(-oneDay)}},
+			want:   false,
 		},
 		{
-			name: "not with stars",
-			args: args{
-				stars: 1,
-			},
-			fields: fields{
-				Name:           githubv4.String("starry"),
-				StargazerCount: githubv4.Int(1),
-			},
-			want: false,
+			name:   "not with stars",
+			args:   args{stars: 1},
+			fields: fields{StargazerCount: githubv4.Int(1)},
+			want:   false,
 		},
 		{
-			name: "not with forks",
-			args: args{
-				forks: 1,
-			},
-			fields: fields{
-				Name:      githubv4.String("forky"),
-				ForkCount: githubv4.Int(1),
-			},
-			want: false,
+			name:   "not with forks",
+			args:   args{forks: 1},
+			fields: fields{ForkCount: githubv4.Int(1)},
+			want:   false,
 		},
 		{
-			name: "not with days",
-			args: args{
-				maxDays: 1,
-			},
-			fields: fields{
-				Name:      githubv4.String("day-y"),
-				UpdatedAt: githubv4.DateTime{time.Now().Add(-oneDay)},
-			},
-			want: false,
+			name:   "not with days",
+			args:   args{maxDays: 1},
+			fields: fields{UpdatedAt: githubv4.DateTime{time.Now().Add(-oneDay)}},
+			want:   false,
 		},
 	}
 	for _, tt := range tests {
