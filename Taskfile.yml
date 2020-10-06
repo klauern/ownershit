@@ -43,6 +43,10 @@ tasks:
     cmds:
       - go run *.go
 
+  test-query:
+    desc: run a raw query with my name
+    cmds:
+      - go run ./cmd/ownershit/main.go archive query --username klauern
   test:
     desc: run tests
     deps:
