@@ -16,35 +16,38 @@ import (
 var ErrUsernameNotDefined = errors.New("username not defined for query")
 var username string
 
+var archiveFlags = []cli.Flag{
+	&cli.StringFlag{
+		Destination: &username,
+		Aliases:     []string{"u"},
+	},
+	&cli.IntFlag{
+		Name:  "forks",
+		Usage: "maximum number of forks that a repo can have before it is considered archivalable",
+		Value: 0,
+	},
+	&cli.IntFlag{
+		Name:  "stars",
+		Usage: "maximum number of stars that a repository should have before it is considered archivable",
+		Value: 0,
+	},
+	&cli.IntFlag{
+		Name:  "days",
+		Usage: "maximum number of days since last activity before considering for archival",
+		Value: 365,
+	},
+}
+
 var ArchiveSubcommands = []*cli.Command{
 	{
 		Name:   "query",
 		Action: queryCommand,
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Destination: &username,
-				Aliases:     []string{"u"},
-			},
-			&cli.IntFlag{
-				Name:  "forks",
-				Usage: "maximum number of forks that a repo can have before it is considered archivalable",
-				Value: 0,
-			},
-			&cli.IntFlag{
-				Name:  "stars",
-				Usage: "maximum number of stars that a repository should have before it is considered archivable",
-				Value: 0,
-			},
-			&cli.IntFlag{
-				Name:  "days",
-				Usage: "maximum number of days since last activity before considering for archival",
-				Value: 365,
-			},
-		},
+		Flags:  archiveFlags,
 	},
 	{
 		Name:   "execute",
 		Action: executeCommand,
+		Flags:  archiveFlags,
 	},
 }
 
