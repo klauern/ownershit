@@ -239,9 +239,10 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 		Watchers       struct{ TotalCount githubv4.Int }
 	}
 	type args struct {
-		forks   int
-		stars   int
-		maxDays int
+		forks    int
+		stars    int
+		maxDays  int
+		watchers int
 	}
 	tests := []struct {
 		name   string
@@ -263,9 +264,9 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 		},
 		{
 			name:   "with days",
-			args:   args{},
-			fields: fields{UpdatedAt: githubv4.DateTime{time.Now().Add(-oneDay)}},
-			want:   false,
+			args:   args{maxDays: 1},
+			fields: fields{UpdatedAt: githubv4.DateTime{Time: time.Now()}},
+			want:   true,
 		},
 		{
 			name:   "not with stars",
@@ -282,7 +283,7 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 		{
 			name:   "not with days",
 			args:   args{maxDays: 1},
-			fields: fields{UpdatedAt: githubv4.DateTime{time.Now().Add(-oneDay)}},
+			fields: fields{UpdatedAt: githubv4.DateTime{Time: time.Now().Add(-oneDay)}},
 			want:   false,
 		},
 		{
@@ -297,6 +298,18 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 			fields: fields{IsFork: githubv4.Boolean(true)},
 			want:   true,
 		},
+		{
+			name:   "has watchers",
+			args:   args{},
+			fields: fields{Watchers: struct{ TotalCount githubv4.Int }{githubv4.Int(1)}},
+			want:   true,
+		},
+		{
+			name:   "not with watchers",
+			args:   args{watchers: 1},
+			fields: fields{Watchers: struct{ TotalCount githubv4.Int }{githubv4.Int(1)}},
+			want:   false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -310,7 +323,8 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 				UpdatedAt:      tt.fields.UpdatedAt,
 				Watchers:       tt.fields.Watchers,
 			}
-			if got := r.IsArchivable(tt.args.forks, tt.args.stars, tt.args.maxDays); got != tt.want {
+			fmt.Println(tt.fields.UpdatedAt.Date())
+			if got := r.IsArchivable(tt.args.forks, tt.args.stars, tt.args.maxDays, tt.args.watchers); got != tt.want {
 				t.Errorf("RepositoryInfo.IsArchivable() = %v, want %v", got, tt.want)
 			}
 		})
