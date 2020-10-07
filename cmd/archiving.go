@@ -143,5 +143,21 @@ func executeCommand(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("error from survey question: %w", err)
 	}
+	repoMapping := mapRepoNames(issues)
+
+	for _, r := range repoNames {
+		err = client.MutateArchiveRepository(repoMapping[r])
+		if err != nil {
+			return fmt.Errorf("archiving %v: %w", r, err)
+		}
+	}
 	return nil
+}
+
+func mapRepoNames(r []shit.RepositoryInfo) map[string]shit.RepositoryInfo {
+	var repos map[string]shit.RepositoryInfo
+	for _, v := range r {
+		repos[string(v.Name)] = v
+	}
+	return repos
 }
