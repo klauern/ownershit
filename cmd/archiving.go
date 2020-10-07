@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	shit "github.com/klauern/ownershit"
 	"github.com/olekukonko/tablewriter"
 	"github.com/rs/zerolog/log"
@@ -123,6 +124,19 @@ func executeCommand(c *cli.Context) error {
 	issues, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
 		return err
+	}
+	var ops []string
+	for _, v := range issues {
+		ops = append(ops, string(v.Name))
+	}
+	archiving := &survey.MultiSelect{
+		Message: "Which repositories do you wish to archive?",
+		Options: ops,
+	}
+	repoNames := []string{}
+	err = survey.AskOne(archiving, &repoNames)
+	if err != nil {
+		return fmt.Errorf("error from survey question: %w", err)
 	}
 	return nil
 }
