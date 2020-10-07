@@ -104,11 +104,11 @@ func queryCommand(c *cli.Context) error {
 
 	repos = shit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
-		repoForks := int(repo.ForkCount)
-		repoStars := int(repo.StargazerCount)
-		repoWatchers := int(repo.Watchers.TotalCount)
+		repoForks := strconv.Itoa(int(repo.ForkCount))
+		repoStars := strconv.Itoa(int(repo.StargazerCount))
+		repoWatchers := strconv.Itoa(int(repo.Watchers.TotalCount))
 		lastUpdated := repo.UpdatedAt.Time
-		table.Append([]string{string(repo.Name), strconv.Itoa(repoForks), strconv.Itoa(repoStars), strconv.Itoa(repoWatchers), lastUpdated.String()})
+		table.Append([]string{string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String()})
 	}
 	table.Render()
 	fmt.Println(tableBuf.String())
