@@ -63,19 +63,22 @@ var ArchiveSubcommands = []*cli.Command{
 		Name:   "query",
 		Action: queryCommand,
 		Flags:  archiveFlags,
-		Before: func(c *cli.Context) error {
-			if username == "" {
-				return ErrUsernameNotDefined
-			}
-			client = shit.NewGitHubClient(context.Background(), shit.GitHubTokenEnv)
-			return nil
-		},
+		Before: userClientSetup,
 	},
 	{
 		Name:   "execute",
 		Action: executeCommand,
 		Flags:  archiveFlags,
+		Before: userClientSetup,
 	},
+}
+
+func userClientSetup(c *cli.Context) error {
+	if username == "" {
+		return ErrUsernameNotDefined
+	}
+	client = shit.NewGitHubClient(context.Background(), shit.GitHubTokenEnv)
+	return nil
 }
 
 func queryCommand(c *cli.Context) error {
