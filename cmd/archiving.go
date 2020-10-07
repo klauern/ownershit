@@ -87,7 +87,7 @@ func queryCommand(c *cli.Context) error {
 			"watchers": watchers,
 		}).
 		Msgf("querying with parms")
-	repos, err := client.QueryArchivableIssues(username, forks, stars, days, watchers)
+	repos, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
 		return err
 	}
@@ -111,8 +111,16 @@ func queryCommand(c *cli.Context) error {
 }
 
 func executeCommand(c *cli.Context) error {
-	log.Info().Msgf("executing Archive with parms")
-	_, err := client.QueryArchivableIssues(username, forks, stars, days, watchers)
+	log.
+		Info().
+		Fields(map[string]interface{}{
+			"forks":    forks,
+			"stars":    stars,
+			"days":     days,
+			"watchers": watchers,
+		}).
+		Msgf("executing Archive with parms")
+	issues, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
 		return err
 	}

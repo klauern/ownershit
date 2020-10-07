@@ -94,7 +94,7 @@ func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays, maxWatchers int) bo
 	return false
 }
 
-func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
+func (c *GitHubClient) QueryArchivableRepos(username string, forks, stars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
 	var query ArchivableIssuesQuery
 	variables := map[string]interface{}{
 		"user":             githubv4.String("user:" + username),
