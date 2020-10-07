@@ -18,9 +18,10 @@ var username string
 
 var client *shit.GitHubClient
 var (
-	forks int
-	stars int
-	days  int
+	forks    int
+	stars    int
+	days     int
+	watchers int
 )
 
 var archiveFlags = []cli.Flag{
@@ -48,6 +49,12 @@ var archiveFlags = []cli.Flag{
 		Destination: &days,
 		Value:       365,
 	},
+	&cli.IntFlag{
+		Name:        "watchers",
+		Usage:       "maximum number of watchers before considering for archival",
+		Destination: &watchers,
+		Value:       0,
+	},
 }
 
 var ArchiveSubcommands = []*cli.Command{
@@ -74,27 +81,29 @@ func queryCommand(c *cli.Context) error {
 	log.
 		Info().
 		Fields(map[string]interface{}{
-			"forks": forks,
-			"stars": stars,
-			"days":  days,
+			"forks":    forks,
+			"stars":    stars,
+			"days":     days,
+			"watchers": watchers,
 		}).
 		Msgf("querying with parms")
-	repos, err := client.QueryArchivableIssues(username, forks, stars, days)
+	repos, err := client.QueryArchivableIssues(username, forks, stars, days, watchers)
 	if err != nil {
 		return err
 	}
 	tableBuf := strings.Builder{}
 	table := tablewriter.NewWriter(&tableBuf)
 	table.SetHeader(
-		[]string{"repository", "forks", "stars", "last updated"},
+		[]string{"repository", "forks", "stars", "watchers", "last updated"},
 	)
 
 	repos = shit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
 		repoForks := int(repo.ForkCount)
 		repoStars := int(repo.StargazerCount)
+		repoWatchers := int(repo.Watchers.TotalCount)
 		lastUpdated := repo.UpdatedAt.Time
-		table.Append([]string{string(repo.Name), strconv.Itoa(repoForks), strconv.Itoa(repoStars), lastUpdated.String()})
+		table.Append([]string{string(repo.Name), strconv.Itoa(repoForks), strconv.Itoa(repoStars), strconv.Itoa(repoWatchers), lastUpdated.String()})
 	}
 	table.Render()
 	fmt.Println(tableBuf.String())
@@ -103,7 +112,7 @@ func queryCommand(c *cli.Context) error {
 
 func executeCommand(c *cli.Context) error {
 	log.Info().Msgf("executing Archive with parms")
-	_, err := client.QueryArchivableIssues(username, forks, stars, days)
+	_, err := client.QueryArchivableIssues(username, forks, stars, days, watchers)
 	if err != nil {
 		return err
 	}

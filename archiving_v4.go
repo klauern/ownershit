@@ -64,13 +64,14 @@ type RepositoryInfo struct {
 const PerPage = 100
 const OneDay = time.Hour * 24
 
-func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays int) bool {
+func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays, maxWatchers int) bool {
 	log.Debug().Fields(map[string]interface{}{
 		"isArchived":  r.IsArchived,
 		"isFork":      r.IsFork,
 		"forks":       r.ForkCount,
 		"stars":       r.StargazerCount,
 		"lastUpdated": r.UpdatedAt,
+		"watchers":    r.Watchers.TotalCount,
 	})
 	if r.IsArchived {
 		return true
@@ -87,10 +88,13 @@ func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays int) bool {
 	if r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(maxDays) * OneDay)) {
 		return true
 	}
+	if int(r.Watchers.TotalCount) > maxWatchers {
+		return true
+	}
 	return false
 }
 
-func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxDays int) ([]RepositoryInfo, error) {
+func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
 	var query ArchivableIssuesQuery
 	variables := map[string]interface{}{
 		"user":             githubv4.String("user:" + username),
@@ -116,7 +120,7 @@ func (c *GitHubClient) QueryArchivableIssues(username string, forks, stars, maxD
 		variables["repositoryCursor"] = githubv4.NewString(query.Search.PageInfo.EndCursor)
 	}
 	for i := 0; i < len(repos); i++ {
-		if repos[i].IsArchivable(forks, stars, maxDays) {
+		if repos[i].IsArchivable(forks, stars, maxDays, maxWatchers) {
 			repos = removeElement(repos, i)
 			i--
 			continue
