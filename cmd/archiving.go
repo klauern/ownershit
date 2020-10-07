@@ -85,6 +85,7 @@ func queryCommand(c *cli.Context) error {
 	log.
 		Info().
 		Fields(map[string]interface{}{
+			"username": username,
 			"forks":    forks,
 			"stars":    stars,
 			"days":     days,
@@ -118,6 +119,7 @@ func executeCommand(c *cli.Context) error {
 	log.
 		Info().
 		Fields(map[string]interface{}{
+			"username": username,
 			"forks":    forks,
 			"stars":    stars,
 			"days":     days,
