@@ -30,6 +30,8 @@ jobs:
       uses: actions/checkout@v2
     - name: Install Task
       uses: Arduino/actions/setup-taskfile@master
+      with:
+        version: "3.0.0"
     - name: Get dependencies
       run: |
         go get -v -t -d ./...
