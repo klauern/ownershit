@@ -368,14 +368,18 @@ func TestQueryArchivableRepos(t *testing.T) {
 }
 
 func TestMutateArchiveRepository(t *testing.T) {
-	mocks := setupMocks(t)
+	mock := setupMocks(t)
 	dummyRepo := RepositoryInfo{
 		Name: githubv4.String("hello"),
 		ID:   githubv4.String("dummyID"),
 	}
-	mocks.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(nil)
-	err := mocks.client.MutateArchiveRepository(dummyRepo)
-	if err != nil {
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(nil)
+	if err := mock.client.MutateArchiveRepository(dummyRepo); err != nil {
 		t.Error("did not expect error here")
 	}
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(fmt.Errorf("dummy error"))
+	if err := mock.client.MutateArchiveRepository(dummyRepo); err == nil {
+		t.Error("expected error here")
+	}
+
 }

@@ -152,7 +152,7 @@ func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 	input := githubv4.ArchiveRepositoryInput{
 		RepositoryID: repo.ID,
 	}
-	err := c.V4.Mutate(c.Context, &mutation, input, nil)
+	err := c.Graph.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
 		log.Err(err).Interface("repository", repo).Msg("Unable to archive repository")
 		return err
