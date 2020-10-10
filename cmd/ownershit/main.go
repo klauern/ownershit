@@ -18,6 +18,13 @@ import (
 var settings *shit.PermissionsSettings
 var githubClient *shit.GitHubClient
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "unknown"
+)
+
 func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -60,6 +67,14 @@ func main() {
 		Action:  cli.ShowAppHelp,
 		Authors: []*cli.Author{{Name: "Nick Klauer", Email: "klauer@gmail.com"}},
 		Before:  readConfigs,
+		Version: version,
+		ExtraInfo: func() map[string]string {
+			return map[string]string{
+				"date":    date,
+				"builtBy": builtBy,
+				"commit":  commit,
+			}
+		},
 	}
 
 	err := app.Run(os.Args)
