@@ -49,6 +49,7 @@ brews:
     tap:
       owner: klauern
       name: ownershit
+      token: "{{ .Env.HOMEBREW_GITHUB_TOKEN }}"
     commit_author:
       name: goreleaserbot
       email: goreleaser@carlosbecker.com
