@@ -17,8 +17,8 @@ type GitHubClient struct {
 	Teams        TeamsService
 	Repositories RepositoriesService
 	Graph        GraphQLClient
-	V3           *github.Client
-	V4           *githubv4.Client
+	v3           *github.Client
+	v4           *githubv4.Client
 	Context      context.Context
 }
 
@@ -43,8 +43,8 @@ func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	return &GitHubClient{
 		Teams:        client.Teams,
 		Repositories: client.Repositories,
-		V3:           client,
-		V4:           clientV4,
+		v3:           client,
+		v4:           clientV4,
 		Graph:        clientV4,
 		Context:      ctx,
 	}
