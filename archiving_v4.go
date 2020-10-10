@@ -36,16 +36,27 @@ query archivableRepositories {
 */
 type ArchivableIssuesQuery struct {
 	Search struct {
-		PageInfo struct {
-			HasNextPage githubv4.Boolean
-			EndCursor   githubv4.String
-			StartCursor githubv4.String
-		}
+		PageInfo        pageInfo
 		RepositoryCount int
 		Repos           []struct {
 			Repository RepositoryInfo `graphql:"... on Repository"`
 		} `graphql:"nodes"`
 	} `graphql:"search(query: $user, type: REPOSITORY, first: $first, after: $repositoryCursor)"`
+}
+
+type ArchiveRepositoryMutation struct {
+	ArchiveRepository struct {
+		Repository struct {
+			ID            githubv4.String
+			NameWithOwner githubv4.String
+		}
+	} `graphql:"archiveRepository(input: $input)"`
+}
+
+type pageInfo struct {
+	HasNextPage githubv4.Boolean
+	EndCursor   githubv4.String
+	StartCursor githubv4.String
 }
 
 type RepositoryInfo struct {
@@ -103,6 +114,11 @@ func (c *GitHubClient) QueryArchivableRepos(username string, forks, stars, maxDa
 	}
 	var repos []RepositoryInfo
 	for {
+		log.Debug().Fields(map[string]interface{}{
+			"user":             githubv4.String("user:" + username),
+			"first":            githubv4.Int(PerPage),
+			"repositoryCursor": variables["repositoryCursor"],
+		}).Msg("querying repositories")
 		err := c.Graph.Query(c.Context, &query, variables)
 		if err != nil {
 			log.Err(err).
@@ -121,6 +137,7 @@ func (c *GitHubClient) QueryArchivableRepos(username string, forks, stars, maxDa
 	}
 	for i := 0; i < len(repos); i++ {
 		if repos[i].IsArchivable(forks, stars, maxDays, maxWatchers) {
+			log.Debug().Str("repository", string(repos[i].Name)).Msg("repository is archivable")
 			repos = removeElement(repos, i)
 			i--
 			continue
@@ -130,20 +147,14 @@ func (c *GitHubClient) QueryArchivableRepos(username string, forks, stars, maxDa
 }
 
 func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
-	var mutation struct {
-		ArchiveRepository struct {
-			Repository struct {
-				ID            githubv4.String
-				NameWithOwner githubv4.String
-			}
-		} `graphql:"archiveRepository(input: $input)"`
-	}
+	mutation := &ArchiveRepositoryMutation{}
+	log.Debug().Interface("repo", repo).Interface("mutation", mutation).Msg("archiving the repository")
 	input := githubv4.ArchiveRepositoryInput{
 		RepositoryID: repo.ID,
 	}
 	err := c.V4.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
-		log.Err(err).Interface("repository", repo.Name).Msg("Unable to archive repository")
+		log.Err(err).Interface("repository", repo).Msg("Unable to archive repository")
 		return err
 	}
 	return nil

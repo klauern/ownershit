@@ -155,7 +155,7 @@ func executeCommand(c *cli.Context) error {
 }
 
 func mapRepoNames(r []shit.RepositoryInfo) map[string]shit.RepositoryInfo {
-	var repos map[string]shit.RepositoryInfo
+	repos := make(map[string]shit.RepositoryInfo, len(r))
 	for _, v := range r {
 		repos[string(v.Name)] = v
 	}
