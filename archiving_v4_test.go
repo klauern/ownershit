@@ -1,11 +1,13 @@
 package ownershit
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/shurcooL/githubv4"
 )
 
@@ -328,5 +330,52 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 				t.Errorf("RepositoryInfo.IsArchivable() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestQueryArchivableRepos(t *testing.T) {
+	mocks := setupMocks(t)
+	dummyVars := map[string]interface{}{
+		"user":             githubv4.String("user:klauern"),
+		"first":            githubv4.Int(100),
+		"repositoryCursor": (*githubv4.String)(nil),
+	}
+	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Eq(dummyVars)).Return(nil).Do(
+		func(c context.Context, y *ArchivableIssuesQuery, v map[string]interface{}) {
+			y.Search.Repos = []struct {
+				Repository RepositoryInfo "graphql:\"... on Repository\""
+			}{{Repository: RepositoryInfo{IsArchived: true}}}
+			y.Search.RepositoryCount = 1
+			y.Search.PageInfo = pageInfo{HasNextPage: true, EndCursor: githubv4.String("dummycursor")}
+		})
+	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(
+		func(c context.Context, y *ArchivableIssuesQuery, v map[string]interface{}) {
+			y.Search.Repos = nil
+			y.Search.PageInfo = pageInfo{}
+		})
+	info, err := mocks.client.QueryArchivableRepos("klauern", 1, 1, 1, 1)
+	if err != nil {
+		t.Error("error unexpected")
+	}
+	if len(info) != 0 {
+		t.Errorf("length of RepositoryInfo: %v, expected to be %v", len(info), 0)
+	}
+	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Eq(dummyVars)).Return(fmt.Errorf("test error here"))
+	_, err = mocks.client.QueryArchivableRepos("klauern", 1, 1, 1, 1)
+	if err == nil {
+		t.Error("error expected")
+	}
+}
+
+func TestMutateArchiveRepository(t *testing.T) {
+	mocks := setupMocks(t)
+	dummyRepo := RepositoryInfo{
+		Name: githubv4.String("hello"),
+		ID:   githubv4.String("dummyID"),
+	}
+	mocks.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(nil)
+	err := mocks.client.MutateArchiveRepository(dummyRepo)
+	if err != nil {
+		t.Error("did not expect error here")
 	}
 }
