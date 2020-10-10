@@ -29,5 +29,4 @@ func TestGitHubClient_SetRepositoryDefaults(t *testing.T) {
 	if err := mock.client.SetRepositoryDefaults(mock.client.Context, "klauern", "ownershit", false, false, false); err == nil {
 		t.Errorf("expected an error here")
 	}
-
 }
