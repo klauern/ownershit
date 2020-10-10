@@ -1,6 +1,6 @@
 # https://taskfile.dev
 
-version: "2"
+version: "3"
 
 tasks:
   dev:
@@ -14,7 +14,8 @@ tasks:
   build:
     desc: Build locally
     cmds:
-      - go build *.go
+      - go build ./cmd/ownershit/main.go
+      - rm main
 
   install:
     desc: install binary locally
@@ -25,6 +26,7 @@ tasks:
     desc: format
     cmds:
       - go fmt
+      - gofmt -w -s .
 
   lint:
     desc: run GolangCI-Lint
@@ -41,6 +43,10 @@ tasks:
     cmds:
       - go run *.go
 
+  test-query:
+    desc: run a raw query with my name
+    cmds:
+      - go run ./cmd/ownershit/main.go archive query --username klauern
   test:
     desc: run tests
     deps:

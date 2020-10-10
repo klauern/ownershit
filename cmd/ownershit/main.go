@@ -7,6 +7,7 @@ import (
 	"os"
 
 	shit "github.com/klauern/ownershit"
+	"github.com/klauern/ownershit/cmd"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -16,6 +17,13 @@ import (
 
 var settings *shit.PermissionsSettings
 var githubClient *shit.GitHubClient
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "unknown"
+)
 
 func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -34,6 +42,11 @@ func main() {
 				UsageText: "ownershit sync --config repositories.yaml",
 				Action:    syncCommand,
 			},
+			{
+				Name:        "archive",
+				Usage:       "Archive repositories",
+				Subcommands: cmd.ArchiveSubcommands,
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -42,9 +55,11 @@ func main() {
 				Usage: "configuration of repository updates to perform",
 			},
 			&cli.BoolFlag{
-				Name:  "debug",
-				Usage: "set output to debug logging",
-				Value: false,
+				Name:    "debug",
+				Aliases: []string{"d"},
+				EnvVars: []string{"OWNERSHIT_DEBUG"},
+				Usage:   "set output to debug logging",
+				Value:   false,
 			},
 		},
 		Name:    "ownershit",
@@ -52,6 +67,14 @@ func main() {
 		Action:  cli.ShowAppHelp,
 		Authors: []*cli.Author{{Name: "Nick Klauer", Email: "klauer@gmail.com"}},
 		Before:  readConfigs,
+		Version: version,
+		ExtraInfo: func() map[string]string {
+			return map[string]string{
+				"date":    date,
+				"builtBy": builtBy,
+				"commit":  commit,
+			}
+		},
 	}
 
 	err := app.Run(os.Args)
