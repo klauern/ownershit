@@ -12,7 +12,7 @@ func (c *GitHubClient) SetDefaultBranch(ctx context.Context, owner, repo, defaul
 	r := &github.Repository{
 		DefaultBranch: github.String(defaultBranchName),
 	}
-	repositoryResp, _, err := c.V3.Repositories.Edit(ctx, owner, repo, r)
+	repositoryResp, _, err := c.Repositories.Edit(ctx, owner, repo, r)
 	if err != nil {
 		return fmt.Errorf("setting repo to default branch %v: %w", defaultBranchName, err)
 	}
@@ -29,7 +29,7 @@ func (c *GitHubClient) SetRepositoryDefaults(
 		HasIssues:   github.Bool(issues),
 		HasProjects: github.Bool(projects),
 	}
-	_, _, err := c.V3.Repositories.Edit(ctx, owner, repo, r)
+	_, _, err := c.Repositories.Edit(ctx, owner, repo, r)
 	if err != nil {
 		return fmt.Errorf("setting defaults for %v/%v: %w", owner, repo, err)
 	}
