@@ -48,10 +48,9 @@ brews:
   -
     tap:
       owner: klauern
-      name: ownershit
+      name: homebrew-ownershit
       token: "{{ .Env.HOMEBREW_GITHUB_TOKEN }}"
     commit_author:
       name: goreleaserbot
       email: goreleaser@carlosbecker.com
-    folder: brew
     description: "Manage the ownership of your repositories."
