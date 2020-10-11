@@ -3,6 +3,7 @@ package ownershit
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -27,6 +28,15 @@ func TestMapPermsWithGitHub(t *testing.T) {
 	if err == nil {
 		t.Error("expected error on non-existent repo")
 	}
+}
+
+func mockGitHubResponse() *github.Response {
+	resp := github.Response{}
+	resp.Response = &http.Response{}
+	resp.Status = "200 OK"
+	resp.StatusCode = 200
+
+	return &resp
 }
 
 func TestOmitPermFixes(t *testing.T) {
@@ -61,6 +71,15 @@ func TestOmitPermFixes(t *testing.T) {
 	})
 	if err != nil {
 		t.Error("error not expected")
+	}
+
+	repoSvc.EXPECT().Edit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(&github.Repository{
+		AllowMergeCommit: boolPtr(true),
+	})).Return(nil, mockGitHubResponse(), fmt.Errorf("erroring thing"))
+	if err = client.UpdateRepositorySettings("klauern", "ownershit", &BranchPermissions{
+		AllowMergeCommit: boolPtr(true),
+	}); err == nil {
+		t.Error("error expected here")
 	}
 }
 
