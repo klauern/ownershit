@@ -98,6 +98,7 @@ func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchP
 			log.Debug().Str("response-body", string(resp))
 		}
 		log.Debug().Str("response-body", string(resp))
+		return err
 	}
 
 	log.Info().Fields(map[string]interface{}{
