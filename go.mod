@@ -3,7 +3,7 @@ module github.com/klauern/ownershit
 go 1.14
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.1.1
+	github.com/AlecAivazis/survey/v2 v2.2.7
 	github.com/golang/mock v1.4.4
 	github.com/google/go-github/v32 v32.0.0
 	github.com/olekukonko/tablewriter v0.0.4
