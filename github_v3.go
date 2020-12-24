@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http/httputil"
 
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v33/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
