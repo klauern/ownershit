@@ -65,6 +65,77 @@ func (mr *MockTeamsServiceMockRecorder) AddTeamRepoBySlug(ctx, org, slug, owner,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTeamRepoBySlug", reflect.TypeOf((*MockTeamsService)(nil).AddTeamRepoBySlug), ctx, org, slug, owner, repo, opts)
 }
 
+// MockIssuesService is a mock of IssuesService interface
+type MockIssuesService struct {
+	ctrl     *gomock.Controller
+	recorder *MockIssuesServiceMockRecorder
+}
+
+// MockIssuesServiceMockRecorder is the mock recorder for MockIssuesService
+type MockIssuesServiceMockRecorder struct {
+	mock *MockIssuesService
+}
+
+// NewMockIssuesService creates a new mock instance
+func NewMockIssuesService(ctrl *gomock.Controller) *MockIssuesService {
+	mock := &MockIssuesService{ctrl: ctrl}
+	mock.recorder = &MockIssuesServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockIssuesService) EXPECT() *MockIssuesServiceMockRecorder {
+	return m.recorder
+}
+
+// CreateLabel mocks base method
+func (m *MockIssuesService) CreateLabel(ctx context.Context, owner, repo string, label *github.Label) (*github.Label, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateLabel", ctx, owner, repo, label)
+	ret0, _ := ret[0].(*github.Label)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateLabel indicates an expected call of CreateLabel
+func (mr *MockIssuesServiceMockRecorder) CreateLabel(ctx, owner, repo, label interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLabel", reflect.TypeOf((*MockIssuesService)(nil).CreateLabel), ctx, owner, repo, label)
+}
+
+// EditLabel mocks base method
+func (m *MockIssuesService) EditLabel(ctx context.Context, owner, repo, name string, label *github.Label) (*github.Label, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EditLabel", ctx, owner, repo, name, label)
+	ret0, _ := ret[0].(*github.Label)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// EditLabel indicates an expected call of EditLabel
+func (mr *MockIssuesServiceMockRecorder) EditLabel(ctx, owner, repo, name, label interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditLabel", reflect.TypeOf((*MockIssuesService)(nil).EditLabel), ctx, owner, repo, name, label)
+}
+
+// ListLabels mocks base method
+func (m *MockIssuesService) ListLabels(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.Label, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListLabels", ctx, owner, repo, opts)
+	ret0, _ := ret[0].([]*github.Label)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListLabels indicates an expected call of ListLabels
+func (mr *MockIssuesServiceMockRecorder) ListLabels(ctx, owner, repo, opts interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLabels", reflect.TypeOf((*MockIssuesService)(nil).ListLabels), ctx, owner, repo, opts)
+}
+
 // MockRepositoriesService is a mock of RepositoriesService interface
 type MockRepositoriesService struct {
 	ctrl     *gomock.Controller

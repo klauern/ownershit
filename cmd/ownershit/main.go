@@ -48,6 +48,11 @@ func main() {
 				Usage:       "Archive repositories",
 				Subcommands: cmd.ArchiveSubcommands,
 			},
+			{
+				Name:   "label",
+				Usage:  "set default labels for repositories",
+				Action: labelCommand,
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -125,6 +130,8 @@ func branchCommand(c *cli.Context) error {
 	return nil
 }
 
-func SetGithubClient(ctx context.Context) {
-	githubClient = shit.NewGitHubClient(ctx, shit.GitHubTokenEnv)
+func labelCommand(c *cli.Context) error {
+	log.Info().Msg("synchronizing labels on repositories")
+	shit.SyncLabels(settings, githubClient)
+	return nil
 }
