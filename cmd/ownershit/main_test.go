@@ -33,7 +33,7 @@ func Test_readConfigs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := readConfigs(tt.args.c); (err != nil) != tt.wantErr {
+			if err := readConfig(tt.args.c); (err != nil) != tt.wantErr {
 				t.Errorf("readConfigs() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

@@ -94,9 +94,6 @@ func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchP
 			Str("response-status", resp.Status).
 			Msg("Error updating repository settings")
 		resp, _ := httputil.DumpResponse(resp.Response, true)
-		if resp != nil {
-			log.Debug().Str("response-body", string(resp))
-		}
 		log.Debug().Str("response-body", string(resp))
 		return err
 	}
