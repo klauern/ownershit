@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	shit "github.com/klauern/ownershit"
@@ -103,7 +102,7 @@ func configureClient(c *cli.Context) error {
 }
 
 func readConfig(c *cli.Context) error {
-	file, err := ioutil.ReadFile(c.String("config"))
+	file, err := os.ReadFile(c.String("config"))
 	if err != nil {
 		log.Err(err).Msg("config file error")
 		return fmt.Errorf("config file error: %w", err)

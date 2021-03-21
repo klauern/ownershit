@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
@@ -100,7 +100,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 		Return(&github.Response{
 			Response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewReader([]byte("something"))),
+				Body:       io.NopCloser(bytes.NewReader([]byte("something"))),
 			},
 		}, nil)
 	teamMock.
@@ -115,7 +115,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 		Return(&github.Response{
 			Response: &http.Response{
 				StatusCode: 500,
-				Body:       ioutil.NopCloser(bytes.NewReader([]byte("error"))),
+				Body:       io.NopCloser(bytes.NewReader([]byte("error"))),
 			},
 		}, errors.New("dummy error"))
 
