@@ -43,11 +43,11 @@ func TestMain(m *testing.M) {
 }
 
 type testMocks struct {
-	ctrl      *gomock.Controller
-	client    *GitHubClient
-	teamMock  *mocks.MockTeamsService
-	repoMock  *mocks.MockRepositoriesService
-	graphMock *mocks.MockGraphQLClient
+	ctrl       *gomock.Controller
+	client     *GitHubClient
+	teamMock   *mocks.MockTeamsService
+	repoMock   *mocks.MockRepositoriesService
+	graphMock  *mocks.MockGraphQLClient
 	issuesMock *mocks.MockIssuesService
 }
 
@@ -65,11 +65,11 @@ func setupMocks(t *testing.T) *testMocks {
 		Issues:       issues,
 	}
 	return &testMocks{
-		ctrl:      ctrl,
-		client:    ghClient,
-		graphMock: graph,
-		repoMock:  repo,
-		teamMock:  teams,
+		ctrl:       ctrl,
+		client:     ghClient,
+		graphMock:  graph,
+		repoMock:   repo,
+		teamMock:   teams,
 		issuesMock: issues,
 	}
 }
