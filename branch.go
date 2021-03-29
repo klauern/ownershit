@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// SetDefaultBranch configures the default push and merge branch for a given repository.
 func (c *GitHubClient) SetDefaultBranch(ctx context.Context, owner, repo, defaultBranchName string) error {
 	r := &github.Repository{
 		DefaultBranch: github.String(defaultBranchName),
@@ -20,6 +21,7 @@ func (c *GitHubClient) SetDefaultBranch(ctx context.Context, owner, repo, defaul
 	return nil
 }
 
+// SetRepositoryDefaults sets up defaults for a given repository, which includes whether the repository supports wikis, issues, or projects.
 func (c *GitHubClient) SetRepositoryDefaults(
 	ctx context.Context,
 	owner, repo string,

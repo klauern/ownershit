@@ -14,6 +14,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// GitHubClient is a wrapper client to both the V3 REST API and V4 GraphQL API, with support for a subset of GitHub services,
+// mainly around repository management itself.
 type GitHubClient struct {
 	Teams        TeamsService
 	Repositories RepositoriesService
@@ -24,12 +26,14 @@ type GitHubClient struct {
 	Context      context.Context
 }
 
-// TeamsService is a wrapepr interface for the GitHub V3 API to support mocking and testing.
+// TeamsService is a wrapper interface for the GitHub V3 API to support mocking and testing for the Teams API endpoints.
 type TeamsService interface {
 	GetTeamBySlug(ctx context.Context, org, slug string) (*github.Team, *github.Response, error)
 	AddTeamRepoBySlug(ctx context.Context, org, slug, owner, repo string, opts *github.TeamAddTeamRepoOptions) (*github.Response, error)
 }
 
+// IssuesService is a wrapper interface for the GitHub V3 REST API for Issues management.  This interface is used for
+// mocking and testing.
 type IssuesService interface {
 	CreateLabel(ctx context.Context, owner string, repo string, label *github.Label) (*github.Label, *github.Response, error)
 	EditLabel(ctx context.Context, owner string, repo string, name string, label *github.Label) (*github.Label, *github.Response, error)
@@ -37,10 +41,12 @@ type IssuesService interface {
 	// DeleteLabel(ctx context.Context, owner string, repo string, name string) (*github.Response, error)
 }
 
+// RepositoriesService is a wrapper interface for the GitHub V3 API to support mocking and testing for the Repository API endpoints.
 type RepositoriesService interface {
 	Edit(ctx context.Context, org, repo string, repository *github.Repository) (*github.Repository, *github.Response, error)
 }
 
+// NewGitHubClient creates a new GitHub context using OAuth2.
 func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: staticToken})
@@ -60,6 +66,7 @@ func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	}
 }
 
+// AddPermissions adds a given team level repository permission.
 func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissions) error {
 	resp, err := c.Teams.
 		AddTeamRepoBySlug(
@@ -85,7 +92,8 @@ func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissio
 	return nil
 }
 
-func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchPermissions) error {
+// UpdateBranchPermissions changes the settings for branch permissions from `perms`.
+func (c *GitHubClient) UpdateBranchPermissions(org, repo string, perms *BranchPermissions) error {
 	r := &github.Repository{}
 	if perms.AllowMergeCommit != nil {
 		r.AllowMergeCommit = perms.AllowMergeCommit
@@ -115,6 +123,7 @@ func (c *GitHubClient) UpdateRepositorySettings(org, repo string, perms *BranchP
 	return nil
 }
 
+// SyncLabels updates the list of labels that can be used on issues within a repository.
 func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 	ghLabels, resp, err := c.Issues.ListLabels(c.Context, org, repo, &github.ListOptions{
 		PerPage: 100,

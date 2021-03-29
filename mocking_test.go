@@ -48,6 +48,7 @@ type testMocks struct {
 	teamMock  *mocks.MockTeamsService
 	repoMock  *mocks.MockRepositoriesService
 	graphMock *mocks.MockGraphQLClient
+	issuesMock *mocks.MockIssuesService
 }
 
 func setupMocks(t *testing.T) *testMocks {
@@ -55,11 +56,13 @@ func setupMocks(t *testing.T) *testMocks {
 	teams := mocks.NewMockTeamsService(ctrl)
 	graph := mocks.NewMockGraphQLClient(ctrl)
 	repo := mocks.NewMockRepositoriesService(ctrl)
+	issues := mocks.NewMockIssuesService(ctrl)
 	ghClient := &GitHubClient{
 		Teams:        teams,
 		Context:      context.TODO(),
 		Graph:        graph,
 		Repositories: repo,
+		Issues:       issues,
 	}
 	return &testMocks{
 		ctrl:      ctrl,
@@ -67,5 +70,6 @@ func setupMocks(t *testing.T) *testMocks {
 		graphMock: graph,
 		repoMock:  repo,
 		teamMock:  teams,
+		issuesMock: issues,
 	}
 }
