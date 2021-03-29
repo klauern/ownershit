@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"testing"
 
 	"github.com/urfave/cli/v2"
@@ -76,23 +75,6 @@ func Test_branchCommand(t *testing.T) {
 			if err := branchCommand(tt.args.c); (err != nil) != tt.wantErr {
 				t.Errorf("branchCommand() error = %v, wantErr %v", err, tt.wantErr)
 			}
-		})
-	}
-}
-
-func TestSetGithubClient(t *testing.T) {
-	type args struct {
-		ctx context.Context
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			SetGithubClient(tt.args.ctx)
 		})
 	}
 }
