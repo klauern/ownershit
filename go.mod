@@ -1,12 +1,12 @@
 module github.com/klauern/ownershit
 
-go 1.15
+go 1.16
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.9
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.5.1 // indirect
-	github.com/google/go-github/v33 v33.0.0
+	github.com/google/go-github/v34 v34.0.0
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rs/zerolog v1.21.0
