@@ -3,7 +3,7 @@ module github.com/klauern/ownershit
 go 1.15
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.9
+	github.com/AlecAivazis/survey/v2 v2.2.15
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-github/v33 v33.0.0
