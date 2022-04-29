@@ -3,7 +3,7 @@ module github.com/klauern/ownershit
 go 1.18
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.9
+	github.com/AlecAivazis/survey/v2 v2.3.4
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v34 v34.0.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -28,7 +28,7 @@ require (
 	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e // indirect
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e // indirect
-	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
+	golang.org/x/term v0.0.0-20210503060354-a79de5458b56 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
