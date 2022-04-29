@@ -34,7 +34,9 @@ query archivableRepositories {
   }
 }
 */
-type ArchivableIssuesQuery struct {
+
+// ArchivableRepositoriesQuery is a GraphQL struct to query for the list of archive-able repositories
+type ArchivableRepositoriesQuery struct {
 	Search struct {
 		PageInfo        pageInfo
 		RepositoryCount int
@@ -44,6 +46,7 @@ type ArchivableIssuesQuery struct {
 	} `graphql:"search(query: $user, type: REPOSITORY, first: $first, after: $repositoryCursor)"`
 }
 
+// ArchiveRepositoryMutation is the struct used to perform the GraphQL mutation for archiving a given repository.
 type ArchiveRepositoryMutation struct {
 	ArchiveRepository struct {
 		Repository struct {
@@ -53,12 +56,14 @@ type ArchiveRepositoryMutation struct {
 	} `graphql:"archiveRepository(input: $input)"`
 }
 
+// pageInfo is used for listing multiple pages worth of information and walking through the list iteratively.
 type pageInfo struct {
 	HasNextPage githubv4.Boolean
 	EndCursor   githubv4.String
 	StartCursor githubv4.String
 }
 
+// RepositoryInfo represents the high-level list of attributes for a given repository.
 type RepositoryInfo struct {
 	ID             githubv4.String
 	Name           githubv4.String
@@ -75,7 +80,9 @@ type RepositoryInfo struct {
 const PerPage = 100
 const OneDay = time.Hour * 24
 
-func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays, maxWatchers int) bool {
+// IsArchivable queries a repository to determine if it meets the necessary requirements for being archived.  All
+// parameters are used to determine if it should be archived.
+func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers int) bool {
 	log.Debug().Fields(map[string]interface{}{
 		"isArchived":  r.IsArchived,
 		"isFork":      r.IsFork,
@@ -90,10 +97,10 @@ func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays, maxWatchers int) bo
 	if r.IsFork {
 		return true
 	}
-	if int(r.ForkCount) > forks {
+	if int(r.ForkCount) > maxForks {
 		return true
 	}
-	if int(r.StargazerCount) > stars {
+	if int(r.StargazerCount) > maxStars {
 		return true
 	}
 	if r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(maxDays) * OneDay)) {
@@ -105,8 +112,8 @@ func (r *RepositoryInfo) IsArchivable(forks, stars, maxDays, maxWatchers int) bo
 	return false
 }
 
-func (c *GitHubClient) QueryArchivableRepos(username string, forks, stars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
-	var query ArchivableIssuesQuery
+func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
+	var query ArchivableRepositoriesQuery
 	variables := map[string]interface{}{
 		"user":             githubv4.String("user:" + username),
 		"first":            githubv4.Int(PerPage),
@@ -136,7 +143,7 @@ func (c *GitHubClient) QueryArchivableRepos(username string, forks, stars, maxDa
 		variables["repositoryCursor"] = githubv4.NewString(query.Search.PageInfo.EndCursor)
 	}
 	for i := 0; i < len(repos); i++ {
-		if repos[i].IsArchivable(forks, stars, maxDays, maxWatchers) {
+		if repos[i].IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
 			log.Debug().Str("repository", string(repos[i].Name)).Msg("repository is archivable")
 			repos = removeElement(repos, i)
 			i--

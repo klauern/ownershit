@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/go-github/v33/github"
+	"github.com/google/go-github/v34/github"
 	"github.com/klauern/ownershit/mocks"
 	"github.com/rs/zerolog"
 )
@@ -43,11 +43,12 @@ func TestMain(m *testing.M) {
 }
 
 type testMocks struct {
-	ctrl      *gomock.Controller
-	client    *GitHubClient
-	teamMock  *mocks.MockTeamsService
-	repoMock  *mocks.MockRepositoriesService
-	graphMock *mocks.MockGraphQLClient
+	ctrl       *gomock.Controller
+	client     *GitHubClient
+	teamMock   *mocks.MockTeamsService
+	repoMock   *mocks.MockRepositoriesService
+	graphMock  *mocks.MockGraphQLClient
+	issuesMock *mocks.MockIssuesService
 }
 
 func setupMocks(t *testing.T) *testMocks {
@@ -55,17 +56,20 @@ func setupMocks(t *testing.T) *testMocks {
 	teams := mocks.NewMockTeamsService(ctrl)
 	graph := mocks.NewMockGraphQLClient(ctrl)
 	repo := mocks.NewMockRepositoriesService(ctrl)
+	issues := mocks.NewMockIssuesService(ctrl)
 	ghClient := &GitHubClient{
 		Teams:        teams,
 		Context:      context.TODO(),
 		Graph:        graph,
 		Repositories: repo,
+		Issues:       issues,
 	}
 	return &testMocks{
-		ctrl:      ctrl,
-		client:    ghClient,
-		graphMock: graph,
-		repoMock:  repo,
-		teamMock:  teams,
+		ctrl:       ctrl,
+		client:     ghClient,
+		graphMock:  graph,
+		repoMock:   repo,
+		teamMock:   teams,
+		issuesMock: issues,
 	}
 }
