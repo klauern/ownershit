@@ -31,9 +31,7 @@ var defaultGoodResponse = &github.Response{
 	},
 }
 
-var (
-	githubv3 = flag.Bool("githubv3", false, "run GitHub V3 Integration Tests")
-)
+var githubv3 = flag.Bool("githubv3", false, "run GitHub V3 Integration Tests")
 
 func TestMain(m *testing.M) {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
