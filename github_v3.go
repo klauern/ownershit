@@ -8,7 +8,7 @@ import (
 	"net/http/httputil"
 	"strings"
 
-	"github.com/google/go-github/v34/github"
+	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"

@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.9
 	github.com/golang/mock v1.6.0
-	github.com/google/go-github/v34 v34.0.0
+	github.com/google/go-github/v43 v43.0.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rs/zerolog v1.26.1
 	github.com/shurcooL/githubv4 v0.0.0-20201206200315-234843c633fa
