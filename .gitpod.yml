@@ -1,8 +1,0 @@
-image:
-  file: .gitpod.Dockerfile
-
-tasks:
-  - init: go get && go build ./... && go test ./...
-  - init: task dev mocks test
-  - init: alias gm='gitmoji -c'
-    command: go run cmd/ownershit/main.go
