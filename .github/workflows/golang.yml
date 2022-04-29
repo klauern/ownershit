@@ -9,22 +9,30 @@ env:
   # CGO_ENABLED: 0
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        id: go
 
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      id: go
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-    - uses: actions/cache@v2
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Install Task
+        uses: Arduino/actions/setup-taskfile@master
+        with:
+          version: "3.0.0"
+      - name: Get dependencies
+        run: |
+          go get -v -t -d ./...
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
@@ -36,16 +44,13 @@ jobs:
       run: |
         go get -v -t -d ./...
 
-    - name: add $GOPATH/bin to path
-      run: echo "::add-path::$(go env GOPATH)/bin"
+      - name: Setup other Dependencies
+        run: |
+          task dev
+          GO111MODULE=on go get github.com/golang/mock/mockgen@latest
 
-    - name: Setup other Dependencies
-      run: |
-        task dev
-        GO111MODULE=on go get github.com/golang/mock/mockgen@latest
+      - name: Build
+        run: task build
 
-    - name: Build
-      run: task build
-
-    - name: Test
-      run: task test
+      - name: Test
+        run: task test
