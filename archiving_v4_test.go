@@ -381,5 +381,4 @@ func TestMutateArchiveRepository(t *testing.T) {
 	if err := mock.client.MutateArchiveRepository(dummyRepo); err == nil {
 		t.Error("expected error here")
 	}
-
 }
