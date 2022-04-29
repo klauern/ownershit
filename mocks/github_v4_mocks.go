@@ -6,50 +6,35 @@ package mocks
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	githubv4 "github.com/shurcooL/githubv4"
+	reflect "reflect"
 )
 
-// MockGraphQLClient is a mock of GraphQLClient interface.
+// MockGraphQLClient is a mock of GraphQLClient interface
 type MockGraphQLClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockGraphQLClientMockRecorder
 }
 
-// MockGraphQLClientMockRecorder is the mock recorder for MockGraphQLClient.
+// MockGraphQLClientMockRecorder is the mock recorder for MockGraphQLClient
 type MockGraphQLClientMockRecorder struct {
 	mock *MockGraphQLClient
 }
 
-// NewMockGraphQLClient creates a new mock instance.
+// NewMockGraphQLClient creates a new mock instance
 func NewMockGraphQLClient(ctrl *gomock.Controller) *MockGraphQLClient {
 	mock := &MockGraphQLClient{ctrl: ctrl}
 	mock.recorder = &MockGraphQLClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use.
+// EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockGraphQLClient) EXPECT() *MockGraphQLClientMockRecorder {
 	return m.recorder
 }
 
-// Mutate mocks base method.
-func (m_2 *MockGraphQLClient) Mutate(ctx context.Context, m interface{}, input githubv4.Input, variables map[string]interface{}) error {
-	m_2.ctrl.T.Helper()
-	ret := m_2.ctrl.Call(m_2, "Mutate", ctx, m, input, variables)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Mutate indicates an expected call of Mutate.
-func (mr *MockGraphQLClientMockRecorder) Mutate(ctx, m, input, variables interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mutate", reflect.TypeOf((*MockGraphQLClient)(nil).Mutate), ctx, m, input, variables)
-}
-
-// Query mocks base method.
+// Query mocks base method
 func (m *MockGraphQLClient) Query(ctx context.Context, q interface{}, variables map[string]interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Query", ctx, q, variables)
@@ -57,8 +42,22 @@ func (m *MockGraphQLClient) Query(ctx context.Context, q interface{}, variables 
 	return ret0
 }
 
-// Query indicates an expected call of Query.
+// Query indicates an expected call of Query
 func (mr *MockGraphQLClientMockRecorder) Query(ctx, q, variables interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockGraphQLClient)(nil).Query), ctx, q, variables)
+}
+
+// Mutate mocks base method
+func (m_2 *MockGraphQLClient) Mutate(ctx context.Context, m interface{}, input githubv4.Input, variables map[string]interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "Mutate", ctx, m, input, variables)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Mutate indicates an expected call of Mutate
+func (mr *MockGraphQLClientMockRecorder) Mutate(ctx, m, input, variables interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Mutate", reflect.TypeOf((*MockGraphQLClient)(nil).Mutate), ctx, m, input, variables)
 }

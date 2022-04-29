@@ -25,7 +25,8 @@ func (c *GitHubClient) SetDefaultBranch(ctx context.Context, owner, repo, defaul
 func (c *GitHubClient) SetRepositoryDefaults(
 	ctx context.Context,
 	owner, repo string,
-	wiki, issues, projects bool) error {
+	wiki, issues, projects bool,
+) error {
 	r := &github.Repository{
 		HasWiki:     github.Bool(wiki),
 		HasIssues:   github.Bool(issues),
