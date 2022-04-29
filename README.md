@@ -1,14 +1,11 @@
-[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/klauern/ownershit)
-
 # Ownershit
 
 Manage repository ownership with your organization's repositories.
 
 ## Usage
 
-This tool expects a `yaml` file called `repositories.yaml` in the path you run this, 
+This tool expects a `yaml` file called `repositories.yaml` in the path you run this,
 but you can override this with the `--config` flag.
-
 
 ## `repositories.yaml`
 
@@ -37,4 +34,3 @@ repositories:
 ```
 go run main.go
 ```
-
