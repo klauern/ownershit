@@ -33,6 +33,7 @@ type PermissionsSettings struct {
 	TeamPermissions   []*Permissions `yaml:"team"`
 	Repositories      []*Repository  `yaml:"repositories"`
 	Organization      *string        `yaml:"organization"`
+	DefaultLabels     []RepoLabel    `yaml:"default_labels"`
 }
 
 type Repository struct {
@@ -40,6 +41,14 @@ type Repository struct {
 	Wiki     *bool
 	Issues   *bool
 	Projects *bool
+}
+
+type RepoLabel struct {
+	Name        string
+	Color       string
+	Emoji       string
+	Description string
+	oldLabel    string
 }
 
 // GitHubTokenEnv sets the GitHub Token from the environment variable.
@@ -67,7 +76,7 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 				}
 			}
 		}
-		if err := client.UpdateRepositorySettings(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
+		if err := client.UpdateBranchPermissions(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
 			log.Err(err).
 				Str("repository", *repo.Name).
 				Str("organization", *settings.Organization).
@@ -103,8 +112,19 @@ func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubCl
 			Bool("merges", *settings.AllowMergeCommit).
 			Bool("rebase-merge", *settings.AllowRebaseMerge).
 			Msg("Updating settings")
-		if err := client.UpdateRepositorySettings(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
+		if err := client.UpdateBranchPermissions(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
 			log.Err(err).Str("repository", *repo.Name).Str("organization", *settings.Organization).Msg("updating repository settings")
+		}
+	}
+}
+
+func SyncLabels(settings *PermissionsSettings, client *GitHubClient) {
+	for _, repo := range settings.Repositories {
+		log.Info().
+			Str("repository", *repo.Name).
+			Msg("Updating Labels")
+		if err := client.SyncLabels(*settings.Organization, *repo.Name, settings.DefaultLabels); err != nil {
+			log.Err(err).Msg("synchronizing Labels")
 		}
 	}
 }

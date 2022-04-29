@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/google/go-github/v33/github"
+	"github.com/google/go-github/v34/github"
 	"github.com/klauern/ownershit/mocks"
 )
 
@@ -57,7 +57,7 @@ func TestOmitPermFixes(t *testing.T) {
 		})).Return(nil, defaultGoodResponse, nil)
 
 	// set default true for everything
-	err := client.UpdateRepositorySettings("klauern", "ownershit", &BranchPermissions{
+	err := client.UpdateBranchPermissions("klauern", "ownershit", &BranchPermissions{
 		AllowMergeCommit: boolPtr(true),
 		AllowRebaseMerge: boolPtr(true),
 		AllowSquashMerge: boolPtr(true),
@@ -66,7 +66,7 @@ func TestOmitPermFixes(t *testing.T) {
 		t.Error("did not expect error")
 	}
 
-	err = client.UpdateRepositorySettings("klauern", "ownershit", &BranchPermissions{
+	err = client.UpdateBranchPermissions("klauern", "ownershit", &BranchPermissions{
 		AllowMergeCommit: boolPtr(false),
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func TestOmitPermFixes(t *testing.T) {
 	repoSvc.EXPECT().Edit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(&github.Repository{
 		AllowMergeCommit: boolPtr(true),
 	})).Return(nil, mockGitHubResponse(), fmt.Errorf("erroring thing"))
-	if err = client.UpdateRepositorySettings("klauern", "ownershit", &BranchPermissions{
+	if err = client.UpdateBranchPermissions("klauern", "ownershit", &BranchPermissions{
 		AllowMergeCommit: boolPtr(true),
 	}); err == nil {
 		t.Error("error expected here")
@@ -100,7 +100,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 		Return(&github.Response{
 			Response: &http.Response{
 				StatusCode: 200,
-				Body:       ioutil.NopCloser(bytes.NewReader([]byte("something"))),
+				Body:       io.NopCloser(bytes.NewReader([]byte("something"))),
 			},
 		}, nil)
 	teamMock.
@@ -115,7 +115,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 		Return(&github.Response{
 			Response: &http.Response{
 				StatusCode: 500,
-				Body:       ioutil.NopCloser(bytes.NewReader([]byte("error"))),
+				Body:       io.NopCloser(bytes.NewReader([]byte("error"))),
 			},
 		}, errors.New("dummy error"))
 

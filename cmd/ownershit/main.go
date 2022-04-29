@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	shit "github.com/klauern/ownershit"
@@ -15,8 +13,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var settings *shit.PermissionsSettings
-var githubClient *shit.GitHubClient
+var (
+	settings     *shit.PermissionsSettings
+	githubClient *shit.GitHubClient
+)
 
 var (
 	version = "dev"
@@ -47,6 +47,11 @@ func main() {
 				Usage:       "Archive repositories",
 				Subcommands: cmd.ArchiveSubcommands,
 			},
+			{
+				Name:   "label",
+				Usage:  "set default labels for repositories",
+				Action: labelCommand,
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -66,7 +71,7 @@ func main() {
 		Usage:   "fix up team ownership of your repositories in an organization",
 		Action:  cli.ShowAppHelp,
 		Authors: []*cli.Author{{Name: "Nick Klauer", Email: "klauer@gmail.com"}},
-		Before:  readConfigs,
+		Before:  configureClient,
 		Version: version,
 		ExtraInfo: func() map[string]string {
 			return map[string]string{
@@ -83,14 +88,24 @@ func main() {
 	}
 }
 
-func readConfigs(c *cli.Context) error {
-	file, err := ioutil.ReadFile(c.String("config"))
+func configureClient(c *cli.Context) error {
+	err := readConfig(c)
 	if err != nil {
-		log.Err(err).Msg("config file error")
-		return fmt.Errorf("config file error: %w", err)
+		return fmt.Errorf("reading config file: %w", err)
 	}
 	if c.Bool("debug") {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	githubClient = shit.NewGitHubClient(c.Context, shit.GitHubTokenEnv)
+	return nil
+}
+
+func readConfig(c *cli.Context) error {
+	file, err := os.ReadFile(c.String("config"))
+	if err != nil {
+		log.Err(err).Msg("config file error")
+		return fmt.Errorf("config file error: %w", err)
 	}
 
 	settings = &shit.PermissionsSettings{}
@@ -98,8 +113,6 @@ func readConfigs(c *cli.Context) error {
 		log.Err(err).Msg("YAML unmarshal error with config file")
 		return fmt.Errorf("config file yaml unmarshal error: %w", err)
 	}
-
-	SetGithubClient(context.Background())
 
 	return nil
 }
@@ -116,6 +129,8 @@ func branchCommand(c *cli.Context) error {
 	return nil
 }
 
-func SetGithubClient(ctx context.Context) {
-	githubClient = shit.NewGitHubClient(ctx, shit.GitHubTokenEnv)
+func labelCommand(c *cli.Context) error {
+	log.Info().Msg("synchronizing labels on repositories")
+	shit.SyncLabels(settings, githubClient)
+	return nil
 }
