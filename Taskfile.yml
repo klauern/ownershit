@@ -38,7 +38,7 @@ tasks:
   mocks:
     desc: generate the mocks for use with testing and stubbing
     cmds:
-      - go generate
+      - go generate ./...
 
   test-query:
     desc: run a raw query with my name
