@@ -171,7 +171,7 @@ func (c *GitHubV4Client) GetRateLimit() (RateLimit, error) {
 
 func (c *GitHubV4Client) SyncLabels(repo string, labels []Label) error {
 	labelsMap := map[string]Label{}
-	labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, "zendesk")
+	labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, "zendesk", "")
 	repoId := labelResp.Repository.Id
 	if err != nil {
 		return fmt.Errorf("can't get labels: %w", err)

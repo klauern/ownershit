@@ -743,8 +743,9 @@ func (v *__DeleteLabelInput) GetInput() DeleteLabelInput { return v.Input }
 
 // __GetRepositoryIssueLabelsInput is used internally by genqlient
 type __GetRepositoryIssueLabelsInput struct {
-	Name  string `json:"name"`
-	Owner string `json:"owner"`
+	Name   string `json:"name"`
+	Owner  string `json:"owner"`
+	Cursor string `json:"cursor,omitempty"`
 }
 
 // GetName returns __GetRepositoryIssueLabelsInput.Name, and is useful for accessing the field via an interface.
@@ -752,6 +753,9 @@ func (v *__GetRepositoryIssueLabelsInput) GetName() string { return v.Name }
 
 // GetOwner returns __GetRepositoryIssueLabelsInput.Owner, and is useful for accessing the field via an interface.
 func (v *__GetRepositoryIssueLabelsInput) GetOwner() string { return v.Owner }
+
+// GetCursor returns __GetRepositoryIssueLabelsInput.Cursor, and is useful for accessing the field via an interface.
+func (v *__GetRepositoryIssueLabelsInput) GetCursor() string { return v.Cursor }
 
 // __GetTeamsInput is used internally by genqlient
 type __GetTeamsInput struct {
@@ -873,10 +877,12 @@ func GetRepositoryIssueLabels(
 	client graphql.Client,
 	name string,
 	owner string,
+	cursor string,
 ) (*GetRepositoryIssueLabelsResponse, error) {
 	__input := __GetRepositoryIssueLabelsInput{
-		Name:  name,
-		Owner: owner,
+		Name:   name,
+		Owner:  owner,
+		Cursor: cursor,
 	}
 	var err error
 
@@ -885,10 +891,10 @@ func GetRepositoryIssueLabels(
 		ctx,
 		"GetRepositoryIssueLabels",
 		`
-query GetRepositoryIssueLabels ($name: String = "", $owner: String = "zendesk") {
+query GetRepositoryIssueLabels ($name: String = "", $owner: String = "zendesk", $cursor: String) {
 	repository(name: $name, owner: $owner) {
 		id
-		labels(first: 100) {
+		labels(first: 100, after: $cursor) {
 			edges {
 				node {
 					name
