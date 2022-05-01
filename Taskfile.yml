@@ -16,7 +16,8 @@ tasks:
     desc: Build locally
     cmds:
       - go build ./cmd/ownershit/main.go
-      - rm main
+      - go build ./cmd/genqlient
+      - rm main genqlient
 
   install:
     desc: install binary locally
