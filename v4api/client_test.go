@@ -2,22 +2,23 @@ package v4api
 
 import (
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-retryablehttp"
-	mock_graphql "github.com/klauern/ownershit/v4api/mocks"
+	mockgraphql "github.com/klauern/ownershit/v4api/mocks"
 )
 
 type testMocks struct {
 	ctrl        *gomock.Controller
-	graphQLMock *mock_graphql.MockClient
+	graphQLMock *mockgraphql.MockClient
 }
 
 func setupMocks(t *testing.T) *testMocks {
 	ctrl := gomock.NewController(t)
-	graphQLClient := mock_graphql.NewMockClient(ctrl)
+	graphQLClient := mockgraphql.NewMockClient(ctrl)
 
 	return &testMocks{
 		ctrl:        ctrl,
