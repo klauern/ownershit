@@ -2,14 +2,15 @@
 
 version: "3"
 
+env:
+  GO111MODULE: on
+
 tasks:
   dev:
     desc: set up development environment
-    env:
-      GO111MODULE: on
     cmds:
-      - go get ./...
-      - go get github.com/golang/mock/mockgen@latest
+      - go mod tidy
+      - go install github.com/golang/mock/mockgen
 
   build:
     desc: Build locally
@@ -38,11 +39,6 @@ tasks:
     cmds:
       - go generate
 
-  run:
-    desc: run off of source
-    cmds:
-      - go run *.go
-
   test-query:
     desc: run a raw query with my name
     cmds:
@@ -58,3 +54,13 @@ tasks:
     cmds:
       - task: test
       - cmd: go tool cover -html=coverage.out
+
+  gql:download-schema:
+    desc: download GitHub's GraphQL schema
+    cmds:
+      - cmd: curl -o schema.graphql https://docs.github.com/public/schema.docs.graphql
+
+  gql:generate-client:
+    desc: create GraphQL generated client for GitHub v4
+    cmds:
+      - cmd: go run github.com/Khan/genqlient

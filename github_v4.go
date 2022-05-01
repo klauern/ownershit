@@ -52,7 +52,8 @@ func (c *GitHubClient) SetBranchRules(
 	branchPattern *string,
 	approverCount *int,
 	requireCodeOwners,
-	requiresApprovingReviews *bool) error {
+	requiresApprovingReviews *bool,
+) error {
 	var mutation struct {
 		CreateBranchProtectionRule struct {
 			ClientMutationID     githubv4.ID
@@ -115,4 +116,33 @@ func (c *GitHubClient) GetRepository(name, owner *string) (githubv4.ID, error) {
 		Bool("project", bool(query.Repository.HasProjectsEnabled)).
 		Msg("get repository results")
 	return query.Repository.ID, nil
+}
+
+type GetRateLimitQuery struct {
+	Viewer struct {
+		Login githubv4.String
+	}
+	RateLimit struct {
+		Limit     githubv4.Int
+		Cost      githubv4.Int
+		Remaining githubv4.Int
+		ResetAt   githubv4.DateTime
+	}
+}
+
+func (c *GitHubClient) GetRateLimit() {
+	query := &GetRateLimitQuery{}
+	err := c.Graph.Query(c.Context, query, nil)
+	if err != nil {
+		log.Err(err).
+			Msg("error retrieving rate limit")
+		return
+	}
+	log.Info().
+		Str("login", string(query.Viewer.Login)).
+		Int("limit", int(query.RateLimit.Limit)).
+		Int("cost", int(query.RateLimit.Cost)).
+		Int("remaining", int(query.RateLimit.Remaining)).
+		Time("resetAt", query.RateLimit.ResetAt.Time).
+		Msg("get rate limit results")
 }

@@ -52,6 +52,11 @@ func main() {
 				Usage:  "set default labels for repositories",
 				Action: labelCommand,
 			},
+			{
+				Name:   "ratelimit",
+				Usage:  "get ratelimit information for the GitHub GraphQL v4 API",
+				Action: rateLimitCommand,
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -132,5 +137,11 @@ func branchCommand(c *cli.Context) error {
 func labelCommand(c *cli.Context) error {
 	log.Info().Msg("synchronizing labels on repositories")
 	shit.SyncLabels(settings, githubClient)
+	return nil
+}
+
+func rateLimitCommand(c *cli.Context) error {
+	log.Info().Msg("getting ratelimit information")
+	githubClient.GetRateLimit()
 	return nil
 }
