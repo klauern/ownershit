@@ -1,4 +1,4 @@
-query getTeams(
+query GetTeams(
   $order: TeamOrder!
   $first: Int
   # @genqlient(omitempty: true)
@@ -44,7 +44,7 @@ query getTeams(
   }
 }
 
-query getRateLimit {
+query GetRateLimit {
   viewer {
     login
   }
@@ -56,8 +56,9 @@ query getRateLimit {
   }
 }
 
-query repositoryIssueLabels($name: String = "", $owner: String = "zendesk") {
+query GetRepositoryIssueLabels($name: String = "", $owner: String = "zendesk") {
   repository(name: $name, owner: $owner) {
+    id
     labels(first: 100) {
       edges {
         node {
@@ -68,6 +69,7 @@ query repositoryIssueLabels($name: String = "", $owner: String = "zendesk") {
           isDefault
           updatedAt
           url
+          id
         }
       }
       pageInfo {
@@ -79,7 +81,7 @@ query repositoryIssueLabels($name: String = "", $owner: String = "zendesk") {
   }
 }
 
-mutation createLabel($input: CreateLabelInput!) {
+mutation CreateLabel($input: CreateLabelInput!) {
   createLabel(input: $input) {
     label {
       name
@@ -93,7 +95,7 @@ mutation createLabel($input: CreateLabelInput!) {
   }
 }
 
-mutation updateLabel($input: UpdateLabelInput!) {
+mutation UpdateLabel($input: UpdateLabelInput!) {
   updateLabel(input: $input) {
     label {
       name
@@ -107,7 +109,7 @@ mutation updateLabel($input: UpdateLabelInput!) {
   }
 }
 
-mutation deleteLabel($input: DeleteLabelInput!) {
+mutation DeleteLabel($input: DeleteLabelInput!) {
   deleteLabel(input: $input) {
     clientMutationId
   }
