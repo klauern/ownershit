@@ -56,10 +56,15 @@ query GetRateLimit {
   }
 }
 
-query GetRepositoryIssueLabels($name: String = "", $owner: String = "zendesk") {
+query GetRepositoryIssueLabels(
+  $name: String = ""
+  $owner: String = "zendesk"
+  # @genqlient(omitempty: true)
+  $cursor: String
+) {
   repository(name: $name, owner: $owner) {
     id
-    labels(first: 100) {
+    labels(first: 100, after: $cursor) {
       edges {
         node {
           name
