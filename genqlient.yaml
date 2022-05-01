@@ -1,0 +1,12 @@
+# Default genqlient config; for full documentation see:
+# https://github.com/Khan/genqlient/blob/main/docs/genqlient.yaml
+schema: schema.graphql
+operations:
+- genqlient.graphql
+generated: v4api/generated.go
+package: v4api
+bindings:
+  DateTime:
+    type: time.Time
+  URI:
+    type: net/url.URL

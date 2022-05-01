@@ -1,0 +1,114 @@
+query getTeams(
+  $order: TeamOrder!
+  $first: Int
+  # @genqlient(omitempty: true)
+  $cursor: String
+) {
+  organization(login: "zendesk") {
+    teams(orderBy: $order, first: $first, after: $cursor) {
+      pageInfo {
+        hasNextPage
+        startCursor
+        endCursor
+      }
+      edges {
+        node {
+          name
+          members {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          childTeams(first: 100) {
+            edges {
+              node {
+                id
+              }
+            }
+          }
+          description
+        }
+      }
+    }
+  }
+  viewer {
+    login
+  }
+  rateLimit {
+    limit
+    cost
+    remaining
+    resetAt
+  }
+}
+
+query getRateLimit {
+  viewer {
+    login
+  }
+  rateLimit {
+    limit
+    cost
+    remaining
+    resetAt
+  }
+}
+
+query repositoryIssueLabels($name: String = "", $owner: String = "zendesk") {
+  repository(name: $name, owner: $owner) {
+    labels(first: 100) {
+      edges {
+        node {
+          name
+          createdAt
+          color
+          description
+          isDefault
+          updatedAt
+          url
+        }
+      }
+      pageInfo {
+        endCursor
+        startCursor
+        hasNextPage
+      }
+    }
+  }
+}
+
+mutation createLabel($input: CreateLabelInput!) {
+  createLabel(input: $input) {
+    label {
+      name
+      createdAt
+      color
+      description
+      isDefault
+      updatedAt
+      url
+    }
+  }
+}
+
+mutation updateLabel($input: UpdateLabelInput!) {
+  updateLabel(input: $input) {
+    label {
+      name
+      createdAt
+      color
+      description
+      isDefault
+      updatedAt
+      url
+    }
+  }
+}
+
+mutation deleteLabel($input: DeleteLabelInput!) {
+  deleteLabel(input: $input) {
+    clientMutationId
+  }
+}
