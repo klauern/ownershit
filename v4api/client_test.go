@@ -100,16 +100,67 @@ func Test_buildClient(t *testing.T) {
 
 func Test_parseEnv(t *testing.T) {
 	tests := []struct {
-		name string
-		want *retryParams
+		name    string
+		envVars map[string]string
+		want    *retryParams
 	}{
-		// TODO: Add test cases.
+		{
+			name: "partial evaluation",
+			envVars: map[string]string{
+				"OWNERSHIT_MAX_RETRIES": "10",
+			},
+			want: &retryParams{
+				TimeoutSeconds:      10,
+				MaxRetries:          10,
+				Multiplier:          2.0,
+				WaitIntervalSeconds: 10,
+			},
+		},
+		{
+			name: "partial evaluation",
+			envVars: map[string]string{
+				"OWNERSHIT_MAX_RETRIES":     "1",
+				"OWNERSHIT_TIMEOUT_SECONDS": "12345",
+			},
+			want: &retryParams{
+				TimeoutSeconds:      12345,
+				MaxRetries:          1,
+				Multiplier:          2.0,
+				WaitIntervalSeconds: 10,
+			},
+		},
+		{
+			name: "override all",
+			envVars: map[string]string{
+				"OWNERSHIT_MAX_RETRIES":           "1",
+				"OWNERSHIT_TIMEOUT_SECONDS":       "12345",
+				"OWNERSHIT_BACKOFF_MULTIPLIER":    "4546",
+				"OWNERSHIT_WAIT_INTERVAL_SECONDS": "789",
+			},
+			want: &retryParams{
+				MaxRetries:          1,
+				TimeoutSeconds:      12345,
+				Multiplier:          4546.0,
+				WaitIntervalSeconds: 789,
+			},
+		},
 	}
 	for _, tt := range tests {
+		oldEnviron := map[string]string{}
+		for k, v := range tt.envVars {
+			oldEnviron[k] = os.Getenv(k)
+			err := os.Setenv(k, v)
+			if err != nil {
+				t.Errorf("unable to set environment variable %s: %v", k, err)
+			}
+		}
 		t.Run(tt.name, func(t *testing.T) {
 			if got := parseEnv(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseEnv() = %v, want %v", got, tt.want)
 			}
 		})
+		for k, v := range oldEnviron {
+			os.Setenv(k, v)
+		}
 	}
 }
