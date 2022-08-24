@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	graphql "github.com/Khan/genqlient/graphql"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -35,15 +36,15 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // MakeRequest mocks base method.
-func (m *MockClient) MakeRequest(arg0 context.Context, arg1, arg2 string, arg3, arg4 interface{}) error {
+func (m *MockClient) MakeRequest(arg0 context.Context, arg1 *graphql.Request, arg2 *graphql.Response) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MakeRequest", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "MakeRequest", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MakeRequest indicates an expected call of MakeRequest.
-func (mr *MockClientMockRecorder) MakeRequest(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) MakeRequest(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeRequest", reflect.TypeOf((*MockClient)(nil).MakeRequest), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MakeRequest", reflect.TypeOf((*MockClient)(nil).MakeRequest), arg0, arg1, arg2)
 }

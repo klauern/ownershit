@@ -786,16 +786,9 @@ func CreateLabel(
 	client graphql.Client,
 	input CreateLabelInput,
 ) (*CreateLabelResponse, error) {
-	__input := __CreateLabelInput{
-		Input: input,
-	}
-	var err error
-
-	var retval CreateLabelResponse
-	err = client.MakeRequest(
-		ctx,
-		"CreateLabel",
-		`
+	req := &graphql.Request{
+		OpName: "CreateLabel",
+		Query: `
 mutation CreateLabel ($input: CreateLabelInput!) {
 	createLabel(input: $input) {
 		label {
@@ -810,10 +803,22 @@ mutation CreateLabel ($input: CreateLabelInput!) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__CreateLabelInput{
+			Input: input,
+		},
+	}
+	var err error
+
+	var data CreateLabelResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func DeleteLabel(
@@ -821,39 +826,40 @@ func DeleteLabel(
 	client graphql.Client,
 	input DeleteLabelInput,
 ) (*DeleteLabelResponse, error) {
-	__input := __DeleteLabelInput{
-		Input: input,
-	}
-	var err error
-
-	var retval DeleteLabelResponse
-	err = client.MakeRequest(
-		ctx,
-		"DeleteLabel",
-		`
+	req := &graphql.Request{
+		OpName: "DeleteLabel",
+		Query: `
 mutation DeleteLabel ($input: DeleteLabelInput!) {
 	deleteLabel(input: $input) {
 		clientMutationId
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__DeleteLabelInput{
+			Input: input,
+		},
+	}
+	var err error
+
+	var data DeleteLabelResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func GetRateLimit(
 	ctx context.Context,
 	client graphql.Client,
 ) (*GetRateLimitResponse, error) {
-	var err error
-
-	var retval GetRateLimitResponse
-	err = client.MakeRequest(
-		ctx,
-		"GetRateLimit",
-		`
+	req := &graphql.Request{
+		OpName: "GetRateLimit",
+		Query: `
 query GetRateLimit {
 	viewer {
 		login
@@ -866,10 +872,19 @@ query GetRateLimit {
 	}
 }
 `,
-		&retval,
-		nil,
+	}
+	var err error
+
+	var data GetRateLimitResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func GetRepositoryIssueLabels(
@@ -879,18 +894,9 @@ func GetRepositoryIssueLabels(
 	owner string,
 	cursor string,
 ) (*GetRepositoryIssueLabelsResponse, error) {
-	__input := __GetRepositoryIssueLabelsInput{
-		Name:   name,
-		Owner:  owner,
-		Cursor: cursor,
-	}
-	var err error
-
-	var retval GetRepositoryIssueLabelsResponse
-	err = client.MakeRequest(
-		ctx,
-		"GetRepositoryIssueLabels",
-		`
+	req := &graphql.Request{
+		OpName: "GetRepositoryIssueLabels",
+		Query: `
 query GetRepositoryIssueLabels ($name: String = "", $owner: String = "zendesk", $cursor: String) {
 	repository(name: $name, owner: $owner) {
 		id
@@ -916,10 +922,24 @@ query GetRepositoryIssueLabels ($name: String = "", $owner: String = "zendesk", 
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__GetRepositoryIssueLabelsInput{
+			Name:   name,
+			Owner:  owner,
+			Cursor: cursor,
+		},
+	}
+	var err error
+
+	var data GetRepositoryIssueLabelsResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func GetTeams(
@@ -929,18 +949,9 @@ func GetTeams(
 	first int,
 	cursor string,
 ) (*GetTeamsResponse, error) {
-	__input := __GetTeamsInput{
-		Order:  order,
-		First:  first,
-		Cursor: cursor,
-	}
-	var err error
-
-	var retval GetTeamsResponse
-	err = client.MakeRequest(
-		ctx,
-		"GetTeams",
-		`
+	req := &graphql.Request{
+		OpName: "GetTeams",
+		Query: `
 query GetTeams ($order: TeamOrder!, $first: Int, $cursor: String) {
 	organization(login: "zendesk") {
 		teams(orderBy: $order, first: $first, after: $cursor) {
@@ -982,10 +993,24 @@ query GetTeams ($order: TeamOrder!, $first: Int, $cursor: String) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__GetTeamsInput{
+			Order:  order,
+			First:  first,
+			Cursor: cursor,
+		},
+	}
+	var err error
+
+	var data GetTeamsResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
 
 func UpdateLabel(
@@ -993,16 +1018,9 @@ func UpdateLabel(
 	client graphql.Client,
 	input UpdateLabelInput,
 ) (*UpdateLabelResponse, error) {
-	__input := __UpdateLabelInput{
-		Input: input,
-	}
-	var err error
-
-	var retval UpdateLabelResponse
-	err = client.MakeRequest(
-		ctx,
-		"UpdateLabel",
-		`
+	req := &graphql.Request{
+		OpName: "UpdateLabel",
+		Query: `
 mutation UpdateLabel ($input: UpdateLabelInput!) {
 	updateLabel(input: $input) {
 		label {
@@ -1017,8 +1035,20 @@ mutation UpdateLabel ($input: UpdateLabelInput!) {
 	}
 }
 `,
-		&retval,
-		&__input,
+		Variables: &__UpdateLabelInput{
+			Input: input,
+		},
+	}
+	var err error
+
+	var data UpdateLabelResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
 	)
-	return &retval, err
+
+	return &data, err
 }
