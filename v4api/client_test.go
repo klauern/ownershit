@@ -105,19 +105,19 @@ func Test_parseEnv(t *testing.T) {
 		want    *retryParams
 	}{
 		{
-			name: "partial evaluation",
+			name: "partial evaluation 1",
 			envVars: map[string]string{
 				"OWNERSHIT_MAX_RETRIES": "10",
 			},
 			want: &retryParams{
-				TimeoutSeconds:      10,
+				TimeoutSeconds:      120,
 				MaxRetries:          10,
 				Multiplier:          2.0,
 				WaitIntervalSeconds: 10,
 			},
 		},
 		{
-			name: "partial evaluation",
+			name: "partial evaluation 2",
 			envVars: map[string]string{
 				"OWNERSHIT_MAX_RETRIES":     "1",
 				"OWNERSHIT_TIMEOUT_SECONDS": "12345",
