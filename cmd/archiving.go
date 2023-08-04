@@ -19,10 +19,11 @@ var username string
 
 var client *shit.GitHubClient
 var (
-	forks    int
-	stars    int
-	days     int
-	watchers int
+	forks        int
+	stars        int
+	days         int
+	watchers     int
+	allowForking bool
 )
 
 var archiveFlags = []cli.Flag{
@@ -55,6 +56,11 @@ var archiveFlags = []cli.Flag{
 		Usage:       "maximum number of watchers before considering for archival",
 		Destination: &watchers,
 		Value:       0,
+	},
+	&cli.BoolFlag{
+		Name:        "allowForking",
+		Usage:       "allow forking of the repository",
+		Destination: &allowForking,
 	},
 }
 
