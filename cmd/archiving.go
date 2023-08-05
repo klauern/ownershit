@@ -23,6 +23,7 @@ var (
 	stars    int
 	days     int
 	watchers int
+	forking  bool
 )
 
 var archiveFlags = []cli.Flag{
@@ -55,6 +56,12 @@ var archiveFlags = []cli.Flag{
 		Usage:       "maximum number of watchers before considering for archival",
 		Destination: &watchers,
 		Value:       0,
+	},
+	&cli.BoolFlag{
+		Name:        "forking",
+		Usage:       "enable or disable the forking of repositories",
+		Destination: &forking,
+		Value:       true,
 	},
 }
 
@@ -90,9 +97,10 @@ func queryCommand(c *cli.Context) error {
 			"stars":    stars,
 			"days":     days,
 			"watchers": watchers,
+			"forking":  forking,
 		}).
 		Msgf("querying with parms")
-	repos, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
+	repos, err := client.QueryArchivableRepos(username, forks, stars, days, watchers, forking)
 	if err != nil {
 		return err
 	}
@@ -124,9 +132,10 @@ func executeCommand(c *cli.Context) error {
 			"stars":    stars,
 			"days":     days,
 			"watchers": watchers,
+			"forking":  forking,
 		}).
 		Msgf("executing Archive with parms")
-	issues, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
+	issues, err := client.QueryArchivableRepos(username, forks, stars, days, watchers, forking)
 	if err != nil {
 		return err
 	}
