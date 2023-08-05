@@ -22,9 +22,10 @@ func TestMapPermsWithGitHub(t *testing.T) {
 		Level: stringPtr(string(Admin)),
 		Team:  &owner,
 	}
+	forking := true
 
 	client := defaultGitHubClient()
-	err := client.AddPermissions(owner, "non-existent-repo", perms)
+	err := client.AddPermissions(owner, "non-existent-repo", perms, forking)
 	if err == nil {
 		t.Error("expected error on non-existent repo")
 	}
@@ -57,18 +58,19 @@ func TestOmitPermFixes(t *testing.T) {
 		})).Return(nil, defaultGoodResponse, nil)
 
 	// set default true for everything
+	forking := true
 	err := client.UpdateBranchPermissions("klauern", "ownershit", &BranchPermissions{
 		AllowMergeCommit: boolPtr(true),
 		AllowRebaseMerge: boolPtr(true),
 		AllowSquashMerge: boolPtr(true),
-	})
+	}, forking)
 	if err != nil {
 		t.Error("did not expect error")
 	}
 
 	err = client.UpdateBranchPermissions("klauern", "ownershit", &BranchPermissions{
 		AllowMergeCommit: boolPtr(false),
-	})
+	}, forking)
 	if err != nil {
 		t.Error("error not expected")
 	}
@@ -78,7 +80,7 @@ func TestOmitPermFixes(t *testing.T) {
 	})).Return(nil, mockGitHubResponse(), fmt.Errorf("erroring thing"))
 	if err = client.UpdateBranchPermissions("klauern", "ownershit", &BranchPermissions{
 		AllowMergeCommit: boolPtr(true),
-	}); err == nil {
+	}, forking); err == nil {
 		t.Error("error expected here")
 	}
 }
