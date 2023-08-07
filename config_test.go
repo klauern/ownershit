@@ -70,6 +70,7 @@ func TestMapPermissions(t *testing.T) {
 	type args struct {
 		settings *PermissionsSettings
 		client   *GitHubClient
+		forking  bool
 	}
 	tests := []struct {
 		name string
@@ -80,12 +81,21 @@ func TestMapPermissions(t *testing.T) {
 			args: args{
 				settings: generateDefaultPermissionsSettings(),
 				client:   mocks.client,
+				forking:  true,
+			},
+		},
+		{
+			name: "test no forking",
+			args: args{
+				settings: generateDefaultPermissionsSettings(),
+				client:   mocks.client,
+				forking:  false,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			MapPermissions(tt.args.settings, tt.args.client)
+			MapPermissions(tt.args.settings, tt.args.client, tt.args.forking)
 		})
 	}
 }

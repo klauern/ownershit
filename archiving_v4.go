@@ -82,7 +82,7 @@ const OneDay = time.Hour * 24
 
 // IsArchivable queries a repository to determine if it meets the necessary requirements for being archived.  All
 // parameters are used to determine if it should be archived.
-func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers int) bool {
+func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers int, forking bool) bool {
 	log.Debug().Fields(map[string]interface{}{
 		"isArchived":  r.IsArchived,
 		"isFork":      r.IsFork,
@@ -90,12 +90,13 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 		"stars":       r.StargazerCount,
 		"lastUpdated": r.UpdatedAt,
 		"watchers":    r.Watchers.TotalCount,
+		"forking":     forking,
 	})
 	if r.IsArchived {
 		return true
 	}
-	if r.IsFork {
-		return true
+	if r.IsFork && !forking {
+		return false
 	}
 	if int(r.ForkCount) > maxForks {
 		return true
