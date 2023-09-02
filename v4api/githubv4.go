@@ -6,12 +6,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const V4ClientDefaultPageSize = 100
+
 func (c *GitHubV4Client) GetTeams() (OrganizationTeams, error) {
 	orgTeams := []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge{}
 	initResp, err := GetTeams(c.Context, c.client, TeamOrder{
 		Direction: OrderDirectionDesc,
 		Field:     TeamOrderFieldName,
-	}, 100, "")
+	}, V4ClientDefaultPageSize, "")
 	if err != nil {
 		panic(err)
 	}
@@ -23,7 +25,7 @@ func (c *GitHubV4Client) GetTeams() (OrganizationTeams, error) {
 		resp, err := GetTeams(c.Context, c.client, TeamOrder{
 			Direction: OrderDirectionDesc,
 			Field:     TeamOrderFieldName,
-		}, 100, cursor)
+		}, V4ClientDefaultPageSize, cursor)
 		if err != nil {
 			panic(err)
 		}
@@ -49,7 +51,7 @@ func (c *GitHubV4Client) GetRateLimit() (RateLimit, error) {
 func (c *GitHubV4Client) SyncLabels(repo string, labels []Label) error {
 	labelsMap := map[string]Label{}
 	labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, "zendesk", "")
-	repoId := labelResp.Repository.Id
+	repoID := labelResp.Repository.Id
 	if err != nil {
 		return fmt.Errorf("can't get labels: %w", err)
 	}
@@ -79,7 +81,7 @@ func (c *GitHubV4Client) SyncLabels(repo string, labels []Label) error {
 				Name:         l.Name,
 				Color:        l.Color,
 				Description:  l.Description,
-				RepositoryId: repoId,
+				RepositoryId: repoID,
 			})
 			if err != nil {
 				return fmt.Errorf("can't create label: %w", err)
