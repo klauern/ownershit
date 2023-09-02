@@ -73,6 +73,7 @@ func Test_authedTransport_RoundTrip(t1 *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t1.Errorf("RoundTrip() got = %v, want %v", got, tt.want)
 			}
+			got.Body.Close()
 		})
 	}
 }
@@ -110,10 +111,10 @@ func Test_parseEnv(t *testing.T) {
 				"OWNERSHIT_MAX_RETRIES": "10",
 			},
 			want: &retryParams{
-				TimeoutSeconds:      120,
+				TimeoutSeconds:      ClientDefaultTimeoutSeconds,
 				MaxRetries:          10,
-				Multiplier:          2.0,
-				WaitIntervalSeconds: 10,
+				Multiplier:          ClientDefaultMultiplier,
+				WaitIntervalSeconds: ClientDefaultWaitIntervalSeconds,
 			},
 		},
 		{
@@ -125,8 +126,8 @@ func Test_parseEnv(t *testing.T) {
 			want: &retryParams{
 				TimeoutSeconds:      12345,
 				MaxRetries:          1,
-				Multiplier:          2.0,
-				WaitIntervalSeconds: 10,
+				Multiplier:          ClientDefaultMultiplier,
+				WaitIntervalSeconds: ClientDefaultWaitIntervalSeconds,
 			},
 		},
 		{

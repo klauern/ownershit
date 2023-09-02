@@ -24,11 +24,16 @@ type GitHubV4Client struct {
 }
 
 const (
-	ENV_VAR_PREFIX        = "OWNERSHIT_"
-	TIMEOUT_SECONDS       = "TIMEOUT_SECONDS"
-	MAX_RETRIES           = "MAX_RETRIES"
-	WAIT_INTERVAL_SECONDS = "WAIT_INTERVAL_SECONDS"
-	BACKOFF_MULTIPLIER    = "BACKOFF_MULTIPLIER"
+	EnvVarPrefix           = "OWNERSHIT_"
+	EnvTimeoutSeconds      = "TIMEOUT_SECONDS"
+	EnvMaxRetries          = "MAX_RETRIES"
+	EnvWaitIntervalSeconds = "WAIT_INTERVAL_SECONDS"
+	EnvBackoffMultiplier   = "BACKOFF_MULTIPLIER"
+
+	ClientDefaultTimeoutSeconds      = 10
+	ClientDefaultMaxRetries          = 3
+	ClientDefaultMultiplier          = 2.0
+	ClientDefaultWaitIntervalSeconds = 10
 )
 
 type retryParams struct {
@@ -61,42 +66,40 @@ func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func parseEnv() *retryParams {
-	// default values
-	timeoutSeconds := 10
-	maxRetries := 3
-	multiplier := 2.0
-	waitIntervalSeconds := 10
+	timeoutSeconds := ClientDefaultTimeoutSeconds
+	maxRetries := ClientDefaultMaxRetries
+	multiplier := ClientDefaultMultiplier
+	waitIntervalSeconds := ClientDefaultWaitIntervalSeconds
 
-	if os.Getenv(ENV_VAR_PREFIX+TIMEOUT_SECONDS) != "" {
-		TimeoutSeconds, err := strconv.Atoi(os.Getenv(ENV_VAR_PREFIX + TIMEOUT_SECONDS))
+	if os.Getenv(EnvVarPrefix+EnvTimeoutSeconds) != "" {
+		parsedTimeoutSeconds, err := strconv.Atoi(os.Getenv(EnvVarPrefix + EnvTimeoutSeconds))
 		if err != nil {
-			panic(fmt.Errorf("can't parse %s: %w", TIMEOUT_SECONDS, err))
+			panic(fmt.Errorf("can't parse %s: %w", EnvTimeoutSeconds, err))
 		}
-		timeoutSeconds = TimeoutSeconds
+		timeoutSeconds = parsedTimeoutSeconds
 	}
-	if os.Getenv(ENV_VAR_PREFIX+MAX_RETRIES) != "" {
-		MaxRetries, err := strconv.Atoi(os.Getenv(ENV_VAR_PREFIX + MAX_RETRIES))
+	if os.Getenv(EnvVarPrefix+EnvMaxRetries) != "" {
+		parsedMaxRetries, err := strconv.Atoi(os.Getenv(EnvVarPrefix + EnvMaxRetries))
 		if err != nil {
-			panic(fmt.Errorf("can't parse %s: %w", MAX_RETRIES, err))
+			panic(fmt.Errorf("can't parse %s: %w", EnvMaxRetries, err))
 		}
-		maxRetries = MaxRetries
+		maxRetries = parsedMaxRetries
 	}
-	if os.Getenv(ENV_VAR_PREFIX+WAIT_INTERVAL_SECONDS) != "" {
-		WaitIntervalSeconds, err := strconv.Atoi(os.Getenv(ENV_VAR_PREFIX + WAIT_INTERVAL_SECONDS))
+	if os.Getenv(EnvVarPrefix+EnvWaitIntervalSeconds) != "" {
+		parsedWaitIntervalSeconds, err := strconv.Atoi(os.Getenv(EnvVarPrefix + EnvWaitIntervalSeconds))
 		if err != nil {
-			panic(fmt.Errorf("can't parse %s: %w", WAIT_INTERVAL_SECONDS, err))
+			panic(fmt.Errorf("can't parse %s: %w", EnvWaitIntervalSeconds, err))
 		}
-		waitIntervalSeconds = WaitIntervalSeconds
+		waitIntervalSeconds = parsedWaitIntervalSeconds
 	}
-	if os.Getenv(ENV_VAR_PREFIX+BACKOFF_MULTIPLIER) != "" {
-		Multiplier, err := strconv.ParseFloat(os.Getenv(ENV_VAR_PREFIX+BACKOFF_MULTIPLIER), 64)
+	if os.Getenv(EnvVarPrefix+EnvBackoffMultiplier) != "" {
+		parsedMultiplier, err := strconv.ParseFloat(os.Getenv(EnvVarPrefix+EnvBackoffMultiplier), 64)
 		if err != nil {
-			panic(fmt.Errorf("can't parse %s: %w", BACKOFF_MULTIPLIER, err))
+			panic(fmt.Errorf("can't parse %s: %w", EnvBackoffMultiplier, err))
 		}
-		multiplier = Multiplier
+		multiplier = parsedMultiplier
 	}
 
-	// githubv4.Init("https://api.github.com/graphql", "", "")
 	return &retryParams{
 		TimeoutSeconds:      timeoutSeconds,
 		MaxRetries:          maxRetries,

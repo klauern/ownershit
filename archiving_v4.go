@@ -77,8 +77,10 @@ type RepositoryInfo struct {
 	}
 }
 
-const PerPage = 100
-const OneDay = time.Hour * 24
+const (
+	PerPage = 100
+	OneDay  = time.Hour * 24
+)
 
 // IsArchivable queries a repository to determine if it meets the necessary requirements for being archived.  All
 // parameters are used to determine if it should be archived.
@@ -91,22 +93,12 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 		"lastUpdated": r.UpdatedAt,
 		"watchers":    r.Watchers.TotalCount,
 	})
-	if r.IsArchived {
-		return true
-	}
-	if r.IsFork {
-		return true
-	}
-	if int(r.ForkCount) > maxForks {
-		return true
-	}
-	if int(r.StargazerCount) > maxStars {
-		return true
-	}
-	if r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(maxDays) * OneDay)) {
-		return true
-	}
-	if int(r.Watchers.TotalCount) > maxWatchers {
+	if bool(r.IsArchived) ||
+		bool(r.IsFork) ||
+		(int(r.ForkCount) > maxForks) ||
+		(int(r.StargazerCount) > maxStars) ||
+		(r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(maxDays) * OneDay))) ||
+		(int(r.Watchers.TotalCount) > maxWatchers) {
 		return true
 	}
 	return false
@@ -172,14 +164,17 @@ func removeElement(slice []RepositoryInfo, s int) []RepositoryInfo {
 }
 
 // Everything behind this is related to sorting a list of RepositoryInfo.
-type RepositoryInfos []RepositoryInfo
-type ReposByName struct{ RepositoryInfos }
+type (
+	RepositoryInfos []RepositoryInfo
+	ReposByName     struct{ RepositoryInfos }
+)
 
 func (r RepositoryInfos) Len() int      { return len(r) }
 func (r RepositoryInfos) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
 func (r ReposByName) Less(i, j int) bool {
 	return string(r.RepositoryInfos[i].Name) < string(r.RepositoryInfos[j].Name)
 }
+
 func SortedRepositoryInfo(repos []RepositoryInfo) []RepositoryInfo {
 	sort.Sort(ReposByName{repos})
 	return repos
