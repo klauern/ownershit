@@ -62,9 +62,9 @@ func TestMapPermissions(t *testing.T) {
 	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil).
 		Do(func(ctx context.Context, query *GetRepoQuery, things map[string]interface{}) {
 			query.Repository.ID = githubv4.ID("12345")
-			query.Repository.HasIssuesEnabled = githubv4.Boolean(false)
-			query.Repository.HasProjectsEnabled = githubv4.Boolean(false)
-			query.Repository.HasWikiEnabled = githubv4.Boolean(false)
+			query.Repository.HasIssuesEnabled = false
+			query.Repository.HasProjectsEnabled = false
+			query.Repository.HasWikiEnabled = false
 		})
 
 	type args struct {
@@ -118,9 +118,9 @@ func TestUpdateBranchMergeStrategies(t *testing.T) {
 	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil).
 		Do(func(ctx context.Context, query *GetRepoQuery, things map[string]interface{}) {
 			query.Repository.ID = githubv4.ID("12345")
-			query.Repository.HasIssuesEnabled = githubv4.Boolean(false)
-			query.Repository.HasProjectsEnabled = githubv4.Boolean(false)
-			query.Repository.HasWikiEnabled = githubv4.Boolean(false)
+			query.Repository.HasIssuesEnabled = false
+			query.Repository.HasProjectsEnabled = false
+			query.Repository.HasWikiEnabled = false
 		})
 
 	type args struct {

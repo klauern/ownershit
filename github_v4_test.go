@@ -15,10 +15,10 @@ func TestGitHubClient_SetRepository(t *testing.T) {
 	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test error"))
 
-	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr((false))); (err != nil) != false {
+	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr(false)); (err != nil) != false {
 		t.Errorf("GitHubClient.SetRepository() error = %v, wantErr %v", err, false)
 	}
-	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr((false))); (err != nil) != true {
+	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr(false)); (err != nil) != true {
 		t.Errorf("GitHubClient.SetRepository() error = %v, wantErr %v", err, true)
 	}
 }
@@ -46,9 +46,9 @@ func TestGitHubClient_GetRepository(t *testing.T) {
 		Return(nil).
 		Do(func(ctx context.Context, query *GetRepoQuery, things map[string]interface{}) {
 			query.Repository.ID = githubv4.ID("12345")
-			query.Repository.HasIssuesEnabled = githubv4.Boolean(false)
-			query.Repository.HasProjectsEnabled = githubv4.Boolean(false)
-			query.Repository.HasWikiEnabled = githubv4.Boolean(false)
+			query.Repository.HasIssuesEnabled = false
+			query.Repository.HasProjectsEnabled = false
+			query.Repository.HasWikiEnabled = false
 		})
 	mock.graphMock.
 		EXPECT().
@@ -56,9 +56,9 @@ func TestGitHubClient_GetRepository(t *testing.T) {
 		Return(errors.New("forced expected error")).
 		Do(func(ctx context.Context, query *GetRepoQuery, things map[string]interface{}) {
 			query.Repository.ID = githubv4.ID("12345")
-			query.Repository.HasIssuesEnabled = githubv4.Boolean(false)
-			query.Repository.HasProjectsEnabled = githubv4.Boolean(false)
-			query.Repository.HasWikiEnabled = githubv4.Boolean(false)
+			query.Repository.HasIssuesEnabled = false
+			query.Repository.HasProjectsEnabled = false
+			query.Repository.HasWikiEnabled = false
 		})
 
 	id, err := mock.client.GetRepository(github.String("ownershit"), github.String("klauern"))
