@@ -1,7 +1,8 @@
 name: Refactor
 title: 'Sweep: '
 description: Write something like "Modify the ... api endpoint to use ... version and ... framework"
-labels: sweep
+labels:
+  - sweep
 body:
   - type: textarea
     id: description
