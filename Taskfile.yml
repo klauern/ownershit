@@ -2,10 +2,6 @@
 
 version: "3"
 
-env:
-  GO111MODULE: on
-  GOEXPERIMENT: loopvar
-
 tasks:
   dev:
     desc: set up development environment
