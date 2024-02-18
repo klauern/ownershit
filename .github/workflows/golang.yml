@@ -3,11 +3,6 @@ name: Go Testing, Linting, Etc.
 on:
   push:
 
-env:
-  GO111MODULE: on
-  # go test -race needs CGO set
-  # CGO_ENABLED: 0
-
 jobs:
   build:
     name: Build
@@ -15,6 +10,8 @@ jobs:
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@v5
+        with:
+          go-version: '^1.22.0'
         id: go
 
       - uses: actions/cache@v2
@@ -37,7 +34,7 @@ jobs:
       - name: Setup other Dependencies
         run: |
           task dev
-          GO111MODULE=on go get github.com/golang/mock/mockgen@latest
+          go get github.com/golang/mock/mockgen@latest
 
       - name: Build
         run: task build
