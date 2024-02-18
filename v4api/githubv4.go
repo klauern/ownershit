@@ -55,10 +55,12 @@ func (c *GitHubV4Client) SyncLabels(repo string, labels []Label) error {
 	if err != nil {
 		return fmt.Errorf("can't get labels: %w", err)
 	}
-	for _, label := range labelResp.Repository.Labels.Edges {
+	for i := 0; i < len(labelResp.Repository.Labels.Edges); i++ {
+		label := labelResp.Repository.Labels.Edges[i]
 		labelsMap[label.Node.Name] = Label(label.Node)
 	}
-	for _, label := range labels {
+	for i := 0; i < len(labels); i++ {
+		label := labels[i]
 		// create some kind of type to track which are new, missing, or updated
 		l, ok := labelsMap[label.Name]
 		if ok {

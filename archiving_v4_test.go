@@ -343,7 +343,7 @@ func TestQueryArchivableRepos(t *testing.T) {
 	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Eq(dummyVars)).Return(nil).Do(
 		func(c context.Context, y *ArchivableRepositoriesQuery, v map[string]interface{}) {
 			y.Search.Repos = []struct {
-				Repository RepositoryInfo "graphql:\"... on Repository\""
+				Repository RepositoryInfo `graphql:"... on Repository"`
 			}{{Repository: RepositoryInfo{IsArchived: true}}}
 			y.Search.RepositoryCount = 1
 			y.Search.PageInfo = pageInfo{HasNextPage: true, EndCursor: githubv4.String("dummycursor")}
