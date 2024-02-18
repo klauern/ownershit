@@ -53,7 +53,7 @@ type Teams []struct {
 	Description string
 }
 
-// various type aliases around genqlient
+// Various type aliases around genqlient.
 type (
 	OrganizationTeams []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge
 	RateLimit         GetRateLimitResponse
@@ -126,7 +126,7 @@ func NewGHv4Client() *GitHubV4Client {
 	}
 }
 
-// buildClient sets up the retry functionality and attaches authentication to the client
+// buildClient sets up the retry functionality and attaches authentication to the client.
 func buildClient(params *retryParams, key string) *retryablehttp.Client {
 	client := retryablehttp.NewClient()
 	client.HTTPClient.Timeout = time.Second * time.Duration(params.TimeoutSeconds)

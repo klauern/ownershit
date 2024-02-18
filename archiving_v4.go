@@ -35,7 +35,7 @@ query archivableRepositories {
 }
 */
 
-// ArchivableRepositoriesQuery is a GraphQL struct to query for the list of archive-able repositories
+// ArchivableRepositoriesQuery is a GraphQL struct to query for the list of archive-able repositories.
 type ArchivableRepositoriesQuery struct {
 	Search struct {
 		PageInfo        pageInfo
