@@ -8,7 +8,7 @@ require (
 	github.com/Khan/genqlient v0.6.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v43 v43.0.0
-	github.com/hashicorp/go-retryablehttp v0.7.4
+	github.com/hashicorp/go-retryablehttp v0.7.5
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rs/zerolog v1.30.0
 	github.com/shurcooL/githubv4 v0.0.0-20230704064427-599ae7bbf278
