@@ -10,7 +10,7 @@ require (
 	github.com/google/go-github/v43 v43.0.0
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/rs/zerolog v1.30.0
+	github.com/rs/zerolog v1.32.0
 	github.com/shurcooL/githubv4 v0.0.0-20230704064427-599ae7bbf278
 	github.com/urfave/cli/v2 v2.25.7
 	golang.org/x/oauth2 v0.11.0
