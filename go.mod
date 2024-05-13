@@ -8,7 +8,7 @@ require (
 	github.com/Khan/genqlient v0.6.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v43 v43.0.0
-	github.com/hashicorp/go-retryablehttp v0.7.4
+	github.com/hashicorp/go-retryablehttp v0.7.6
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rs/zerolog v1.30.0
 	github.com/shurcooL/githubv4 v0.0.0-20230704064427-599ae7bbf278
@@ -27,7 +27,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
@@ -38,7 +38,7 @@ require (
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.12.0 // indirect
