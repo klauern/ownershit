@@ -7,7 +7,7 @@ tasks:
     desc: set up development environment
     cmds:
       - go mod tidy
-      - go install github.com/golang/mock/mockgen
+      - go install go.uber.org/mock/mockgen
 
   build:
     desc: Build locally
