@@ -7,10 +7,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/google/go-github/v43/github"
+	"github.com/google/go-github/v66/github"
 	"github.com/klauern/ownershit/mocks"
 	"github.com/rs/zerolog"
+	"go.uber.org/mock/gomock"
 )
 
 func stringPtr(s string) *string {

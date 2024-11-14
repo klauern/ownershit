@@ -7,7 +7,7 @@ tasks:
     desc: set up development environment
     cmds:
       - go mod tidy
-      - go install github.com/golang/mock/mockgen
+      - go install go.uber.org/mock/mockgen
 
   build:
     desc: Build locally
@@ -30,7 +30,7 @@ tasks:
   lint:
     desc: run GolangCI-Lint
     cmds:
-    - golangci-lint run
+      - golangci-lint run
 
   mocks:
     desc: generate the mocks for use with testing and stubbing
@@ -56,7 +56,7 @@ tasks:
   gql:download-schema:
     desc: download GitHub's GraphQL schema
     cmds:
-      - cmd: curl -o schema.graphql https://docs.github.com/public/schema.docs.graphql
+      - cmd: curl -o schema.graphql https://docs.github.com/public/fpt/schema.docs.graphql
 
   gql:generate-client:
     desc: create GraphQL generated client for GitHub v4
