@@ -148,3 +148,4 @@ fabric.properties
 
 repositories.yaml
 dist/
+.aider*

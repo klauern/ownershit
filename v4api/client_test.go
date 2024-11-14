@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-retryablehttp"
 	mockgraphql "github.com/klauern/ownershit/v4api/mocks"
+	"go.uber.org/mock/gomock"
 )
 
 type testMocks struct {
