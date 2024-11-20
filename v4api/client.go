@@ -2,7 +2,6 @@ package v4api
 
 import (
 	"context"
-	"fmt"
 	globalLog "log"
 	"net/http"
 	"os"
@@ -23,17 +22,25 @@ type GitHubV4Client struct {
 	Context     context.Context
 }
 
+const EnvVarPrefix = "OWNERSHIT_"
+
+var defaultConfig = struct {
+	timeoutSeconds      int
+	maxRetries          int
+	multiplier          float64
+	waitIntervalSeconds int
+}{
+	timeoutSeconds:      10,
+	maxRetries:          3,
+	multiplier:          2.0,
+	waitIntervalSeconds: 10,
+}
+
 const (
-	EnvVarPrefix           = "OWNERSHIT_"
 	EnvTimeoutSeconds      = "TIMEOUT_SECONDS"
 	EnvMaxRetries          = "MAX_RETRIES"
 	EnvWaitIntervalSeconds = "WAIT_INTERVAL_SECONDS"
 	EnvBackoffMultiplier   = "BACKOFF_MULTIPLIER"
-
-	ClientDefaultTimeoutSeconds      = 10
-	ClientDefaultMaxRetries          = 3
-	ClientDefaultMultiplier          = 2.0
-	ClientDefaultWaitIntervalSeconds = 10
 )
 
 type retryParams struct {
@@ -66,46 +73,36 @@ func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func parseEnv() *retryParams {
-	timeoutSeconds := ClientDefaultTimeoutSeconds
-	maxRetries := ClientDefaultMaxRetries
-	multiplier := ClientDefaultMultiplier
-	waitIntervalSeconds := ClientDefaultWaitIntervalSeconds
-
-	if os.Getenv(EnvVarPrefix+EnvTimeoutSeconds) != "" {
-		parsedTimeoutSeconds, err := strconv.Atoi(os.Getenv(EnvVarPrefix + EnvTimeoutSeconds))
-		if err != nil {
-			panic(fmt.Errorf("can't parse %s: %w", EnvTimeoutSeconds, err))
-		}
-		timeoutSeconds = parsedTimeoutSeconds
-	}
-	if os.Getenv(EnvVarPrefix+EnvMaxRetries) != "" {
-		parsedMaxRetries, err := strconv.Atoi(os.Getenv(EnvVarPrefix + EnvMaxRetries))
-		if err != nil {
-			panic(fmt.Errorf("can't parse %s: %w", EnvMaxRetries, err))
-		}
-		maxRetries = parsedMaxRetries
-	}
-	if os.Getenv(EnvVarPrefix+EnvWaitIntervalSeconds) != "" {
-		parsedWaitIntervalSeconds, err := strconv.Atoi(os.Getenv(EnvVarPrefix + EnvWaitIntervalSeconds))
-		if err != nil {
-			panic(fmt.Errorf("can't parse %s: %w", EnvWaitIntervalSeconds, err))
-		}
-		waitIntervalSeconds = parsedWaitIntervalSeconds
-	}
-	if os.Getenv(EnvVarPrefix+EnvBackoffMultiplier) != "" {
-		parsedMultiplier, err := strconv.ParseFloat(os.Getenv(EnvVarPrefix+EnvBackoffMultiplier), 64)
-		if err != nil {
-			panic(fmt.Errorf("can't parse %s: %w", EnvBackoffMultiplier, err))
-		}
-		multiplier = parsedMultiplier
+	params := &retryParams{
+		TimeoutSeconds:      defaultConfig.timeoutSeconds,
+		MaxRetries:          defaultConfig.maxRetries,
+		Multiplier:          defaultConfig.multiplier,
+		WaitIntervalSeconds: defaultConfig.waitIntervalSeconds,
 	}
 
-	return &retryParams{
-		TimeoutSeconds:      timeoutSeconds,
-		MaxRetries:          maxRetries,
-		Multiplier:          multiplier,
-		WaitIntervalSeconds: waitIntervalSeconds,
+	parseEnvInt := func(env string, target *int) {
+		if val := os.Getenv(EnvVarPrefix + env); val != "" {
+			if parsed, err := strconv.Atoi(val); err == nil {
+				*target = parsed
+			} else {
+				log.Fatal().Err(err).Str("env", env).Msg("failed to parse environment variable")
+			}
+		}
 	}
+
+	parseEnvInt(EnvTimeoutSeconds, &params.TimeoutSeconds)
+	parseEnvInt(EnvMaxRetries, &params.MaxRetries)
+	parseEnvInt(EnvWaitIntervalSeconds, &params.WaitIntervalSeconds)
+
+	if val := os.Getenv(EnvVarPrefix + EnvBackoffMultiplier); val != "" {
+		if parsed, err := strconv.ParseFloat(val, 64); err == nil {
+			params.Multiplier = parsed
+		} else {
+			log.Fatal().Err(err).Str("env", EnvBackoffMultiplier).Msg("failed to parse environment variable")
+		}
+	}
+
+	return params
 }
 
 func NewGHv4Client() *GitHubV4Client {
@@ -129,11 +126,11 @@ func NewGHv4Client() *GitHubV4Client {
 // buildClient sets up the retry functionality and attaches authentication to the client.
 func buildClient(params *retryParams, key string) *retryablehttp.Client {
 	client := retryablehttp.NewClient()
-	client.HTTPClient.Timeout = time.Second * time.Duration(params.TimeoutSeconds)
+	client.HTTPClient.Timeout = time.Duration(params.TimeoutSeconds) * time.Second
 	client.Logger = globalLog.Default()
 	client.RetryMax = params.MaxRetries
-	client.RetryWaitMax = time.Minute * time.Duration(params.WaitIntervalSeconds) * time.Duration(params.Multiplier)
-	client.RetryWaitMin = time.Second * time.Duration(params.WaitIntervalSeconds)
+	client.RetryWaitMax = time.Duration(params.WaitIntervalSeconds) * time.Duration(params.Multiplier) * time.Minute
+	client.RetryWaitMin = time.Duration(params.WaitIntervalSeconds) * time.Second
 	client.HTTPClient.Transport = &authedTransport{
 		key:     key,
 		wrapped: http.DefaultTransport,
