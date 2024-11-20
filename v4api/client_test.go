@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
 	mockgraphql "github.com/klauern/ownershit/v4api/mocks"
@@ -28,52 +29,88 @@ func setupMocks(t *testing.T) *testMocks {
 
 func TestNewGHv4Client(t *testing.T) {
 	tests := []struct {
-		name string
-		want *GitHubV4Client
+		name        string
+		envVars     map[string]string
+		wantRetries int
+		wantTimeout int
 	}{
-		// TODO: Add test cases.
+		{
+			name:        "default configuration",
+			wantRetries: defaultConfig.maxRetries,
+			wantTimeout: defaultConfig.timeoutSeconds,
+		},
+		{
+			name: "custom configuration",
+			envVars: map[string]string{
+				EnvVarPrefix + EnvMaxRetries:     "5",
+				EnvVarPrefix + EnvTimeoutSeconds: "30",
+			},
+			wantRetries: 5,
+			wantTimeout: 30,
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewGHv4Client(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewGHv4Client() = %v, want %v", got, tt.want)
+			// Setup environment
+			for k, v := range tt.envVars {
+				oldVal := os.Getenv(k)
+				os.Setenv(k, v)
+				defer os.Setenv(k, oldVal)
+			}
+
+			client := NewGHv4Client()
+
+			// Access the underlying HTTP client
+			httpClient := client.retryClient
+			if httpClient == nil {
+				t.Fatal("failed to get underlying HTTP client")
+			}
+
+			if httpClient.RetryMax != tt.wantRetries {
+				t.Errorf("RetryMax = %v, want %v", httpClient.RetryMax, tt.wantRetries)
+			}
+
+			if httpClient.HTTPClient.Timeout != time.Duration(tt.wantTimeout)*time.Second {
+				t.Errorf("Timeout = %v, want %v", httpClient.HTTPClient.Timeout, time.Duration(tt.wantTimeout)*time.Second)
 			}
 		})
 	}
 }
 
-func Test_authedTransport_RoundTrip(t1 *testing.T) {
-	type fields struct {
-		key     string
-		wrapped http.RoundTripper
-	}
-	type args struct {
-		req *http.Request
-	}
+func Test_authedTransport_RoundTrip(t *testing.T) {
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *http.Response
-		wantErr bool
+		name       string
+		key        string
+		wantHeader string
 	}{
-		// TODO: Add test cases.
+		{
+			name:       "adds authorization header",
+			key:        "test-key",
+			wantHeader: "bearer test-key",
+		},
 	}
+
 	for _, tt := range tests {
-		t1.Run(tt.name, func(t1 *testing.T) {
-			t := &authedTransport{
-				key:     tt.fields.key,
-				wrapped: tt.fields.wrapped,
+		t.Run(tt.name, func(t *testing.T) {
+			transport := &authedTransport{
+				key:     tt.key,
+				wrapped: http.DefaultTransport,
 			}
-			got, err := t.RoundTrip(tt.args.req)
-			if (err != nil) != tt.wantErr {
-				t1.Errorf("RoundTrip() error = %v, wantErr %v", err, tt.wantErr)
-				return
+
+			req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t1.Errorf("RoundTrip() got = %v, want %v", got, tt.want)
+
+			_, err = transport.RoundTrip(req)
+			if err != nil {
+				t.Fatal(err)
 			}
-			got.Body.Close()
+
+			if got := req.Header.Get("Authorization"); got != tt.wantHeader {
+				t.Errorf("Authorization header = %v, want %v", got, tt.wantHeader)
+			}
 		})
 	}
 }
@@ -106,62 +143,50 @@ func Test_parseEnv(t *testing.T) {
 		want    *retryParams
 	}{
 		{
-			name: "partial evaluation 1",
-			envVars: map[string]string{
-				"OWNERSHIT_MAX_RETRIES": "10",
-			},
+			name: "default values when no env vars set",
 			want: &retryParams{
-				TimeoutSeconds:      ClientDefaultTimeoutSeconds,
-				MaxRetries:          10,
-				Multiplier:          ClientDefaultMultiplier,
-				WaitIntervalSeconds: ClientDefaultWaitIntervalSeconds,
+				TimeoutSeconds:      defaultConfig.timeoutSeconds,
+				MaxRetries:          defaultConfig.maxRetries,
+				Multiplier:          defaultConfig.multiplier,
+				WaitIntervalSeconds: defaultConfig.waitIntervalSeconds,
 			},
 		},
 		{
-			name: "partial evaluation 2",
+			name: "custom values",
 			envVars: map[string]string{
-				"OWNERSHIT_MAX_RETRIES":     "1",
-				"OWNERSHIT_TIMEOUT_SECONDS": "12345",
+				EnvVarPrefix + EnvMaxRetries:          "5",
+				EnvVarPrefix + EnvTimeoutSeconds:      "30",
+				EnvVarPrefix + EnvBackoffMultiplier:   "3.0",
+				EnvVarPrefix + EnvWaitIntervalSeconds: "20",
 			},
 			want: &retryParams{
-				TimeoutSeconds:      12345,
-				MaxRetries:          1,
-				Multiplier:          ClientDefaultMultiplier,
-				WaitIntervalSeconds: ClientDefaultWaitIntervalSeconds,
-			},
-		},
-		{
-			name: "override all",
-			envVars: map[string]string{
-				"OWNERSHIT_MAX_RETRIES":           "1",
-				"OWNERSHIT_TIMEOUT_SECONDS":       "12345",
-				"OWNERSHIT_BACKOFF_MULTIPLIER":    "4546",
-				"OWNERSHIT_WAIT_INTERVAL_SECONDS": "789",
-			},
-			want: &retryParams{
-				MaxRetries:          1,
-				TimeoutSeconds:      12345,
-				Multiplier:          4546.0,
-				WaitIntervalSeconds: 789,
+				TimeoutSeconds:      30,
+				MaxRetries:          5,
+				Multiplier:          3.0,
+				WaitIntervalSeconds: 20,
 			},
 		},
 	}
+
 	for _, tt := range tests {
-		oldEnviron := map[string]string{}
-		for k, v := range tt.envVars {
-			oldEnviron[k] = os.Getenv(k)
-			err := os.Setenv(k, v)
-			if err != nil {
-				t.Errorf("unable to set environment variable %s: %v", k, err)
-			}
-		}
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parseEnv(); !reflect.DeepEqual(got, tt.want) {
+			// Setup environment
+			oldEnv := make(map[string]string)
+			for k := range tt.envVars {
+				oldEnv[k] = os.Getenv(k)
+				os.Setenv(k, tt.envVars[k])
+			}
+			// Cleanup
+			defer func() {
+				for k, v := range oldEnv {
+					os.Setenv(k, v)
+				}
+			}()
+
+			got := parseEnv()
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseEnv() = %v, want %v", got, tt.want)
 			}
 		})
-		for k, v := range oldEnviron {
-			os.Setenv(k, v)
-		}
 	}
 }
