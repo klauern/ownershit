@@ -13,6 +13,9 @@ builds:
   goarch:
   - amd64
   - arm
+  ignore:
+  - goos: darwin
+    goarch: amd64
 archives:
   - id: archive
 snapshot:
