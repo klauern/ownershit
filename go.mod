@@ -3,7 +3,7 @@ module github.com/klauern/ownershit
 go 1.23
 
 require (
-	github.com/99designs/gqlgen v0.17.56
+	github.com/99designs/gqlgen v0.17.57
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Khan/genqlient v0.7.0
 	github.com/golang/mock v1.6.0
