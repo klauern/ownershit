@@ -9,6 +9,7 @@ tasks:
       - go mod tidy
       - go install go.uber.org/mock/mockgen
       - go install golang.org/x/vuln/cmd/govulncheck@latest
+      - go install github.com/klauern/bump/cmd/bump@latest
 
   build:
     desc: Build locally
@@ -77,19 +78,56 @@ tasks:
     cmds:
       - govulncheck ./...
 
+  release:patch:
+    desc: create a patch release (bug fixes, v0.6.0 → v0.6.1)
+    cmds:
+      - task: test-all
+      - task: security
+      - cmd: |
+          echo "🐛 Creating patch release..."
+          bump patch --push
+          echo "✅ Patch release created! GoReleaser will build and publish automatically."
+
+  release:minor:
+    desc: create a minor release (new features, v0.6.0 → v0.7.0)
+    cmds:
+      - task: test-all
+      - task: security
+      - cmd: |
+          echo "✨ Creating minor release..."
+          bump minor --push
+          echo "✅ Minor release created! GoReleaser will build and publish automatically."
+
+  release:major:
+    desc: create a major release (breaking changes, v0.6.0 → v1.0.0)
+    cmds:
+      - task: test-all
+      - task: security
+      - cmd: |
+          echo "💥 Creating major release..."
+          bump major --push
+          echo "✅ Major release created! GoReleaser will build and publish automatically."
+
+  release:rc:
+    desc: create a release candidate (v0.6.0 → v0.7.0-rc1)
+    cmds:
+      - task: test-all
+      - task: security
+      - cmd: |
+          echo "🚀 Creating release candidate..."
+          bump minor --suffix rc1 --push
+          echo "✅ Release candidate created! GoReleaser will build and publish automatically."
+
   release:
-    desc: create a new release (requires VERSION=x.x.x)
+    desc: show available release commands
     cmds:
       - cmd: |
-          if [ -z "{{.VERSION}}" ]; then
-            echo "❌ VERSION is required. Usage: task release VERSION=v0.6.0"
-            exit 1
-          fi
-      - task: test-all
-      - task: lint
-      - cmd: |
-          echo "🏷️  Creating release tag {{.VERSION}}"
-          git tag {{.VERSION}}
-          git push origin {{.VERSION}}
-          echo "✅ Release {{.VERSION}} created! GoReleaser will build and publish automatically."
-          echo "🔗 Check the release at: https://github.com/klauern/ownershit/releases/tag/{{.VERSION}}"
+          echo "📦 Available release commands:"
+          echo ""
+          echo "  task release:patch  - Bug fixes (v0.6.0 → v0.6.1)"
+          echo "  task release:minor  - New features (v0.6.0 → v0.7.0)"  
+          echo "  task release:major  - Breaking changes (v0.6.0 → v1.0.0)"
+          echo "  task release:rc     - Release candidate (v0.6.0 → v0.7.0-rc1)"
+          echo ""
+          echo "All releases automatically run tests, security checks, and push tags."
+          echo "GoReleaser will build and publish binaries automatically."
