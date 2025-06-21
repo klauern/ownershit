@@ -10,10 +10,15 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
+var (
+	ErrTestV4Error         = errors.New("test error")
+	ErrForcedExpectedError = errors.New("forced expected error")
+)
+
 func TestGitHubClient_SetRepository(t *testing.T) {
 	mock := setupMocks(t)
 	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("test error"))
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(ErrTestV4Error)
 
 	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr(false)); (err != nil) != false {
 		t.Errorf("GitHubClient.SetRepository() error = %v, wantErr %v", err, false)
@@ -26,7 +31,7 @@ func TestGitHubClient_SetRepository(t *testing.T) {
 func TestGitHubClient_SetBranchRules(t *testing.T) {
 	mock := setupMocks(t)
 	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("forced expected error"))
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(ErrForcedExpectedError)
 
 	err := mock.client.SetBranchRules(githubv4.ID("test"), github.String("master"), github.Int(1), github.Bool(true), github.Bool(true))
 	if err != nil {
@@ -53,7 +58,7 @@ func TestGitHubClient_GetRepository(t *testing.T) {
 	mock.graphMock.
 		EXPECT().
 		Query(gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(errors.New("forced expected error")).
+		Return(ErrForcedExpectedError).
 		Do(func(ctx context.Context, query *GetRepoQuery, things map[string]interface{}) {
 			query.Repository.ID = githubv4.ID("12345")
 			query.Repository.HasIssuesEnabled = false

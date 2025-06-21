@@ -66,20 +66,23 @@ task fmt
 ```
 
 **Tasks**:
-- [ ] Add error handling in `cmd/genqlient/main.go:16,17`
-- [ ] Fix integer overflow in `github_v4.go:73`
-- [ ] Remove unused test code in `v4api/client_test.go`
-- [ ] Fix resource leaks in test loops
-- [ ] Replace dynamic errors with wrapped static errors
-- [ ] Update deprecated linter configuration
+- [x] Add error handling in `cmd/genqlient/main.go:16,17`
+- [x] Fix integer overflow in `github_v4.go:73`
+- [x] Remove unused test code in `v4api/client_test.go`
+- [x] Fix resource leaks in test loops
+- [x] Replace dynamic errors with wrapped static errors (11 fixed)
+- [x] Update deprecated linter configuration
+- [x] Fix funlen violation in `archiving_v4_test.go:232`
 
-**Estimated Effort**: 4-6 hours
+**Status**: Complete - All linting violations resolved
+**Estimated Effort**: Completed (4 hours)
 
 #### 1.2 Code Formatting
 **Tasks**:
-- [ ] Run `gofumpt` on all Go files
-- [ ] Fix formatting issues in `cmd/archiving.go`
+- [x] Run `gofumpt` on all Go files
+- [x] Fix formatting issues in `cmd/archiving.go`
 
+**Status**: Complete
 **Estimated Effort**: 1 hour
 
 ### Phase 2: Security and Quality Improvements (Week 3-4)
