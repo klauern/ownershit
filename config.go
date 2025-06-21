@@ -139,7 +139,9 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 						Str("repository", *repo.Name).
 						Str("permissions-level", *perm.Level).
 						Str("permissions-team", *perm.Team).
+						Str("operation", "addTeamPermissions").
 						Msg("setting team permissions")
+					// Continue processing other permissions even if one fails
 				}
 			}
 		}

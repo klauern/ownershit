@@ -104,24 +104,33 @@ func configureClient(c *cli.Context) error {
 
 	client, err := shit.NewSecureGitHubClient(c.Context)
 	if err != nil {
-		log.Err(err).Msg("GitHub client initialization failed")
-		return err
+		log.Err(err).
+			Str("operation", "initializeGitHubClient").
+			Msg("GitHub client initialization failed")
+		return fmt.Errorf("failed to initialize GitHub client: %w", err)
 	}
 	githubClient = client
 	return nil
 }
 
 func readConfig(c *cli.Context) error {
-	file, err := os.ReadFile(c.String("config"))
+	configPath := c.String("config")
+	file, err := os.ReadFile(configPath)
 	if err != nil {
-		log.Err(err).Msg("config file error")
-		return fmt.Errorf("config file error: %w", err)
+		log.Err(err).
+			Str("configPath", configPath).
+			Str("operation", "readConfigFile").
+			Msg("config file error")
+		return shit.NewConfigFileError(configPath, "read", "failed to read configuration file", err)
 	}
 
 	settings = &shit.PermissionsSettings{}
 	if err := yaml.Unmarshal(file, settings); err != nil {
-		log.Err(err).Msg("YAML unmarshal error with config file")
-		return fmt.Errorf("config file yaml unmarshal error: %w", err)
+		log.Err(err).
+			Str("configPath", configPath).
+			Str("operation", "parseConfigFile").
+			Msg("YAML unmarshal error with config file")
+		return shit.NewConfigFileError(configPath, "parse", "failed to parse YAML configuration", err)
 	}
 
 	return nil

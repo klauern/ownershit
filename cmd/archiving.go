@@ -81,7 +81,10 @@ func userClientSetup(c *cli.Context) error {
 	}
 	secureClient, err := shit.NewSecureGitHubClient(context.Background())
 	if err != nil {
-		return err
+		log.Err(err).
+			Str("operation", "initializeSecureGitHubClient").
+			Msg("failed to initialize secure GitHub client")
+		return fmt.Errorf("failed to initialize secure GitHub client: %w", err)
 	}
 	client = secureClient
 	return nil
@@ -100,7 +103,11 @@ func queryCommand(c *cli.Context) error {
 		Msgf("querying with parms")
 	repos, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
-		return err
+		log.Err(err).
+			Str("username", username).
+			Str("operation", "queryArchivableRepos").
+			Msg("failed to query archivable repositories")
+		return fmt.Errorf("failed to query archivable repositories for user %s: %w", username, err)
 	}
 	tableBuf := strings.Builder{}
 	table := tablewriter.NewWriter(&tableBuf)
@@ -134,7 +141,11 @@ func executeCommand(c *cli.Context) error {
 		Msgf("executing Archive with parms")
 	issues, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
-		return err
+		log.Err(err).
+			Str("username", username).
+			Str("operation", "queryArchivableRepos").
+			Msg("failed to query archivable repositories for execution")
+		return fmt.Errorf("failed to query archivable repositories for user %s: %w", username, err)
 	}
 	var ops []string
 	for _, v := range issues {

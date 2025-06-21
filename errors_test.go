@@ -230,7 +230,7 @@ func TestNetworkError(t *testing.T) {
 
 func TestErrorUnwrapping(t *testing.T) {
 	baseErr := errors.New("original error")
-	
+
 	testErrors := []error{
 		NewGitHubAPIError(404, "test", "repo", "message", baseErr),
 		NewAuthenticationError("classic", "message", baseErr),

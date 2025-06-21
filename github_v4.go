@@ -41,8 +41,10 @@ func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project *bool
 	err := c.Graph.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
 		log.Err(err).
+			Str("operation", "updateRepository").
+			Interface("repositoryID", id).
 			Msg("updating repository")
-		return err
+		return NewGitHubAPIError(0, "update repository", "", "failed to update repository settings", err)
 	}
 	return nil
 }
@@ -87,8 +89,12 @@ func (c *GitHubClient) SetBranchRules(
 	err := c.Graph.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
 		log.Err(err).
+			Str("operation", "createBranchProtectionRule").
+			Interface("repositoryID", id).
+			Str("pattern", *branchPattern).
 			Msg("setting branch rules")
-		return err
+		return NewGitHubAPIError(0, "create branch protection rule", "",
+			fmt.Sprintf("failed to create branch protection rule for pattern %s", *branchPattern), err)
 	}
 	return nil
 }
@@ -112,8 +118,9 @@ func (c *GitHubClient) GetRepository(name, owner *string) (githubv4.ID, error) {
 		log.Err(err).
 			Str("owner", *owner).
 			Str("name", *name).
+			Str("operation", "getRepository").
 			Msg("error retrieving repository")
-		return nil, err
+		return nil, NewRepositoryNotFoundError(*owner, *name, fmt.Errorf("failed to retrieve repository %s/%s: %w", *owner, *name, err))
 	}
 	log.Info().
 		Str("repository", fmt.Sprintf("%s/%s", *owner, *name)).

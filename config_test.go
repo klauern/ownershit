@@ -155,94 +155,94 @@ func TestUpdateBranchMergeStrategies(t *testing.T) {
 // 		gomock.Any()).Return()
 // }
 
-func TestValidateGitHubToken(t *testing.T) {
-	tests := []struct {
-		name     string
-		token    string
-		wantErr  error
-		wantType string
-	}{
-		{
-			name:     "empty token",
-			token:    "",
-			wantErr:  ErrTokenEmpty,
-			wantType: "empty",
-		},
-		{
-			name:     "whitespace only token",
-			token:    "   \t\n  ",
-			wantErr:  ErrTokenEmpty,
-			wantType: "whitespace",
-		},
-		{
-			name:     "valid classic personal access token",
-			token:    "ghp_abcd1234567890ABCD1234567890abcd1234",
-			wantErr:  nil,
-			wantType: "classic",
-		},
-		{
-			name:     "valid fine-grained personal access token",
-			token:    "github_pat_abcd1234567890ABCD1234567890abcd1234567890ABCD1234567890abcd12",
-			wantErr:  nil,
-			wantType: "fine-grained",
-		},
-		{
-			name:     "valid GitHub App token",
-			token:    "ghs_abcd1234567890ABCD1234567890abcd1234",
-			wantErr:  nil,
-			wantType: "app",
-		},
-		{
-			name:     "valid OAuth token",
-			token:    "gho_abcd1234567890ABCD1234567890abcd1234",
-			wantErr:  nil,
-			wantType: "oauth",
-		},
-		{
-			name:     "valid refresh token",
-			token:    "ghr_abcd1234567890ABCD1234567890abcd1234",
-			wantErr:  nil,
-			wantType: "refresh",
-		},
-		{
-			name:     "valid SAML token",
-			token:    "ghu_abcd1234567890ABCD1234567890abcd1234",
-			wantErr:  nil,
-			wantType: "saml",
-		},
-		{
-			name:     "invalid classic token - too short",
-			token:    "ghp_abcd1234567890ABCD1234567890abcd123",
-			wantErr:  ErrTokenInvalid,
-			wantType: "invalid",
-		},
-		{
-			name:     "invalid classic token - too long",
-			token:    "ghp_abcd1234567890ABCD1234567890abcd12345",
-			wantErr:  ErrTokenInvalid,
-			wantType: "invalid",
-		},
-		{
-			name:     "invalid token - wrong prefix",
-			token:    "abc_1234567890123456789012345678901234567890",
-			wantErr:  ErrTokenInvalid,
-			wantType: "invalid",
-		},
-		{
-			name:     "invalid token - no prefix",
-			token:    "1234567890123456789012345678901234567890",
-			wantErr:  ErrTokenInvalid,
-			wantType: "invalid",
-		},
-		{
-			name:     "invalid fine-grained token - too short",
-			token:    "github_pat_123456789012345678901",
-			wantErr:  ErrTokenInvalid,
-			wantType: "invalid",
-		},
-	}
+var gitHubTokenValidationTests = []struct {
+	name     string
+	token    string
+	wantErr  error
+	wantType string
+}{
+	{
+		name:     "empty token",
+		token:    "",
+		wantErr:  ErrTokenEmpty,
+		wantType: "empty",
+	},
+	{
+		name:     "whitespace only token",
+		token:    "   \t\n  ",
+		wantErr:  ErrTokenEmpty,
+		wantType: "whitespace",
+	},
+	{
+		name:     "valid classic personal access token",
+		token:    "ghp_abcd1234567890ABCD1234567890abcd1234",
+		wantErr:  nil,
+		wantType: "classic",
+	},
+	{
+		name:     "valid fine-grained personal access token",
+		token:    "github_pat_abcd1234567890ABCD1234567890abcd1234567890ABCD1234567890abcd12",
+		wantErr:  nil,
+		wantType: "fine-grained",
+	},
+	{
+		name:     "valid GitHub App token",
+		token:    "ghs_abcd1234567890ABCD1234567890abcd1234",
+		wantErr:  nil,
+		wantType: "app",
+	},
+	{
+		name:     "valid OAuth token",
+		token:    "gho_abcd1234567890ABCD1234567890abcd1234",
+		wantErr:  nil,
+		wantType: "oauth",
+	},
+	{
+		name:     "valid refresh token",
+		token:    "ghr_abcd1234567890ABCD1234567890abcd1234",
+		wantErr:  nil,
+		wantType: "refresh",
+	},
+	{
+		name:     "valid SAML token",
+		token:    "ghu_abcd1234567890ABCD1234567890abcd1234",
+		wantErr:  nil,
+		wantType: "saml",
+	},
+	{
+		name:     "invalid classic token - too short",
+		token:    "ghp_abcd1234567890ABCD1234567890abcd123",
+		wantErr:  ErrTokenInvalid,
+		wantType: "invalid",
+	},
+	{
+		name:     "invalid classic token - too long",
+		token:    "ghp_abcd1234567890ABCD1234567890abcd12345",
+		wantErr:  ErrTokenInvalid,
+		wantType: "invalid",
+	},
+	{
+		name:     "invalid token - wrong prefix",
+		token:    "abc_1234567890123456789012345678901234567890",
+		wantErr:  ErrTokenInvalid,
+		wantType: "invalid",
+	},
+	{
+		name:     "invalid token - no prefix",
+		token:    "1234567890123456789012345678901234567890",
+		wantErr:  ErrTokenInvalid,
+		wantType: "invalid",
+	},
+	{
+		name:     "invalid fine-grained token - too short",
+		token:    "github_pat_123456789012345678901",
+		wantErr:  ErrTokenInvalid,
+		wantType: "invalid",
+	},
+}
 
-	for _, tt := range tests {
+func TestValidateGitHubToken(t *testing.T) {
+	for _, tt := range gitHubTokenValidationTests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateGitHubToken(tt.token)
 			if tt.wantErr != nil {
@@ -253,10 +253,8 @@ func TestValidateGitHubToken(t *testing.T) {
 				if !errors.Is(err, tt.wantErr) {
 					t.Errorf("ValidateGitHubToken() error = %v, wantErr %v", err, tt.wantErr)
 				}
-			} else {
-				if err != nil {
-					t.Errorf("ValidateGitHubToken() error = %v, wantErr nil", err)
-				}
+			} else if err != nil {
+				t.Errorf("ValidateGitHubToken() error = %v, wantErr nil", err)
 			}
 		})
 	}

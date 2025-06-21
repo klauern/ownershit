@@ -1,6 +1,7 @@
 package ownershit
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -122,8 +123,10 @@ func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars,
 		if err != nil {
 			log.Err(err).
 				Str("username", username).
+				Str("operation", "queryArchivableRepositories").
 				Msg("error querying for archivable repositories")
-			return nil, err
+			return nil, NewGitHubAPIError(0, "query archivable repositories", "",
+				fmt.Sprintf("failed to query repositories for user %s", username), err)
 		}
 
 		for _, v := range query.Search.Repos {
@@ -153,8 +156,12 @@ func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 	}
 	err := c.Graph.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
-		log.Err(err).Interface("repository", repo).Msg("Unable to archive repository")
-		return err
+		log.Err(err).
+			Interface("repository", repo).
+			Str("operation", "archiveRepository").
+			Str("repositoryName", string(repo.Name)).
+			Msg("Unable to archive repository")
+		return NewGitHubAPIError(0, "archive repository", string(repo.Name), "failed to archive repository", err)
 	}
 	return nil
 }
