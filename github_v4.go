@@ -67,11 +67,17 @@ func (c *GitHubClient) SetBranchRules(
 		} `graphql:"createBranchProtectionRule(input: $input)"`
 	}
 	input := githubv4.CreateBranchProtectionRuleInput{
-		RepositoryID:                 id,
-		Pattern:                      *githubv4.NewString(githubv4.String(*branchPattern)),
-		RequiresApprovingReviews:     githubv4.NewBoolean(githubv4.Boolean(*requiresApprovingReviews)),
-		RequiredApprovingReviewCount: githubv4.NewInt(githubv4.Int(*approverCount)),
-		RequiresCodeOwnerReviews:     githubv4.NewBoolean(githubv4.Boolean(*requireCodeOwners)),
+		RepositoryID:             id,
+		Pattern:                  *githubv4.NewString(githubv4.String(*branchPattern)),
+		RequiresApprovingReviews: githubv4.NewBoolean(githubv4.Boolean(*requiresApprovingReviews)),
+		RequiredApprovingReviewCount: func() *githubv4.Int {
+			if *approverCount > 2147483647 || *approverCount < -2147483648 {
+				log.Warn().Int("approverCount", *approverCount).Msg("approverCount exceeds int32 range, using max value")
+				return githubv4.NewInt(githubv4.Int(2147483647))
+			}
+			return githubv4.NewInt(githubv4.Int(int32(*approverCount)))
+		}(),
+		RequiresCodeOwnerReviews: githubv4.NewBoolean(githubv4.Boolean(*requireCodeOwners)),
 	}
 	log.Debug().
 		Interface("mutation", mutation).

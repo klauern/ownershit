@@ -33,7 +33,7 @@ linters-settings:
     min-complexity: 15
   goimports:
     local-prefixes: github.com/golangci/golangci-lint
-  gomnd:
+  mnd:
     settings:
       mnd:
         # don't include the "operation" and "assign"
@@ -43,7 +43,8 @@ linters-settings:
         - condition
         - return
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
 
   lll:
     line-length: 140
@@ -71,11 +72,11 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - goerr113
+    - err113
     - gofmt
     - gofumpt
     - goimports
-    - gomnd
+    - mnd
     - gomodguard
     - goprintffuncname
     - gosec
@@ -98,10 +99,21 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
-        - gomnd
+        - mnd
         - dupl
-        - goerr113
+        - err113
+    - path: cmd/
+      linters:
+        - mnd
+    - path: v4api/
+      linters:
+        - mnd
+    - path: github_v3\.go
+      linters:
+        - mnd
+    - path: github_v4\.go
+      linters:
+        - mnd
 
-run:
-  skip-dirs:
+  exclude-dirs:
     - mocks

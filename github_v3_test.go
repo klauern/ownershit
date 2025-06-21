@@ -3,7 +3,6 @@ package ownershit
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -11,6 +10,11 @@ import (
 	"github.com/google/go-github/v66/github"
 	"github.com/klauern/ownershit/mocks"
 	"go.uber.org/mock/gomock"
+)
+
+var (
+	ErrErroringThing = errors.New("erroring thing")
+	ErrDummyV3Error  = errors.New("dummy error")
 )
 
 func TestMapPermsWithGitHub(t *testing.T) {
@@ -75,7 +79,7 @@ func TestOmitPermFixes(t *testing.T) {
 
 	repoSvc.EXPECT().Edit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(&github.Repository{
 		AllowMergeCommit: boolPtr(true),
-	})).Return(nil, mockGitHubResponse(), fmt.Errorf("erroring thing"))
+	})).Return(nil, mockGitHubResponse(), ErrErroringThing)
 	if err = client.UpdateBranchPermissions("klauern", "ownershit", &BranchPermissions{
 		AllowMergeCommit: boolPtr(true),
 	}); err == nil {
@@ -117,7 +121,7 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 				StatusCode: 500,
 				Body:       io.NopCloser(bytes.NewReader([]byte("error"))),
 			},
-		}, errors.New("dummy error"))
+		}, ErrDummyV3Error)
 
 	graphMock := mocks.NewMockGraphQLClient(ctrl)
 

@@ -8,24 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
-	mockgraphql "github.com/klauern/ownershit/v4api/mocks"
-	"go.uber.org/mock/gomock"
 )
-
-type testMocks struct {
-	ctrl        *gomock.Controller
-	graphQLMock *mockgraphql.MockClient
-}
-
-func setupMocks(t *testing.T) *testMocks {
-	ctrl := gomock.NewController(t)
-	graphQLClient := mockgraphql.NewMockClient(ctrl)
-
-	return &testMocks{
-		ctrl:        ctrl,
-		graphQLMock: graphQLClient,
-	}
-}
 
 func TestNewGHv4Client(t *testing.T) {
 	tests := []struct {
@@ -53,11 +36,16 @@ func TestNewGHv4Client(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
+			oldVals := make(map[string]string)
 			for k, v := range tt.envVars {
-				oldVal := os.Getenv(k)
+				oldVals[k] = os.Getenv(k)
 				os.Setenv(k, v)
-				defer os.Setenv(k, oldVal)
 			}
+			defer func() {
+				for k, oldVal := range oldVals {
+					os.Setenv(k, oldVal)
+				}
+			}()
 
 			client := NewGHv4Client()
 
@@ -65,6 +53,7 @@ func TestNewGHv4Client(t *testing.T) {
 			httpClient := client.retryClient
 			if httpClient == nil {
 				t.Fatal("failed to get underlying HTTP client")
+				return
 			}
 
 			if httpClient.RetryMax != tt.wantRetries {
@@ -98,14 +87,17 @@ func Test_authedTransport_RoundTrip(t *testing.T) {
 				wrapped: http.DefaultTransport,
 			}
 
-			req, err := http.NewRequest(http.MethodGet, "http://example.com", nil)
+			req, err := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			_, err = transport.RoundTrip(req)
+			resp, err := transport.RoundTrip(req)
 			if err != nil {
 				t.Fatal(err)
+			}
+			if resp != nil && resp.Body != nil {
+				resp.Body.Close()
 			}
 
 			if got := req.Header.Get("Authorization"); got != tt.wantHeader {

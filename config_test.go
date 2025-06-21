@@ -9,6 +9,8 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
+var ErrDummyConfigError = errors.New("dummy error")
+
 func generateDefaultPermissionsSettings() *PermissionsSettings {
 	return &PermissionsSettings{
 		BranchPermissions: BranchPermissions{
@@ -48,7 +50,7 @@ func TestMapPermissions(t *testing.T) {
 	mocks.graphMock.EXPECT().
 		Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		AnyTimes().
-		Return(errors.New("dummy error"))
+		Return(ErrDummyConfigError)
 
 	mocks.repoMock.
 		EXPECT().
@@ -104,7 +106,7 @@ func TestUpdateBranchMergeStrategies(t *testing.T) {
 	mocks.graphMock.EXPECT().
 		Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		AnyTimes().
-		Return(errors.New("dummy error"))
+		Return(ErrDummyConfigError)
 
 	mocks.repoMock.
 		EXPECT().
@@ -148,6 +150,6 @@ func TestUpdateBranchMergeStrategies(t *testing.T) {
 
 // func TestSyncLabels(t *testing.T) {
 // 	mocks := setupMocks(t)
-// 	mocks.issuesMock.EXPECT().ListLabels(gomock.Any(), gomock.Any(), gomock.Any(),
+// 	mocks.issuesMock.EXPECT().ListLabels(gomock.Any(), gomock.Any(),
 // 		gomock.Any()).Return()
 // }
