@@ -47,6 +47,7 @@ type RepositoriesService interface {
 }
 
 // NewGitHubClient creates a new GitHub context using OAuth2.
+// Deprecated: Use NewSecureGitHubClient() for secure token handling.
 func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: staticToken})
@@ -64,6 +65,31 @@ func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 		Graph:        clientV4,
 		Context:      ctx,
 	}
+}
+
+// NewSecureGitHubClient creates a new GitHub client with validated token from environment.
+func NewSecureGitHubClient(ctx context.Context) (*GitHubClient, error) {
+	token, err := GetValidatedGitHubToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get validated GitHub token: %w", err)
+	}
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token})
+	tc := oauth2.NewClient(ctx, ts)
+
+	client := github.NewClient(tc)
+	clientV4 := githubv4.NewClient(tc)
+
+	return &GitHubClient{
+		Teams:        client.Teams,
+		Repositories: client.Repositories,
+		Issues:       client.Issues,
+		v3:           client,
+		v4:           clientV4,
+		Graph:        clientV4,
+		Context:      ctx,
+	}, nil
 }
 
 // AddPermissions adds a given team level repository permission.
@@ -106,14 +132,22 @@ func (c *GitHubClient) UpdateBranchPermissions(org, repo string, perms *BranchPe
 	}
 	_, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
 	if err != nil {
+		statusCode := 0
+		if resp != nil {
+			statusCode = resp.StatusCode
+		}
 		log.Err(err).
 			Str("org", org).
 			Str("repo", repo).
-			Str("response-status", resp.Status).
+			Int("statusCode", statusCode).
+			Str("operation", "updateRepositorySettings").
 			Msg("Error updating repository settings")
-		resp, _ := httputil.DumpResponse(resp.Response, true)
-		log.Debug().Str("response-body", string(resp))
-		return err
+		if resp != nil {
+			resp, _ := httputil.DumpResponse(resp.Response, true)
+			log.Debug().Str("response-body", string(resp))
+		}
+		return NewGitHubAPIError(statusCode, "update repository settings",
+			fmt.Sprintf("%s/%s", org, repo), "failed to update repository settings", err)
 	}
 
 	log.Info().Fields(map[string]interface{}{
@@ -153,7 +187,7 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 			Description: &create.Description,
 		})
 		if err != nil {
-			return fmt.Errorf("listing labels for %v/%v: %w", org, repo, err)
+			return NewGitHubAPIError(0, "create label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to create label %s", create.Name), err)
 		}
 		dumpedResp, _ := httputil.DumpResponse(resp.Response, true)
 		log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
@@ -167,7 +201,7 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 			Description: &edit.Description,
 		})
 		if err != nil {
-			return fmt.Errorf("listing labels for %v/%v: %w", org, repo, err)
+			return NewGitHubAPIError(0, "edit label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to edit label %s", edit.Name), err)
 		}
 		dumpedResp, _ := httputil.DumpResponse(resp.Response, true)
 		log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")

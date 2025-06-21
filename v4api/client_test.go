@@ -18,13 +18,17 @@ func TestNewGHv4Client(t *testing.T) {
 		wantTimeout int
 	}{
 		{
-			name:        "default configuration",
+			name: "default configuration",
+			envVars: map[string]string{
+				"GITHUB_TOKEN": "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
+			},
 			wantRetries: defaultConfig.maxRetries,
 			wantTimeout: defaultConfig.timeoutSeconds,
 		},
 		{
 			name: "custom configuration",
 			envVars: map[string]string{
+				"GITHUB_TOKEN":                   "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
 				EnvVarPrefix + EnvMaxRetries:     "5",
 				EnvVarPrefix + EnvTimeoutSeconds: "30",
 			},
