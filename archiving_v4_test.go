@@ -2,6 +2,7 @@ package ownershit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -9,6 +10,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/shurcooL/githubv4"
+)
+
+var (
+	ErrTestError  = errors.New("test error here")
+	ErrDummyError = errors.New("dummy error")
 )
 
 const oneDay = time.Hour * 24
@@ -229,107 +235,122 @@ func TestSortedRepositoryInfo(t *testing.T) {
 	}
 }
 
-func TestRepositoryInfo_IsArchivable(t *testing.T) {
-	type fields struct {
-		ID             githubv4.String
-		Name           githubv4.String
-		ForkCount      githubv4.Int
-		IsArchived     githubv4.Boolean
-		IsFork         githubv4.Boolean
-		StargazerCount githubv4.Int
-		UpdatedAt      githubv4.DateTime
-		Watchers       struct{ TotalCount githubv4.Int }
-	}
-	type args struct {
-		forks    int
-		stars    int
-		maxDays  int
-		watchers int
-	}
-	tests := []struct {
+type archivableTestFields struct {
+	ID             githubv4.String
+	Name           githubv4.String
+	ForkCount      githubv4.Int
+	IsArchived     githubv4.Boolean
+	IsFork         githubv4.Boolean
+	StargazerCount githubv4.Int
+	UpdatedAt      githubv4.DateTime
+	Watchers       struct{ TotalCount githubv4.Int }
+}
+
+type archivableTestArgs struct {
+	forks    int
+	stars    int
+	maxDays  int
+	watchers int
+}
+
+func getArchivableTestCases() []struct {
+	name   string
+	fields archivableTestFields
+	args   archivableTestArgs
+	want   bool
+} {
+	return []struct {
 		name   string
-		fields fields
-		args   args
+		fields archivableTestFields
+		args   archivableTestArgs
 		want   bool
 	}{
 		{
 			name:   "with stars",
-			args:   args{},
-			fields: fields{StargazerCount: githubv4.Int(1)},
+			args:   archivableTestArgs{},
+			fields: archivableTestFields{StargazerCount: githubv4.Int(1)},
 			want:   true,
 		},
 		{
 			name:   "with forks",
-			args:   args{},
-			fields: fields{ForkCount: githubv4.Int(1)},
+			args:   archivableTestArgs{},
+			fields: archivableTestFields{ForkCount: githubv4.Int(1)},
 			want:   true,
 		},
 		{
 			name:   "with days",
-			args:   args{maxDays: 1},
-			fields: fields{UpdatedAt: githubv4.DateTime{Time: time.Now()}},
+			args:   archivableTestArgs{maxDays: 1},
+			fields: archivableTestFields{UpdatedAt: githubv4.DateTime{Time: time.Now()}},
 			want:   true,
 		},
 		{
 			name:   "not with stars",
-			args:   args{stars: 1},
-			fields: fields{StargazerCount: githubv4.Int(1)},
+			args:   archivableTestArgs{stars: 1},
+			fields: archivableTestFields{StargazerCount: githubv4.Int(1)},
 			want:   false,
 		},
 		{
 			name:   "not with forks",
-			args:   args{forks: 1},
-			fields: fields{ForkCount: githubv4.Int(1)},
+			args:   archivableTestArgs{forks: 1},
+			fields: archivableTestFields{ForkCount: githubv4.Int(1)},
 			want:   false,
 		},
 		{
 			name:   "not with days",
-			args:   args{maxDays: 1},
-			fields: fields{UpdatedAt: githubv4.DateTime{Time: time.Now().Add(-oneDay)}},
+			args:   archivableTestArgs{maxDays: 1},
+			fields: archivableTestFields{UpdatedAt: githubv4.DateTime{Time: time.Now().Add(-oneDay)}},
 			want:   false,
 		},
 		{
 			name:   "already archived",
-			args:   args{},
-			fields: fields{IsArchived: githubv4.Boolean(true)},
+			args:   archivableTestArgs{},
+			fields: archivableTestFields{IsArchived: githubv4.Boolean(true)},
 			want:   true,
 		},
 		{
 			name:   "is forked",
-			args:   args{},
-			fields: fields{IsFork: githubv4.Boolean(true)},
+			args:   archivableTestArgs{},
+			fields: archivableTestFields{IsFork: githubv4.Boolean(true)},
 			want:   true,
 		},
 		{
 			name:   "has watchers",
-			args:   args{},
-			fields: fields{Watchers: struct{ TotalCount githubv4.Int }{githubv4.Int(1)}},
+			args:   archivableTestArgs{},
+			fields: archivableTestFields{Watchers: struct{ TotalCount githubv4.Int }{githubv4.Int(1)}},
 			want:   true,
 		},
 		{
 			name:   "not with watchers",
-			args:   args{watchers: 1},
-			fields: fields{Watchers: struct{ TotalCount githubv4.Int }{githubv4.Int(1)}},
+			args:   archivableTestArgs{watchers: 1},
+			fields: archivableTestFields{Watchers: struct{ TotalCount githubv4.Int }{githubv4.Int(1)}},
 			want:   false,
 		},
 	}
+}
+
+func TestRepositoryInfo_IsArchivable(t *testing.T) {
+	tests := getArchivableTestCases()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &RepositoryInfo{
-				ID:             tt.fields.ID,
-				Name:           tt.fields.Name,
-				ForkCount:      tt.fields.ForkCount,
-				IsArchived:     tt.fields.IsArchived,
-				IsFork:         tt.fields.IsFork,
-				StargazerCount: tt.fields.StargazerCount,
-				UpdatedAt:      tt.fields.UpdatedAt,
-				Watchers:       tt.fields.Watchers,
-			}
+			r := createRepositoryInfo(tt.fields)
 			fmt.Println(tt.fields.UpdatedAt.Date())
 			if got := r.IsArchivable(tt.args.forks, tt.args.stars, tt.args.maxDays, tt.args.watchers); got != tt.want {
 				t.Errorf("RepositoryInfo.IsArchivable() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func createRepositoryInfo(fields archivableTestFields) *RepositoryInfo {
+	return &RepositoryInfo{
+		ID:             fields.ID,
+		Name:           fields.Name,
+		ForkCount:      fields.ForkCount,
+		IsArchived:     fields.IsArchived,
+		IsFork:         fields.IsFork,
+		StargazerCount: fields.StargazerCount,
+		UpdatedAt:      fields.UpdatedAt,
+		Watchers:       fields.Watchers,
 	}
 }
 
@@ -360,7 +381,7 @@ func TestQueryArchivableRepos(t *testing.T) {
 	if len(info) != 0 {
 		t.Errorf("length of RepositoryInfo: %v, expected to be %v", len(info), 0)
 	}
-	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Eq(dummyVars)).Return(fmt.Errorf("test error here"))
+	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Eq(dummyVars)).Return(ErrTestError)
 	_, err = mocks.client.QueryArchivableRepos("klauern", 1, 1, 1, 1)
 	if err == nil {
 		t.Error("error expected")
@@ -377,7 +398,7 @@ func TestMutateArchiveRepository(t *testing.T) {
 	if err := mock.client.MutateArchiveRepository(dummyRepo); err != nil {
 		t.Error("did not expect error here")
 	}
-	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(fmt.Errorf("dummy error"))
+	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).Return(ErrDummyError)
 	if err := mock.client.MutateArchiveRepository(dummyRepo); err == nil {
 		t.Error("expected error here")
 	}
