@@ -32,8 +32,8 @@ func main() {
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
-				Name:   "init",
-				Usage:  "Create a stub configuration file to get started",
+				Name:  "init",
+				Usage: "Create a stub configuration file to get started",
 				Before: func(c *cli.Context) error {
 					if c.Bool("debug") {
 						zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -188,7 +188,7 @@ func rateLimitCommand(c *cli.Context) error {
 
 func initCommand(c *cli.Context) error {
 	configPath := c.String("config")
-	
+
 	// Check if config file already exists
 	if _, err := os.Stat(configPath); err == nil {
 		log.Warn().Str("configPath", configPath).Msg("configuration file already exists")
@@ -196,15 +196,15 @@ func initCommand(c *cli.Context) error {
 		fmt.Printf("Remove it first if you want to create a new one.\n")
 		return nil
 	}
-	
+
 	stubConfig := getStubConfig()
-	
-	err := os.WriteFile(configPath, []byte(stubConfig), 0644)
+
+	err := os.WriteFile(configPath, []byte(stubConfig), 0600)
 	if err != nil {
 		log.Err(err).Str("configPath", configPath).Msg("failed to write configuration file")
 		return fmt.Errorf("failed to create configuration file: %w", err)
 	}
-	
+
 	log.Info().Str("configPath", configPath).Msg("configuration file created")
 	fmt.Printf("✅ Created configuration file: %s\n\n", configPath)
 	fmt.Printf("Next steps:\n")
@@ -214,7 +214,7 @@ func initCommand(c *cli.Context) error {
 	fmt.Printf("4. Set up your GITHUB_TOKEN environment variable\n")
 	fmt.Printf("5. Run 'ownershit sync' to apply the configuration\n\n")
 	fmt.Printf("For help, run: ownershit --help\n")
-	
+
 	return nil
 }
 

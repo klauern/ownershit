@@ -22,7 +22,15 @@
       "Bash(gh pr create:*)",
       "Bash(git fetch:*)",
       "Bash(git merge-base:*)",
-      "Bash(task test-cover)"
+      "Bash(task test-cover)",
+      "mcp__github__get_me",
+      "mcp__github__search_issues",
+      "mcp__github__list_pull_requests",
+      "mcp__github__get_pull_request_status",
+      "Bash(ownershit:*)",
+      "Bash(rm:*)",
+      "Bash(GITHUB_TOKEN=fake_token ownershit sync --debug)",
+      "Bash(GITHUB_TOKEN=fake_token ownershit --debug sync)"
     ],
     "deny": []
   }
