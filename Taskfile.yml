@@ -20,7 +20,7 @@ tasks:
   install:
     desc: install binary locally
     cmds:
-      - go install ./cmd/ownershit/main.go
+      - go install ./cmd/ownershit
 
   fmt:
     desc: format
@@ -76,3 +76,20 @@ tasks:
     desc: run security vulnerability check
     cmds:
       - govulncheck ./...
+
+  release:
+    desc: create a new release (requires VERSION=x.x.x)
+    cmds:
+      - cmd: |
+          if [ -z "{{.VERSION}}" ]; then
+            echo "❌ VERSION is required. Usage: task release VERSION=v0.6.0"
+            exit 1
+          fi
+      - task: test-all
+      - task: lint
+      - cmd: |
+          echo "🏷️  Creating release tag {{.VERSION}}"
+          git tag {{.VERSION}}
+          git push origin {{.VERSION}}
+          echo "✅ Release {{.VERSION}} created! GoReleaser will build and publish automatically."
+          echo "🔗 Check the release at: https://github.com/klauern/ownershit/releases/tag/{{.VERSION}}"
