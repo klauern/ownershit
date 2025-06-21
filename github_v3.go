@@ -157,6 +157,117 @@ func (c *GitHubClient) UpdateBranchPermissions(org, repo string, perms *BranchPe
 	return nil
 }
 
+// SetBranchProtectionFallback applies advanced branch protection features via REST API
+// that are not available in the GraphQL CreateBranchProtectionRuleInput
+func (c *GitHubClient) SetBranchProtectionFallback(org, repo, branch string, perms *BranchPermissions) error {
+	if perms == nil {
+		return nil
+	}
+
+	// Build protection request for REST API
+	protection := &github.ProtectionRequest{}
+
+	// Required pull request reviews
+	if perms.RequirePullRequestReviews != nil && *perms.RequirePullRequestReviews {
+		reviews := &github.PullRequestReviewsEnforcementRequest{
+			RequiredApprovingReviewCount: 1, // Default
+		}
+
+		if perms.ApproverCount != nil {
+			reviews.RequiredApprovingReviewCount = *perms.ApproverCount
+		}
+
+		if perms.RequireCodeOwners != nil {
+			reviews.RequireCodeOwnerReviews = *perms.RequireCodeOwners
+		}
+
+		protection.RequiredPullRequestReviews = reviews
+	}
+
+	// Required status checks
+	if perms.RequireStatusChecks != nil && *perms.RequireStatusChecks {
+		statusChecks := &github.RequiredStatusChecks{
+			Strict: false, // Default
+		}
+
+		if perms.RequireUpToDateBranch != nil {
+			statusChecks.Strict = *perms.RequireUpToDateBranch
+		}
+
+		if len(perms.StatusChecks) > 0 {
+			statusChecks.Contexts = &perms.StatusChecks
+		}
+
+		protection.RequiredStatusChecks = statusChecks
+	}
+
+	// Enforce admins
+	if perms.EnforceAdmins != nil {
+		protection.EnforceAdmins = *perms.EnforceAdmins
+	}
+
+	// Restrict pushes
+	if perms.RestrictPushes != nil && *perms.RestrictPushes {
+		restrictions := &github.BranchRestrictionsRequest{}
+
+		// Add users/teams from allowlist
+		if len(perms.PushAllowlist) > 0 {
+			// Note: In a real implementation, you'd need to resolve team names to IDs
+			// For now, assume they are team slugs
+			restrictions.Teams = perms.PushAllowlist
+		}
+
+		protection.Restrictions = restrictions
+	}
+
+	// Advanced options only available in REST API
+	if perms.RequireLinearHistory != nil {
+		protection.RequireLinearHistory = perms.RequireLinearHistory
+	}
+
+	if perms.AllowForcePushes != nil {
+		protection.AllowForcePushes = perms.AllowForcePushes
+	}
+
+	if perms.AllowDeletions != nil {
+		protection.AllowDeletions = perms.AllowDeletions
+	}
+
+	log.Debug().
+		Interface("protection", protection).
+		Str("org", org).
+		Str("repo", repo).
+		Str("branch", branch).
+		Msg("Setting branch protection via REST API")
+
+	// Apply protection via REST API
+	_, resp, err := c.v3.Repositories.UpdateBranchProtection(c.Context, org, repo, branch, protection)
+	if err != nil {
+		statusCode := 0
+		if resp != nil {
+			statusCode = resp.StatusCode
+		}
+		log.Err(err).
+			Str("org", org).
+			Str("repo", repo).
+			Str("branch", branch).
+			Int("statusCode", statusCode).
+			Str("operation", "updateBranchProtection").
+			Msg("Error setting branch protection via REST API")
+		return NewGitHubAPIError(statusCode, "update branch protection",
+			fmt.Sprintf("%s/%s", org, repo), "failed to set branch protection via REST API", err)
+	}
+
+	log.Info().
+		Str("org", org).
+		Str("repo", repo).
+		Str("branch", branch).
+		Int("statusCode", resp.StatusCode).
+		Msg("Successfully set branch protection via REST API")
+
+	return nil
+}
+
 // SyncLabels updates the list of labels that can be used on issues within a repository.
 func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 	ghLabels, resp, err := c.Issues.ListLabels(c.Context, org, repo, &github.ListOptions{

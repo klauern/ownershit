@@ -61,3 +61,6 @@ The tool expects a `repositories.yaml` file defining:
 - GraphQL client generation: `github.com/Khan/genqlient`
 - Configuration: `gopkg.in/yaml.v3`
 - Logging: `github.com/rs/zerolog`
+
+## Development Workflow
+- When tests pass, we should commit changes before we make more changes
