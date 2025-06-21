@@ -55,12 +55,19 @@ func setupMocks(t *testing.T) *testMocks {
 	graph := mocks.NewMockGraphQLClient(ctrl)
 	repo := mocks.NewMockRepositoriesService(ctrl)
 	issues := mocks.NewMockIssuesService(ctrl)
+
+	// Create a real GitHub client for v3 operations that can't be mocked easily
+	// Use an empty token since we're mocking the service layer
+	realClient := defaultGitHubClient()
+
 	ghClient := &GitHubClient{
 		Teams:        teams,
 		Context:      context.TODO(),
 		Graph:        graph,
 		Repositories: repo,
 		Issues:       issues,
+		v3:           realClient.v3, // Set the v3 client to avoid nil pointer
+		v4:           realClient.v4, // Set the v4 client as well for completeness
 	}
 	return &testMocks{
 		ctrl:       ctrl,
