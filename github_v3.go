@@ -47,6 +47,7 @@ type RepositoriesService interface {
 }
 
 // NewGitHubClient creates a new GitHub context using OAuth2.
+// Deprecated: Use NewSecureGitHubClient() for secure token handling.
 func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: staticToken})
@@ -64,6 +65,31 @@ func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 		Graph:        clientV4,
 		Context:      ctx,
 	}
+}
+
+// NewSecureGitHubClient creates a new GitHub client with validated token from environment.
+func NewSecureGitHubClient(ctx context.Context) (*GitHubClient, error) {
+	token, err := GetValidatedGitHubToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get validated GitHub token: %w", err)
+	}
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token})
+	tc := oauth2.NewClient(ctx, ts)
+
+	client := github.NewClient(tc)
+	clientV4 := githubv4.NewClient(tc)
+
+	return &GitHubClient{
+		Teams:        client.Teams,
+		Repositories: client.Repositories,
+		Issues:       client.Issues,
+		v3:           client,
+		v4:           clientV4,
+		Graph:        clientV4,
+		Context:      ctx,
+	}, nil
 }
 
 // AddPermissions adds a given team level repository permission.

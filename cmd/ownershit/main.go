@@ -102,7 +102,12 @@ func configureClient(c *cli.Context) error {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	githubClient = shit.NewGitHubClient(c.Context, shit.GitHubTokenEnv)
+	client, err := shit.NewSecureGitHubClient(c.Context)
+	if err != nil {
+		log.Err(err).Msg("GitHub client initialization failed")
+		return err
+	}
+	githubClient = client
 	return nil
 }
 

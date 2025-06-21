@@ -3,6 +3,7 @@ package ownershit
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -153,3 +154,189 @@ func TestUpdateBranchMergeStrategies(t *testing.T) {
 // 	mocks.issuesMock.EXPECT().ListLabels(gomock.Any(), gomock.Any(),
 // 		gomock.Any()).Return()
 // }
+
+func TestValidateGitHubToken(t *testing.T) {
+	tests := []struct {
+		name     string
+		token    string
+		wantErr  error
+		wantType string
+	}{
+		{
+			name:     "empty token",
+			token:    "",
+			wantErr:  ErrTokenEmpty,
+			wantType: "empty",
+		},
+		{
+			name:     "whitespace only token",
+			token:    "   \t\n  ",
+			wantErr:  ErrTokenEmpty,
+			wantType: "whitespace",
+		},
+		{
+			name:     "valid classic personal access token",
+			token:    "ghp_abcd1234567890ABCD1234567890abcd1234",
+			wantErr:  nil,
+			wantType: "classic",
+		},
+		{
+			name:     "valid fine-grained personal access token",
+			token:    "github_pat_abcd1234567890ABCD1234567890abcd1234567890ABCD1234567890abcd12",
+			wantErr:  nil,
+			wantType: "fine-grained",
+		},
+		{
+			name:     "valid GitHub App token",
+			token:    "ghs_abcd1234567890ABCD1234567890abcd1234",
+			wantErr:  nil,
+			wantType: "app",
+		},
+		{
+			name:     "valid OAuth token",
+			token:    "gho_abcd1234567890ABCD1234567890abcd1234",
+			wantErr:  nil,
+			wantType: "oauth",
+		},
+		{
+			name:     "valid refresh token",
+			token:    "ghr_abcd1234567890ABCD1234567890abcd1234",
+			wantErr:  nil,
+			wantType: "refresh",
+		},
+		{
+			name:     "valid SAML token",
+			token:    "ghu_abcd1234567890ABCD1234567890abcd1234",
+			wantErr:  nil,
+			wantType: "saml",
+		},
+		{
+			name:     "invalid classic token - too short",
+			token:    "ghp_abcd1234567890ABCD1234567890abcd123",
+			wantErr:  ErrTokenInvalid,
+			wantType: "invalid",
+		},
+		{
+			name:     "invalid classic token - too long",
+			token:    "ghp_abcd1234567890ABCD1234567890abcd12345",
+			wantErr:  ErrTokenInvalid,
+			wantType: "invalid",
+		},
+		{
+			name:     "invalid token - wrong prefix",
+			token:    "abc_1234567890123456789012345678901234567890",
+			wantErr:  ErrTokenInvalid,
+			wantType: "invalid",
+		},
+		{
+			name:     "invalid token - no prefix",
+			token:    "1234567890123456789012345678901234567890",
+			wantErr:  ErrTokenInvalid,
+			wantType: "invalid",
+		},
+		{
+			name:     "invalid fine-grained token - too short",
+			token:    "github_pat_123456789012345678901",
+			wantErr:  ErrTokenInvalid,
+			wantType: "invalid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateGitHubToken(tt.token)
+			if tt.wantErr != nil {
+				if err == nil {
+					t.Errorf("ValidateGitHubToken() error = nil, wantErr %v", tt.wantErr)
+					return
+				}
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("ValidateGitHubToken() error = %v, wantErr %v", err, tt.wantErr)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("ValidateGitHubToken() error = %v, wantErr nil", err)
+				}
+			}
+		})
+	}
+}
+
+func TestGetValidatedGitHubToken(t *testing.T) {
+	// Save original env var
+	original := os.Getenv("GITHUB_TOKEN")
+	defer func() {
+		if original == "" {
+			os.Unsetenv("GITHUB_TOKEN")
+		} else {
+			os.Setenv("GITHUB_TOKEN", original)
+		}
+	}()
+
+	tests := []struct {
+		name     string
+		envValue string
+		unsetEnv bool
+		wantErr  bool
+		errType  error
+	}{
+		{
+			name:     "environment variable not set",
+			unsetEnv: true,
+			wantErr:  true,
+			errType:  ErrTokenNotFound,
+		},
+		{
+			name:     "empty environment variable",
+			envValue: "",
+			wantErr:  true,
+			errType:  ErrTokenNotFound,
+		},
+		{
+			name:     "invalid token format",
+			envValue: "invalid_token_format",
+			wantErr:  true,
+			errType:  ErrTokenInvalid,
+		},
+		{
+			name:     "valid classic token",
+			envValue: "ghp_abcd1234567890ABCD1234567890abcd1234",
+			wantErr:  false,
+		},
+		{
+			name:     "valid fine-grained token",
+			envValue: "github_pat_abcd1234567890ABCD1234567890abcd1234567890ABCD1234567890abcd12",
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.unsetEnv {
+				os.Unsetenv("GITHUB_TOKEN")
+			} else {
+				os.Setenv("GITHUB_TOKEN", tt.envValue)
+			}
+
+			token, err := GetValidatedGitHubToken()
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("GetValidatedGitHubToken() error = nil, wantErr %v", tt.wantErr)
+					return
+				}
+				if tt.errType != nil && !errors.Is(err, tt.errType) {
+					t.Errorf("GetValidatedGitHubToken() error = %v, want error type %v", err, tt.errType)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("GetValidatedGitHubToken() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				if token != tt.envValue {
+					t.Errorf("GetValidatedGitHubToken() token = %v, want %v", token, tt.envValue)
+				}
+			}
+		})
+	}
+}

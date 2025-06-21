@@ -2,6 +2,7 @@ package v4api
 
 import (
 	"context"
+	"fmt"
 	globalLog "log"
 	"net/http"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"github.com/Khan/genqlient/graphql"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/rs/zerolog/log"
+
+	"github.com/klauern/ownershit"
 )
 
 //go:generate mockgen -destination mocks/client_mocks.go github.com/Khan/genqlient/graphql Client
@@ -110,7 +113,10 @@ func NewGHv4Client() *GitHubV4Client {
 	retryLogger := log.With().Str("component", "retryablehttp").Logger()
 	globalLog.SetOutput(retryLogger)
 
-	key := os.Getenv("GITHUB_TOKEN")
+	key, err := ownershit.GetValidatedGitHubToken()
+	if err != nil {
+		panic(fmt.Sprintf("GitHub token validation failed: %v", err))
+	}
 
 	client := buildClient(params, key)
 

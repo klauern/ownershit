@@ -79,7 +79,11 @@ func userClientSetup(c *cli.Context) error {
 	if username == "" {
 		return ErrUsernameNotDefined
 	}
-	client = shit.NewGitHubClient(context.Background(), shit.GitHubTokenEnv)
+	secureClient, err := shit.NewSecureGitHubClient(context.Background())
+	if err != nil {
+		return err
+	}
+	client = secureClient
 	return nil
 }
 
