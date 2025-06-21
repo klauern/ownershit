@@ -8,6 +8,7 @@ tasks:
     cmds:
       - go mod tidy
       - go install go.uber.org/mock/mockgen
+      - go install golang.org/x/vuln/cmd/govulncheck@latest
 
   build:
     desc: Build locally
@@ -47,6 +48,14 @@ tasks:
       - mocks
     cmds:
       - go test -race -coverprofile=coverage.out ./...
+
+  test-all:
+    desc: run tests with security checks
+    deps:
+      - mocks
+    cmds:
+      - go test -race -coverprofile=coverage.out ./...
+      - task: security
   test-cover:
     desc: run tests, and then show coverage output
     cmds:
@@ -62,3 +71,8 @@ tasks:
     desc: create GraphQL generated client for GitHub v4
     cmds:
       - cmd: go run github.com/Khan/genqlient
+
+  security:
+    desc: run security vulnerability check
+    cmds:
+      - govulncheck ./...

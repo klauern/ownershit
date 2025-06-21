@@ -1,7 +1,11 @@
 package ownershit
 
 import (
+	"errors"
+	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 )
@@ -51,7 +55,70 @@ type RepoLabel struct {
 	oldLabel    string
 }
 
+// GitHub token validation errors.
+var (
+	ErrTokenEmpty    = errors.New("GitHub token is empty")
+	ErrTokenInvalid  = errors.New("GitHub token format is invalid")
+	ErrTokenNotFound = errors.New("GITHUB_TOKEN environment variable not set")
+)
+
+// ValidateGitHubToken validates a GitHub token format and content.
+func ValidateGitHubToken(token string) error {
+	if token == "" {
+		return ErrTokenEmpty
+	}
+
+	// Remove whitespace
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return ErrTokenEmpty
+	}
+
+	// GitHub tokens have specific patterns:
+	// - Classic tokens: ghp_[A-Za-z0-9]{36}
+	// - Fine-grained tokens: github_pat_[A-Za-z0-9_]+
+	// - GitHub App tokens: ghs_[A-Za-z0-9]{36}
+	// - OAuth tokens: gho_[A-Za-z0-9]{36}
+	// - Refresh tokens: ghr_[A-Za-z0-9]{36}
+	// - SAML tokens: ghu_[A-Za-z0-9]{36}
+	validPatterns := []string{
+		`^ghp_[A-Za-z0-9]{36}$`,             // Classic personal access token
+		`^github_pat_[A-Za-z0-9_]{22,255}$`, // Fine-grained personal access token
+		`^ghs_[A-Za-z0-9]{36}$`,             // GitHub App token
+		`^gho_[A-Za-z0-9]{36}$`,             // OAuth token
+		`^ghr_[A-Za-z0-9]{36}$`,             // Refresh token
+		`^ghu_[A-Za-z0-9]{36}$`,             // SAML token
+	}
+
+	for _, pattern := range validPatterns {
+		matched, err := regexp.MatchString(pattern, token)
+		if err != nil {
+			return fmt.Errorf("token validation regex error: %w", err)
+		}
+		if matched {
+			return nil
+		}
+	}
+
+	return ErrTokenInvalid
+}
+
+// GetValidatedGitHubToken gets and validates the GitHub token from environment.
+func GetValidatedGitHubToken() (string, error) {
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return "", ErrTokenNotFound
+	}
+
+	if err := ValidateGitHubToken(token); err != nil {
+		return "", fmt.Errorf("invalid GitHub token: %w", err)
+	}
+
+	return token, nil
+}
+
 // GitHubTokenEnv sets the GitHub Token from the environment variable.
+// Deprecated: Use GetValidatedGitHubToken() for secure token handling.
 var GitHubTokenEnv = os.Getenv("GITHUB_TOKEN")
 
 func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
@@ -72,7 +139,9 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 						Str("repository", *repo.Name).
 						Str("permissions-level", *perm.Level).
 						Str("permissions-team", *perm.Team).
+						Str("operation", "addTeamPermissions").
 						Msg("setting team permissions")
+					// Continue processing other permissions even if one fails
 				}
 			}
 		}
