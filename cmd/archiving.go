@@ -14,8 +14,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var ErrUsernameNotDefined = errors.New("username not defined for query")
-var username string
+var (
+	ErrUsernameNotDefined = errors.New("username not defined for query")
+	username              string
+)
 
 var client *shit.GitHubClient
 var (

@@ -92,7 +92,8 @@ func (c *GitHubV4Client) SyncLabels(repo string, labels []Label) error {
 		}
 	}
 	// now we have a map of labels that we need to delete
-	for _, label := range labelsMap {
+	for name := range labelsMap {
+		label := labelsMap[name]
 		_, err := DeleteLabel(c.Context, c.client, DeleteLabelInput{
 			Id: label.Id,
 		})

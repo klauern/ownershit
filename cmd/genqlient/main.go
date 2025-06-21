@@ -13,6 +13,10 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 
 	client := v4api.NewGHv4Client()
-	client.GetRateLimit()
-	client.GetTeams()
+	if _, err := client.GetRateLimit(); err != nil {
+		log.Error().Err(err).Msg("failed to get rate limit")
+	}
+	if _, err := client.GetTeams(); err != nil {
+		log.Error().Err(err).Msg("failed to get teams")
+	}
 }

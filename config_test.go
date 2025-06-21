@@ -148,6 +148,6 @@ func TestUpdateBranchMergeStrategies(t *testing.T) {
 
 // func TestSyncLabels(t *testing.T) {
 // 	mocks := setupMocks(t)
-// 	mocks.issuesMock.EXPECT().ListLabels(gomock.Any(), gomock.Any(), gomock.Any(),
+// 	mocks.issuesMock.EXPECT().ListLabels(gomock.Any(), gomock.Any(),
 // 		gomock.Any()).Return()
 // }
