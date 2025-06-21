@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -11,6 +12,123 @@ import (
 )
 
 var ErrDummyConfigError = errors.New("dummy error")
+
+// Helper function for creating int pointers in tests
+func intPtr(i int) *int {
+	return &i
+}
+
+func TestValidateBranchPermissions(t *testing.T) {
+	tests := []struct {
+		name    string
+		perms   *BranchPermissions
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "nil permissions should not error",
+			perms:   nil,
+			wantErr: false,
+		},
+		{
+			name: "valid configuration",
+			perms: &BranchPermissions{
+				RequireCodeOwners:         boolPtr(true),
+				ApproverCount:             intPtr(2),
+				RequirePullRequestReviews: boolPtr(true),
+				RequireStatusChecks:       boolPtr(true),
+				StatusChecks:              []string{"ci/build", "ci/test"},
+				RequireUpToDateBranch:     boolPtr(true),
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative approver count should error",
+			perms: &BranchPermissions{
+				ApproverCount: intPtr(-1),
+			},
+			wantErr: true,
+			errMsg:  "approving review count must be non-negative",
+		},
+		{
+			name: "require status checks with empty list should error",
+			perms: &BranchPermissions{
+				RequireStatusChecks: boolPtr(true),
+				StatusChecks:        []string{},
+			},
+			wantErr: true,
+			errMsg:  "status_checks list cannot be empty",
+		},
+		{
+			name: "empty status check name should error",
+			perms: &BranchPermissions{
+				RequireStatusChecks: boolPtr(true),
+				StatusChecks:        []string{"ci/build", "", "ci/test"},
+			},
+			wantErr: true,
+			errMsg:  "status check name cannot be empty",
+		},
+		{
+			name: "require approving reviews when pull request reviews disabled should error",
+			perms: &BranchPermissions{
+				RequirePullRequestReviews: boolPtr(false),
+				ApproverCount:             intPtr(1),
+			},
+			wantErr: true,
+			errMsg:  "cannot require approving reviews when require_pull_request_reviews is false",
+		},
+		{
+			name: "require code owners when pull request reviews disabled should error",
+			perms: &BranchPermissions{
+				RequirePullRequestReviews: boolPtr(false),
+				RequireCodeOwners:         boolPtr(true),
+			},
+			wantErr: true,
+			errMsg:  "cannot require code owner reviews when require_pull_request_reviews is false",
+		},
+		{
+			name: "require up-to-date branch without status checks should error",
+			perms: &BranchPermissions{
+				RequireStatusChecks:   boolPtr(false),
+				RequireUpToDateBranch: boolPtr(true),
+			},
+			wantErr: true,
+			errMsg:  "cannot require up-to-date branch when require_status_checks is false",
+		},
+		{
+			name: "restrict pushes with empty allowlist should not error but warn",
+			perms: &BranchPermissions{
+				RestrictPushes: boolPtr(true),
+				PushAllowlist:  []string{},
+			},
+			wantErr: false, // Should only warn, not error
+		},
+		{
+			name: "empty push allowlist entry should error",
+			perms: &BranchPermissions{
+				RestrictPushes: boolPtr(true),
+				PushAllowlist:  []string{"team1", "", "team2"},
+			},
+			wantErr: true,
+			errMsg:  "push allowlist entry cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateBranchPermissions(tt.perms)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBranchPermissions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && tt.errMsg != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("ValidateBranchPermissions() error = %v, want error containing %v", err, tt.errMsg)
+				}
+			}
+		})
+	}
+}
 
 func generateDefaultPermissionsSettings() *PermissionsSettings {
 	return &PermissionsSettings{

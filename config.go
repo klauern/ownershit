@@ -30,6 +30,18 @@ type BranchPermissions struct {
 	AllowMergeCommit          *bool `yaml:"allow_merge_commit"`
 	AllowSquashMerge          *bool `yaml:"allow_squash_merge"`
 	AllowRebaseMerge          *bool `yaml:"allow_rebase_merge"`
+
+	// Advanced Branch Protection Features
+	RequireStatusChecks           *bool    `yaml:"require_status_checks"`
+	StatusChecks                  []string `yaml:"status_checks"`
+	RequireUpToDateBranch         *bool    `yaml:"require_up_to_date_branch"`
+	EnforceAdmins                 *bool    `yaml:"enforce_admins"`
+	RestrictPushes                *bool    `yaml:"restrict_pushes"`
+	PushAllowlist                 []string `yaml:"push_allowlist"`
+	RequireConversationResolution *bool    `yaml:"require_conversation_resolution"`
+	RequireLinearHistory          *bool    `yaml:"require_linear_history"`
+	AllowForcePushes              *bool    `yaml:"allow_force_pushes"`
+	AllowDeletions                *bool    `yaml:"allow_deletions"`
 }
 
 type PermissionsSettings struct {
@@ -117,11 +129,83 @@ func GetValidatedGitHubToken() (string, error) {
 	return token, nil
 }
 
+// ValidateBranchPermissions validates branch protection configuration.
+func ValidateBranchPermissions(perms *BranchPermissions) error {
+	if perms == nil {
+		return nil
+	}
+
+	// Validate approver count
+	if perms.ApproverCount != nil && *perms.ApproverCount < 0 {
+		return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
+			"approving review count must be non-negative", nil)
+	}
+
+	// Validate status checks configuration
+	if perms.RequireStatusChecks != nil && *perms.RequireStatusChecks {
+		if len(perms.StatusChecks) == 0 {
+			return NewConfigValidationError("status_checks", perms.StatusChecks,
+				"status_checks list cannot be empty when require_status_checks is true", nil)
+		}
+
+		// Validate individual status check names
+		for i, check := range perms.StatusChecks {
+			if strings.TrimSpace(check) == "" {
+				return NewConfigValidationError(fmt.Sprintf("status_checks[%d]", i), check,
+					"status check name cannot be empty", nil)
+			}
+		}
+	}
+
+	// Validate push allowlist configuration
+	if perms.RestrictPushes != nil && *perms.RestrictPushes {
+		if len(perms.PushAllowlist) == 0 {
+			log.Warn().Msg("restrict_pushes is enabled but push_allowlist is empty - this will block all pushes")
+		}
+
+		// Validate push allowlist entries
+		for i, actor := range perms.PushAllowlist {
+			if strings.TrimSpace(actor) == "" {
+				return NewConfigValidationError(fmt.Sprintf("push_allowlist[%d]", i), actor,
+					"push allowlist entry cannot be empty", nil)
+			}
+		}
+	}
+
+	// Validate logical consistency
+	if perms.RequirePullRequestReviews != nil && !*perms.RequirePullRequestReviews {
+		if perms.ApproverCount != nil && *perms.ApproverCount > 0 {
+			return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
+				"cannot require approving reviews when require_pull_request_reviews is false", nil)
+		}
+		if perms.RequireCodeOwners != nil && *perms.RequireCodeOwners {
+			return NewConfigValidationError("require_code_owners", *perms.RequireCodeOwners,
+				"cannot require code owner reviews when require_pull_request_reviews is false", nil)
+		}
+	}
+
+	// Validate up-to-date branch requirement
+	if perms.RequireUpToDateBranch != nil && *perms.RequireUpToDateBranch {
+		if perms.RequireStatusChecks == nil || !*perms.RequireStatusChecks {
+			return NewConfigValidationError("require_up_to_date_branch", *perms.RequireUpToDateBranch,
+				"cannot require up-to-date branch when require_status_checks is false", nil)
+		}
+	}
+
+	return nil
+}
+
 // GitHubTokenEnv sets the GitHub Token from the environment variable.
 // Deprecated: Use GetValidatedGitHubToken() for secure token handling.
 var GitHubTokenEnv = os.Getenv("GITHUB_TOKEN")
 
 func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
+	// Validate branch permissions configuration
+	if err := ValidateBranchPermissions(&settings.BranchPermissions); err != nil {
+		log.Err(err).Msg("branch permissions validation failed")
+		return
+	}
+
 	for _, repo := range settings.Repositories {
 		if len(settings.TeamPermissions) > 0 {
 			for _, perm := range settings.TeamPermissions {
@@ -151,6 +235,8 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 				Str("organization", *settings.Organization).
 				Msg("updating repository settings")
 		}
+
+		// Get repository ID once for both operations
 		repoID, err := client.GetRepository(repo.Name, settings.Organization)
 		if err != nil {
 			log.Err(err).
@@ -160,6 +246,24 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 			log.Debug().
 				Interface("repoID", repoID).
 				Msg("Repository ID")
+
+			// Apply enhanced branch protection rules via GraphQL
+			if err := client.SetEnhancedBranchProtection(repoID, "main", &settings.BranchPermissions); err != nil {
+				log.Err(err).
+					Str("repository", *repo.Name).
+					Str("organization", *settings.Organization).
+					Msg("setting enhanced branch protection")
+			}
+
+			// Apply advanced features via REST API fallback
+			if err := client.SetBranchProtectionFallback(*settings.Organization, *repo.Name, "main", &settings.BranchPermissions); err != nil {
+				log.Err(err).
+					Str("repository", *repo.Name).
+					Str("organization", *settings.Organization).
+					Msg("setting branch protection fallback via REST API")
+			}
+
+			// Set repository features (wiki, issues, projects)
 			err := client.SetRepository(&repoID, repo.Wiki, repo.Issues, repo.Projects)
 			if err != nil {
 				log.Err(err).
@@ -174,6 +278,12 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 }
 
 func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubClient) {
+	// Validate branch permissions configuration
+	if err := ValidateBranchPermissions(&settings.BranchPermissions); err != nil {
+		log.Err(err).Msg("branch permissions validation failed")
+		return
+	}
+
 	for _, repo := range settings.Repositories {
 		log.Info().
 			Str("repository", *repo.Name).

@@ -8,7 +8,21 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(rg:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git rebase:*)",
+      "Bash(git stash:*)",
+      "Bash(task build)",
+      "Bash(task security)",
+      "Bash(ls:*)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "WebFetch(domain:docs.github.com)",
+      "Bash(gh pr create:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge-base:*)",
+      "Bash(task test-cover)"
     ],
     "deny": []
   }
