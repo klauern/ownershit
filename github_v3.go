@@ -158,7 +158,7 @@ func (c *GitHubClient) UpdateBranchPermissions(org, repo string, perms *BranchPe
 }
 
 // SetBranchProtectionFallback applies advanced branch protection features via REST API
-// that are not available in the GraphQL CreateBranchProtectionRuleInput
+// that are not available in the GraphQL CreateBranchProtectionRuleInput.
 func (c *GitHubClient) SetBranchProtectionFallback(org, repo, branch string, perms *BranchPermissions) error {
 	if perms == nil {
 		return nil

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	shit "github.com/klauern/ownershit"
@@ -368,6 +369,125 @@ func TestRateLimitCommand(t *testing.T) {
 				t.Errorf("rateLimitCommand() unexpected error = %v", err)
 			}
 		})
+	}
+}
+
+func TestInitCommand(t *testing.T) {
+	tests := []struct {
+		name         string
+		configPath   string
+		fileExists   bool
+		writeError   bool
+		expectedFile bool
+		wantErr      bool
+	}{
+		{
+			name:         "create new config file",
+			configPath:   "new_config.yaml",
+			fileExists:   false,
+			writeError:   false,
+			expectedFile: true,
+			wantErr:      false,
+		},
+		{
+			name:         "config file already exists",
+			configPath:   "existing_config.yaml",
+			fileExists:   true,
+			writeError:   false,
+			expectedFile: true,
+			wantErr:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup test directory
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, tt.configPath)
+
+			// Create existing file if needed
+			if tt.fileExists {
+				err := os.WriteFile(configPath, []byte("existing content"), 0o600)
+				if err != nil {
+					t.Fatalf("failed to create existing config file: %v", err)
+				}
+			}
+
+			// Create CLI context
+			app := &cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			set.String("config", configPath, "config file")
+			c := cli.NewContext(app, set, nil)
+
+			err := initCommand(c)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("initCommand() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// Check if file was created/exists as expected
+			_, statErr := os.Stat(configPath)
+			fileExists := statErr == nil
+			if fileExists != tt.expectedFile {
+				t.Errorf("initCommand() file existence = %v, expected %v", fileExists, tt.expectedFile)
+			}
+
+			// If file should exist and was created, verify content structure
+			if tt.expectedFile && !tt.fileExists && !tt.wantErr {
+				content, readErr := os.ReadFile(configPath)
+				if readErr != nil {
+					t.Errorf("failed to read created config file: %v", readErr)
+				} else {
+					// Verify the stub config contains expected sections
+					contentStr := string(content)
+					expectedSections := []string{"organization:", "repositories:", "team:", "branches:"}
+					for _, section := range expectedSections {
+						if !strings.Contains(contentStr, section) {
+							t.Errorf("initCommand() created config missing section: %s", section)
+						}
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestGetStubConfig(t *testing.T) {
+	stubConfig := getStubConfig()
+
+	// Test that stub config is not empty
+	if stubConfig == "" {
+		t.Error("getStubConfig() should return non-empty string")
+	}
+
+	// Test that stub config contains required sections
+	requiredSections := []string{
+		"organization:",
+		"repositories:",
+		"team:",
+		"branches:",
+		"default_labels:",
+	}
+
+	for _, section := range requiredSections {
+		if !strings.Contains(stubConfig, section) {
+			t.Errorf("getStubConfig() missing required section: %s", section)
+		}
+	}
+
+	// Test that stub config contains example values
+	exampleValues := []string{
+		"your-org-name",
+		"example-repo",
+		"developers",
+		"maintainers",
+		"require_pull_request_reviews",
+	}
+
+	for _, value := range exampleValues {
+		if !strings.Contains(stubConfig, value) {
+			t.Errorf("getStubConfig() missing example value: %s", value)
+		}
 	}
 }
 

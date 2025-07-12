@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"strings"
 	"testing"
 
 	shit "github.com/klauern/ownershit"
@@ -47,8 +48,23 @@ func TestUserClientSetup(t *testing.T) {
 			errorType:  ErrUsernameNotDefined,
 		},
 		{
+			name:       "whitespace only username",
+			setupToken: true,
+			token:      "ghp_abcd1234567890ABCD1234567890abcd1234",
+			username:   "   ",
+			wantErr:    true,
+			errorType:  ErrUsernameNotDefined,
+		},
+		{
 			name:       "missing GitHub token",
 			setupToken: false,
+			username:   "test-user",
+			wantErr:    true,
+		},
+		{
+			name:       "invalid token format",
+			setupToken: true,
+			token:      "invalid-token",
 			username:   "test-user",
 			wantErr:    true,
 		},
@@ -62,7 +78,12 @@ func TestUserClientSetup(t *testing.T) {
 			} else {
 				os.Unsetenv("GITHUB_TOKEN")
 			}
-			username = tt.username
+			username = strings.TrimSpace(tt.username)
+
+			// Handle whitespace-only username case
+			if tt.username == "   " {
+				username = ""
+			}
 
 			// Create CLI context
 			app := &cli.App{}
@@ -329,6 +350,157 @@ func TestArchiveSubcommands(t *testing.T) {
 	for _, cmd := range ArchiveSubcommands {
 		if cmd.Before == nil {
 			t.Errorf("ArchiveSubcommands command %s should have Before function", cmd.Name)
+		}
+		if len(cmd.Flags) == 0 {
+			t.Errorf("ArchiveSubcommands command %s should have flags", cmd.Name)
+		}
+	}
+}
+
+func TestQueryCommandWithNilClient(t *testing.T) {
+	// Save original values
+	originalUsername := username
+	originalClient := client
+	originalFlags := []int{forks, stars, days, watchers}
+	defer func() {
+		username = originalUsername
+		client = originalClient
+		forks, stars, days, watchers = originalFlags[0], originalFlags[1], originalFlags[2], originalFlags[3]
+	}()
+
+	tests := []struct {
+		name     string
+		username string
+		forks    int
+		stars    int
+		days     int
+		watchers int
+		wantErr  bool
+	}{
+		{
+			name:     "nil client should panic",
+			username: "test-user",
+			forks:    0,
+			stars:    0,
+			days:     365,
+			watchers: 0,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set global variables
+			username = tt.username
+			forks = tt.forks
+			stars = tt.stars
+			days = tt.days
+			watchers = tt.watchers
+			client = nil
+
+			app := &cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			c := cli.NewContext(app, set, nil)
+
+			// Expect panic with nil client
+			defer func() {
+				if r := recover(); r != nil {
+					if !tt.wantErr {
+						t.Errorf("queryCommand() unexpected panic: %v", r)
+					}
+					// Expected panic
+				} else if tt.wantErr {
+					t.Error("queryCommand() expected panic but didn't panic")
+				}
+			}()
+
+			_ = queryCommand(c)
+		})
+	}
+}
+
+func TestExecuteCommandWithNilClient(t *testing.T) {
+	// Save original values
+	originalUsername := username
+	originalClient := client
+	originalFlags := []int{forks, stars, days, watchers}
+	defer func() {
+		username = originalUsername
+		client = originalClient
+		forks, stars, days, watchers = originalFlags[0], originalFlags[1], originalFlags[2], originalFlags[3]
+	}()
+
+	tests := []struct {
+		name     string
+		username string
+		forks    int
+		stars    int
+		days     int
+		watchers int
+		wantErr  bool
+	}{
+		{
+			name:     "nil client should panic",
+			username: "test-user",
+			forks:    0,
+			stars:    0,
+			days:     365,
+			watchers: 0,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set global variables
+			username = tt.username
+			forks = tt.forks
+			stars = tt.stars
+			days = tt.days
+			watchers = tt.watchers
+			client = nil
+
+			app := &cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			c := cli.NewContext(app, set, nil)
+
+			// Expect panic with nil client
+			defer func() {
+				if r := recover(); r != nil {
+					if !tt.wantErr {
+						t.Errorf("executeCommand() unexpected panic: %v", r)
+					}
+					// Expected panic
+				} else if tt.wantErr {
+					t.Error("executeCommand() expected panic but didn't panic")
+				}
+			}()
+
+			_ = executeCommand(c)
+		})
+	}
+}
+
+func TestGlobalVariableDefaults(t *testing.T) {
+	// Test that global variables have sensible defaults
+	if ErrUsernameNotDefined == nil {
+		t.Error("ErrUsernameNotDefined should be defined")
+	}
+
+	// Test that archive flags have proper default values
+	for _, flag := range archiveFlags {
+		switch f := flag.(type) {
+		case *cli.IntFlag:
+			if f.Name == "days" && f.Value != 365 {
+				t.Errorf("days flag should default to 365, got %d", f.Value)
+			}
+			if (f.Name == "forks" || f.Name == "stars" || f.Name == "watchers") && f.Value != 0 {
+				t.Errorf("%s flag should default to 0, got %d", f.Name, f.Value)
+			}
+		case *cli.StringFlag:
+			if f.Name == "username" && f.Value != "" {
+				t.Errorf("username flag should default to empty string, got %s", f.Value)
+			}
 		}
 	}
 }

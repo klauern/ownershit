@@ -30,7 +30,22 @@
       "Bash(ownershit:*)",
       "Bash(rm:*)",
       "Bash(GITHUB_TOKEN=fake_token ownershit sync --debug)",
-      "Bash(GITHUB_TOKEN=fake_token ownershit --debug sync)"
+      "Bash(GITHUB_TOKEN=fake_token ownershit --debug sync)",
+      "Bash(gh run list:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(bump:*)",
+      "Bash(git tag:*)",
+      "Bash(backlog task create:*)",
+      "Bash(backlog task list:*)",
+      "mcp__annas-archive__search",
+      "mcp__annas-archive__download",
+      "Bash(backlog task edit:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/run-e2e-tests.sh:*)",
+      "Bash(export RUN_E2E_TESTS=true)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(export:*)"
     ],
     "deny": []
   }

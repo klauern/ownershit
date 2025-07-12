@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/google/go-github/v66/github"
 	"github.com/shurcooL/githubv4"
+	"go.uber.org/mock/gomock"
 )
 
 var (
