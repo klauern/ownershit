@@ -12,7 +12,7 @@ require (
 	github.com/rs/zerolog v1.33.0
 	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/urfave/cli/v2 v2.27.7
-	go.uber.org/mock v0.5.0
+	go.uber.org/mock v0.5.2
 	golang.org/x/oauth2 v0.30.0
 	gopkg.in/yaml.v3 v3.0.1
 )
