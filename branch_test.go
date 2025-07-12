@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 var ErrGenerated = errors.New("generated error")

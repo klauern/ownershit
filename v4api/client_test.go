@@ -298,7 +298,7 @@ func TestGitHubV4Client_GetTeams(t *testing.T) {
 				}
 			}()
 
-			_, err := c.GetTeams()
+			_, err := c.GetTeams("test-org")
 			if !tt.wantErr && err != nil {
 				t.Errorf("GetTeams() unexpected error = %v", err)
 			}
@@ -338,7 +338,7 @@ func TestGitHubV4Client_SyncLabels(t *testing.T) {
 				}
 			}()
 
-			err := c.SyncLabels(tt.repo, tt.labels)
+			err := c.SyncLabels(tt.repo, "test-org", tt.labels)
 			if !tt.wantErr && err != nil {
 				t.Errorf("SyncLabels() unexpected error = %v", err)
 			}
@@ -405,7 +405,7 @@ func TestGitHubV4Client_GetRateLimit_MockSuccessPath(t *testing.T) {
 	// Note: Due to the complexity of mocking genqlient generated code,
 	// we focus on testing that the call path is executed correctly
 	_, err := client.GetRateLimit()
-	// The actual response depends on genqlient's unmarshaling, 
+	// The actual response depends on genqlient's unmarshaling,
 	// so we just verify the method executes without panicking
 	_ = err
 }
@@ -450,7 +450,7 @@ func TestGitHubV4Client_GetTeams_WithContext(t *testing.T) {
 	mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	// This tests the GetTeams method execution path
-	_, err := client.GetTeams()
+	_, err := client.GetTeams("test-org")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -471,16 +471,9 @@ func TestGitHubV4Client_GetTeams_GraphQLError(t *testing.T) {
 	expectedError := errors.New("graphql error")
 	mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).Return(expectedError)
 
-	// Test should panic due to error handling in GetTeams
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected panic due to GraphQL error, but got none")
-		}
-	}()
-
-	_, err := client.GetTeams()
-	if err != nil {
-		t.Errorf("Expected panic, but got error: %v", err)
+	_, err := client.GetTeams("test-org")
+	if err == nil {
+		t.Error("Expected error due to GraphQL error, but got none")
 	}
 }
 
@@ -500,7 +493,7 @@ func TestGitHubV4Client_SyncLabels_WithContext(t *testing.T) {
 	mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	labels := []Label{}
-	err := client.SyncLabels("test-repo", labels)
+	err := client.SyncLabels("test-repo", "test-org", labels)
 	// The method should execute without panicking
 	_ = err
 }
@@ -521,7 +514,7 @@ func TestGitHubV4Client_SyncLabels_GetLabelsError(t *testing.T) {
 	mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).Return(expectedError)
 
 	labels := []Label{}
-	err := client.SyncLabels("test-repo", labels)
+	err := client.SyncLabels("test-repo", "test-org", labels)
 	if err == nil {
 		t.Error("Expected error, but got nil")
 	}
@@ -603,7 +596,10 @@ func TestAuthedTransport_RoundTrip_Error(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = transport.RoundTrip(req)
+	resp, err := transport.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
+	}
 	if err == nil {
 		t.Error("Expected error from wrapped transport, but got nil")
 	}
@@ -673,8 +669,9 @@ func TestTypeAliases(t *testing.T) {
 	// Test that type aliases are properly defined
 	var teams OrganizationTeams
 	if teams == nil {
-		teams = OrganizationTeams{}
+		teams = make(OrganizationTeams, 0)
 	}
+	_ = teams
 
 	var rateLimit RateLimit
 	_ = rateLimit
@@ -701,11 +698,15 @@ func TestGitHubV4Client_ContextHandling(t *testing.T) {
 			context: context.Background(),
 		},
 		{
-			name:    "context with timeout",
-			context: func() context.Context { ctx, _ := context.WithTimeout(context.Background(), time.Second); return ctx }(),
+			name: "context with timeout",
+			context: func() context.Context {
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+				return ctx
+			}(),
 		},
 		{
-			name:    "cancelled context",
+			name:    "canceled context",
 			context: func() context.Context { ctx, cancel := context.WithCancel(context.Background()); cancel(); return ctx }(),
 		},
 	}
@@ -743,7 +744,7 @@ func TestGitHubV4Client_SyncLabels_BasicPath(t *testing.T) {
 	mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	labels := []Label{}
-	err := client.SyncLabels("test-repo", labels)
+	err := client.SyncLabels("test-repo", "test-org", labels)
 	// We just verify the method executes its basic code path
 	_ = err
 }
@@ -763,7 +764,7 @@ func TestGitHubV4Client_GetTeams_PaginationPath(t *testing.T) {
 	// Test pagination scenario - mock multiple calls
 	mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).Return(nil).MinTimes(1)
 
-	_, err := client.GetTeams()
+	_, err := client.GetTeams("test-org")
 	if err != nil {
 		t.Errorf("Unexpected error in GetTeams: %v", err)
 	}
@@ -865,18 +866,21 @@ func TestRetryParams_EdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := buildClient(tt.params, "test-key")
-			
+
 			if client == nil {
 				t.Error("buildClient returned nil")
+				return
 			}
 
 			// Verify basic client structure
 			if client.HTTPClient == nil {
 				t.Error("HTTPClient is nil")
+				return
 			}
 
 			if client.HTTPClient.Transport == nil {
 				t.Error("Transport is nil")
+				return
 			}
 
 			// Verify auth transport is set

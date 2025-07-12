@@ -16,6 +16,9 @@ const (
 	Admin PermissionsLevel = "admin"
 	Read  PermissionsLevel = "pull"
 	Write PermissionsLevel = "push"
+
+	// MaxApproverCount defines the maximum reasonable number of required approvers.
+	MaxApproverCount = 100
 )
 
 type Permissions struct {
@@ -132,43 +135,66 @@ func GetValidatedGitHubToken() (string, error) {
 // ValidateBranchPermissions validates branch protection configuration.
 func ValidateBranchPermissions(perms *BranchPermissions) error {
 	if perms == nil {
-		return nil
+		return NewConfigValidationError("branch_permissions", nil, "branch permissions cannot be nil", nil)
 	}
 
 	// Validate approver count
-	if perms.ApproverCount != nil && *perms.ApproverCount < 0 {
-		return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
-			"approving review count must be non-negative", nil)
+	if perms.ApproverCount != nil {
+		if *perms.ApproverCount < 0 {
+			return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
+				"approver count cannot be negative", nil)
+		}
+		if *perms.ApproverCount > MaxApproverCount {
+			return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
+				"approver count seems unreasonably high", nil)
+		}
 	}
 
 	// Validate status checks configuration
 	if perms.RequireStatusChecks != nil && *perms.RequireStatusChecks {
 		if len(perms.StatusChecks) == 0 {
 			return NewConfigValidationError("status_checks", perms.StatusChecks,
-				"status_checks list cannot be empty when require_status_checks is true", nil)
+				"RequireStatusChecks is enabled but no status checks specified", nil)
 		}
 
-		// Validate individual status check names
+		// Check for duplicates and validate individual status check names
+		seen := make(map[string]bool)
 		for i, check := range perms.StatusChecks {
 			if strings.TrimSpace(check) == "" {
 				return NewConfigValidationError(fmt.Sprintf("status_checks[%d]", i), check,
-					"status check name cannot be empty", nil)
+					"empty status check name", nil)
 			}
+			if seen[check] {
+				return NewConfigValidationError("status_checks", check,
+					"duplicate status check", nil)
+			}
+			seen[check] = true
 		}
+	} else if len(perms.StatusChecks) > 0 {
+		return NewConfigValidationError("status_checks", perms.StatusChecks,
+			"status checks specified but RequireStatusChecks is disabled", nil)
 	}
 
 	// Validate push allowlist configuration
 	if perms.RestrictPushes != nil && *perms.RestrictPushes {
 		if len(perms.PushAllowlist) == 0 {
-			log.Warn().Msg("restrict_pushes is enabled but push_allowlist is empty - this will block all pushes")
+			return NewConfigValidationError("push_allowlist", perms.PushAllowlist,
+				"RestrictPushes is enabled but no users/teams specified in PushAllowlist", nil)
 		}
 
-		// Validate push allowlist entries
+		// Check for duplicates and validate push allowlist entries
+		seen := make(map[string]bool)
 		for i, actor := range perms.PushAllowlist {
-			if strings.TrimSpace(actor) == "" {
+			trimmed := strings.TrimSpace(actor)
+			if trimmed == "" {
 				return NewConfigValidationError(fmt.Sprintf("push_allowlist[%d]", i), actor,
-					"push allowlist entry cannot be empty", nil)
+					"empty entry in PushAllowlist", nil)
 			}
+			if seen[actor] {
+				return NewConfigValidationError("push_allowlist", actor,
+					"duplicate entry in PushAllowlist", nil)
+			}
+			seen[actor] = true
 		}
 	}
 
@@ -188,21 +214,80 @@ func ValidateBranchPermissions(perms *BranchPermissions) error {
 	if perms.RequireUpToDateBranch != nil && *perms.RequireUpToDateBranch {
 		if perms.RequireStatusChecks == nil || !*perms.RequireStatusChecks {
 			return NewConfigValidationError("require_up_to_date_branch", *perms.RequireUpToDateBranch,
-				"cannot require up-to-date branch when require_status_checks is false", nil)
+				"RequireUpToDateBranch requires RequireStatusChecks to be enabled", nil)
 		}
+	}
+
+	// Validate conflicting settings
+	if perms.RequireLinearHistory != nil && *perms.RequireLinearHistory &&
+		perms.AllowForcePushes != nil && *perms.AllowForcePushes {
+		return NewConfigValidationError("allow_force_pushes", *perms.AllowForcePushes,
+			"RequireLinearHistory and AllowForcePushes cannot both be enabled", nil)
 	}
 
 	return nil
 }
 
-// GitHubTokenEnv sets the GitHub Token from the environment variable.
-// Deprecated: Use GetValidatedGitHubToken() for secure token handling.
-var GitHubTokenEnv = os.Getenv("GITHUB_TOKEN")
+// ValidatePermissionsSettings validates the overall permissions configuration.
+func ValidatePermissionsSettings(settings *PermissionsSettings) error {
+	if settings == nil {
+		return NewConfigValidationError("settings", nil, "permissions settings cannot be nil", nil)
+	}
+
+	// Validate organization field
+	if settings.Organization == nil || *settings.Organization == "" {
+		return NewConfigValidationError("organization", settings.Organization,
+			"organization must be specified and cannot be empty", nil)
+	}
+
+	// Validate organization name format (GitHub usernames/orgs)
+	orgName := strings.TrimSpace(*settings.Organization)
+	if len(orgName) < 1 || len(orgName) > 39 {
+		return NewConfigValidationError("organization", orgName,
+			"organization name must be between 1 and 39 characters", nil)
+	}
+
+	// Validate branch permissions
+	if err := ValidateBranchPermissions(&settings.BranchPermissions); err != nil {
+		return err
+	}
+
+	// Validate repositories
+	if len(settings.Repositories) == 0 {
+		return NewConfigValidationError("repositories", settings.Repositories,
+			"at least one repository must be specified", nil)
+	}
+
+	// Validate each repository
+	repoNames := make(map[string]bool)
+	for i, repo := range settings.Repositories {
+		if repo == nil {
+			return NewConfigValidationError(fmt.Sprintf("repositories[%d]", i), nil,
+				"repository cannot be nil", nil)
+		}
+		if repo.Name == nil || *repo.Name == "" {
+			return NewConfigValidationError(fmt.Sprintf("repositories[%d].name", i), repo.Name,
+				"repository name must be specified and cannot be empty", nil)
+		}
+
+		repoName := strings.TrimSpace(*repo.Name)
+		if repoNames[repoName] {
+			return NewConfigValidationError(fmt.Sprintf("repositories[%d].name", i), repoName,
+				"duplicate repository name", nil)
+		}
+		repoNames[repoName] = true
+	}
+
+	return nil
+}
+
+// GitHubTokenEnv was removed for security reasons.
+// Use GetValidatedGitHubToken() for secure token handling instead.
 
 func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
-	// Validate branch permissions configuration
-	if err := ValidateBranchPermissions(&settings.BranchPermissions); err != nil {
-		log.Err(err).Msg("branch permissions validation failed")
+	// Validate complete configuration
+	if err := ValidatePermissionsSettings(settings); err != nil {
+		log.Err(err).Msg("configuration validation failed")
 		return
 	}
 

@@ -266,14 +266,94 @@ task fmt
 - **Error Handling**: 9 custom error types with 100% test coverage, error wrapping throughout codebase, enhanced logging with structured context
 - **Code Quality**: All linting violations resolved, improved debugging capabilities
 
-### Phase 3: Test Coverage Enhancement (🔄 IN PROGRESS - 2025-07-06)
+### Phase 3: Test Coverage Enhancement (🔄 IN PROGRESS - 2025-07-10)
 - **CLI Testing**: Complete test suite for `cmd/ownershit` package achieving 80.6% coverage
 - **Integration Tests**: Comprehensive command workflow testing with error scenarios
 - **Archive Command Testing**: Full coverage for archiving functionality
 - **Configuration Testing**: Robust YAML parsing and validation tests
 - **GraphQL API**: Improved from 13.9% to 27.0% coverage
 
+### Phase 4: Critical Dependencies and Security Updates (✅ COMPLETED - 2025-07-10)
+
+#### ✅ 4.1 Mock Library Migration (HIGH PRIORITY)
+**Issue**: Using deprecated `github.com/golang/mock/gomock` package
+**Impact**: Security vulnerabilities, maintenance issues, potential build failures
+**Tasks**:
+- [x] Update `go.mod` to remove `github.com/golang/mock` and add `go.uber.org/mock`
+- [x] Update `tools.go` import paths
+- [x] Update all `//go:generate mockgen` directives across codebase
+- [x] Update all test files importing mock packages (11 files updated)
+- [x] Verify all mock generation still works correctly
+
+**Status**: Complete - All mock files now use the new library, tests pass
+**Estimated Effort**: Completed (3 hours)
+
+#### ✅ 4.2 Security Token Management (HIGH PRIORITY)
+**Issue**: Global `GitHubTokenEnv` variable exposes sensitive data
+**Impact**: Potential token exposure, security vulnerability
+**Tasks**:
+- [x] Remove global `GitHubTokenEnv` variable from `config.go:230`
+- [x] Ensure all token access goes through `GetValidatedGitHubToken()`
+- [x] Add security warnings for deprecated token usage patterns
+- [x] Audit all token usage patterns across the codebase
+
+**Status**: Complete - Global variable removed, secure pattern enforced
+**Estimated Effort**: Completed (2 hours)
+
+#### ✅ 4.3 Configuration Hardcoding (MEDIUM PRIORITY)
+**Issue**: Hardcoded "zendesk" organization in GraphQL queries
+**Impact**: Reduces tool flexibility, maintenance issues
+**Tasks**:
+- [x] Make organization name configurable in `genqlient.graphql`
+- [x] Update GraphQL queries to use variables instead of hardcoded values
+- [x] Add organization parameter to configuration schema (already existed)
+- [x] Update all method signatures to accept organization parameter
+- [x] Update all test files to use dynamic organization names
+- [x] Test with different organization names
+
+**Status**: Complete - Organization name is now fully configurable
+**Estimated Effort**: Completed (4 hours)
+
+#### ✅ 4.4 Enhanced Error Handling (MEDIUM PRIORITY)
+**Issue**: Panic-based error handling in GraphQL operations
+**Impact**: Poor error handling and debugging experience
+**Tasks**:
+- [x] Replace `panic(err)` with proper error returns in `GetTeams` method
+- [x] Improve error messages with context (initial vs pagination requests)
+- [x] Update test expectations from panics to errors
+- [x] Ensure proper error propagation throughout the call stack
+
+**Status**: Complete - Robust error handling implemented
+**Estimated Effort**: Completed (2 hours)
+
+#### ✅ 4.5 Configuration Validation Enhancement (MEDIUM PRIORITY)
+**Issue**: Limited configuration validation
+**Impact**: Runtime errors and unclear configuration issues
+**Tasks**:
+- [x] Add comprehensive validation for `PermissionsSettings` struct
+- [x] Validate organization field presence and format
+- [x] Add repository validation with duplicate detection
+- [x] Integrate validation into `MapPermissions` function
+- [x] Ensure all validation uses consistent error types
+
+**Status**: Complete - Comprehensive configuration validation system
+**Estimated Effort**: Completed (2 hours)
+
 ### Key Files Modified
+
+#### Phase 4 Updates (2025-07-10)
+- `go.mod` - Removed deprecated `github.com/golang/mock` dependency
+- `tools.go` - Updated to `go.uber.org/mock/mockgen`
+- `config.go` - Removed global `GitHubTokenEnv` variable, added `ValidatePermissionsSettings`
+- `genqlient.graphql` - Made organization name configurable in GraphQL queries
+- `v4api/githubv4.go` - Updated methods to accept organization parameter, improved error handling
+- `v4api/generated.go` - Regenerated with organization parameter support
+- **11 Test Files** - Updated all mock imports and test expectations:
+  - `archiving_v4_test.go`, `branch_protection_integration_test.go`, `config_test.go`
+  - `github_v4_test.go`, `branch_test.go`, `v4api/client_test.go`
+  - `v4api/client_integration_test.go`, `cmd/genqlient/main.go`
+
+#### Previous Phases
 - `errors.go` & `errors_test.go` - Complete custom error type system
 - `config.go` - GitHub token validation and secure token handling  
 - `github_v3.go`, `github_v4.go`, `archiving_v4.go` - GitHubAPIError integration
