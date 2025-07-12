@@ -199,7 +199,7 @@ func initCommand(c *cli.Context) error {
 
 	stubConfig := getStubConfig()
 
-	err := os.WriteFile(configPath, []byte(stubConfig), 0600)
+	err := os.WriteFile(configPath, []byte(stubConfig), 0o600)
 	if err != nil {
 		log.Err(err).Str("configPath", configPath).Msg("failed to write configuration file")
 		return fmt.Errorf("failed to create configuration file: %w", err)

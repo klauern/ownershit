@@ -6,7 +6,6 @@ require (
 	github.com/99designs/gqlgen v0.17.75
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Khan/genqlient v0.8.1
-	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v66 v66.0.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/olekukonko/tablewriter v0.0.5
