@@ -13,6 +13,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	syncCommandName     = "sync"
+	branchesCommandName = "branches"
+	labelCommandName    = "label"
+)
+
 func TestAppCommandExecution(t *testing.T) {
 	// Save original environment and globals
 	originalToken := os.Getenv("GITHUB_TOKEN")
@@ -41,7 +47,7 @@ func TestAppCommandExecution(t *testing.T) {
 	}{
 		{
 			name:    "sync command with valid config",
-			command: "sync",
+			command: syncCommandName,
 			configData: `organization: test-org
 repositories:
   - name: test-repo
@@ -59,7 +65,7 @@ team:
 		},
 		{
 			name:    "branches command with debug",
-			command: "branches",
+			command: branchesCommandName,
 			configData: `organization: test-org
 repositories:
   - name: test-repo
@@ -74,7 +80,7 @@ branches:
 		},
 		{
 			name:    "label command",
-			command: "label",
+			command: labelCommandName,
 			configData: `organization: test-org
 repositories:
   - name: test-repo
@@ -123,7 +129,7 @@ default_labels:
 
 			// Capture log output
 			var logOutput bytes.Buffer
-			
+
 			// Create CLI context
 			app := &cli.App{}
 			set := flag.NewFlagSet("test", 0)
@@ -160,11 +166,11 @@ default_labels:
 			}()
 
 			switch tt.command {
-			case "sync":
+			case syncCommandName:
 				err = syncCommand(c)
-			case "branches":
+			case branchesCommandName:
 				err = branchCommand(c)
-			case "label":
+			case labelCommandName:
 				err = labelCommand(c)
 			case "ratelimit":
 				// Skip ratelimit as it will panic with nil client
@@ -186,6 +192,7 @@ default_labels:
 				if !strings.Contains(logStr, expectedOutput) {
 					// Note: We can't easily capture zerolog output in tests
 					// This is a placeholder for future log output verification
+					t.Logf("Expected log output '%s' not found in: %s", expectedOutput, logStr)
 				}
 			}
 		})
@@ -295,7 +302,7 @@ func TestCompleteInitWorkflow(t *testing.T) {
 	}
 
 	// Verify file was created
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
 		t.Error("initCommand() should have created config file")
 		return
 	}
@@ -341,13 +348,13 @@ func TestCompleteInitWorkflow(t *testing.T) {
 
 func TestErrorHandlingWorkflows(t *testing.T) {
 	tests := []struct {
-		name           string
-		setupConfig    bool
-		configData     string
-		setupToken     bool
-		token          string
-		command        string
-		expectedError  string
+		name          string
+		setupConfig   bool
+		configData    string
+		setupToken    bool
+		token         string
+		command       string
+		expectedError string
 	}{
 		{
 			name:          "missing config file",
@@ -358,29 +365,29 @@ func TestErrorHandlingWorkflows(t *testing.T) {
 			expectedError: "configuration file not found",
 		},
 		{
-			name:        "invalid config file",
-			setupConfig: true,
-			configData:  `invalid: [yaml`,
-			setupToken:  true,
-			token:       "ghp_abcd1234567890ABCD1234567890abcd1234",
-			command:     "sync",
+			name:          "invalid config file",
+			setupConfig:   true,
+			configData:    `invalid: [yaml`,
+			setupToken:    true,
+			token:         "ghp_abcd1234567890ABCD1234567890abcd1234",
+			command:       "sync",
 			expectedError: "failed to parse YAML",
 		},
 		{
-			name:        "missing GitHub token",
-			setupConfig: true,
-			configData:  `organization: test-org`,
-			setupToken:  false,
-			command:     "sync",
+			name:          "missing GitHub token",
+			setupConfig:   true,
+			configData:    `organization: test-org`,
+			setupToken:    false,
+			command:       "sync",
 			expectedError: "GitHub token",
 		},
 		{
-			name:        "invalid token format",
-			setupConfig: true,
-			configData:  `organization: test-org`,
-			setupToken:  true,
-			token:       "invalid-token-format",
-			command:     "sync",
+			name:          "invalid token format",
+			setupConfig:   true,
+			configData:    `organization: test-org`,
+			setupToken:    true,
+			token:         "invalid-token-format",
+			command:       "sync",
 			expectedError: "GitHub token format is invalid",
 		},
 	}

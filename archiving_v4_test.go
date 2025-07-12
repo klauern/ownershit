@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
 	"github.com/shurcooL/githubv4"
+	"go.uber.org/mock/gomock"
 )
 
 var (

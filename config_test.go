@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/shurcooL/githubv4"
+	"go.uber.org/mock/gomock"
 )
 
 var ErrDummyConfigError = errors.New("dummy error")
 
-// Helper function for creating int pointers in tests
+// Helper function for creating int pointers in tests.
 func intPtr(i int) *int {
 	return &i
 }
@@ -26,9 +26,10 @@ func TestValidateBranchPermissions(t *testing.T) {
 		errMsg  string
 	}{
 		{
-			name:    "nil permissions should not error",
+			name:    "nil permissions should error",
 			perms:   nil,
-			wantErr: false,
+			wantErr: true,
+			errMsg:  "branch permissions cannot be nil",
 		},
 		{
 			name: "valid configuration",
@@ -48,7 +49,7 @@ func TestValidateBranchPermissions(t *testing.T) {
 				ApproverCount: intPtr(-1),
 			},
 			wantErr: true,
-			errMsg:  "approving review count must be non-negative",
+			errMsg:  "approver count cannot be negative",
 		},
 		{
 			name: "require status checks with empty list should error",
@@ -57,7 +58,7 @@ func TestValidateBranchPermissions(t *testing.T) {
 				StatusChecks:        []string{},
 			},
 			wantErr: true,
-			errMsg:  "status_checks list cannot be empty",
+			errMsg:  "RequireStatusChecks is enabled but no status checks specified",
 		},
 		{
 			name: "empty status check name should error",
@@ -66,7 +67,7 @@ func TestValidateBranchPermissions(t *testing.T) {
 				StatusChecks:        []string{"ci/build", "", "ci/test"},
 			},
 			wantErr: true,
-			errMsg:  "status check name cannot be empty",
+			errMsg:  "empty status check name",
 		},
 		{
 			name: "require approving reviews when pull request reviews disabled should error",
@@ -93,15 +94,16 @@ func TestValidateBranchPermissions(t *testing.T) {
 				RequireUpToDateBranch: boolPtr(true),
 			},
 			wantErr: true,
-			errMsg:  "cannot require up-to-date branch when require_status_checks is false",
+			errMsg:  "RequireUpToDateBranch requires RequireStatusChecks to be enabled",
 		},
 		{
-			name: "restrict pushes with empty allowlist should not error but warn",
+			name: "restrict pushes with empty allowlist should error",
 			perms: &BranchPermissions{
 				RestrictPushes: boolPtr(true),
 				PushAllowlist:  []string{},
 			},
-			wantErr: false, // Should only warn, not error
+			wantErr: true,
+			errMsg:  "RestrictPushes is enabled but no users/teams specified in PushAllowlist",
 		},
 		{
 			name: "empty push allowlist entry should error",
@@ -110,7 +112,7 @@ func TestValidateBranchPermissions(t *testing.T) {
 				PushAllowlist:  []string{"team1", "", "team2"},
 			},
 			wantErr: true,
-			errMsg:  "push allowlist entry cannot be empty",
+			errMsg:  "empty entry in PushAllowlist",
 		},
 	}
 

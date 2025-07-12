@@ -3,8 +3,9 @@ query GetTeams(
   $first: Int
   # @genqlient(omitempty: true)
   $cursor: String
+  $organization: String!
 ) {
-  organization(login: "zendesk") {
+  organization(login: $organization) {
     teams(orderBy: $order, first: $first, after: $cursor) {
       pageInfo {
         hasNextPage
@@ -58,7 +59,7 @@ query GetRateLimit {
 
 query GetRepositoryIssueLabels(
   $name: String = ""
-  $owner: String = "zendesk"
+  $owner: String!
   # @genqlient(omitempty: true)
   $cursor: String
 ) {

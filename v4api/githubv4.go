@@ -8,16 +8,17 @@ import (
 
 const V4ClientDefaultPageSize = 100
 
-func (c *GitHubV4Client) GetTeams() (OrganizationTeams, error) {
+func (c *GitHubV4Client) GetTeams(organization string) (OrganizationTeams, error) {
 	orgTeams := []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge{}
 	initResp, err := GetTeams(c.Context, c.client, TeamOrder{
 		Direction: OrderDirectionDesc,
 		Field:     TeamOrderFieldName,
-	}, V4ClientDefaultPageSize, "")
+	}, V4ClientDefaultPageSize, "", organization)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to get teams (initial request): %w", err)
 	}
 	log.Info().Interface("teams", initResp).Msg("initial teams")
+	orgTeams = append(orgTeams, initResp.Organization.Teams.Edges...)
 	hasNextPage := initResp.Organization.Teams.PageInfo.HasNextPage
 	cursor := initResp.Organization.Teams.PageInfo.EndCursor
 	for hasNextPage {
@@ -25,9 +26,9 @@ func (c *GitHubV4Client) GetTeams() (OrganizationTeams, error) {
 		resp, err := GetTeams(c.Context, c.client, TeamOrder{
 			Direction: OrderDirectionDesc,
 			Field:     TeamOrderFieldName,
-		}, V4ClientDefaultPageSize, cursor)
+		}, V4ClientDefaultPageSize, cursor, organization)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("failed to get teams (pagination request): %w", err)
 		}
 		hasNextPage = resp.Organization.Teams.PageInfo.HasNextPage
 		cursor = resp.Organization.Teams.PageInfo.EndCursor
@@ -48,9 +49,9 @@ func (c *GitHubV4Client) GetRateLimit() (RateLimit, error) {
 	return RateLimit(*resp), nil
 }
 
-func (c *GitHubV4Client) SyncLabels(repo string, labels []Label) error {
+func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
 	labelsMap := map[string]Label{}
-	labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, "zendesk", "")
+	labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, owner, "")
 	repoID := labelResp.Repository.Id
 	if err != nil {
 		return fmt.Errorf("can't get labels: %w", err)
@@ -67,9 +68,9 @@ func (c *GitHubV4Client) SyncLabels(repo string, labels []Label) error {
 			// Label name exists, so we need to update it
 			log.Debug().Interface("label", label).Msg("label exists")
 			_, err := UpdateLabel(c.Context, c.client, UpdateLabelInput{
-				Name:        l.Name,
-				Color:       l.Color,
-				Description: l.Description,
+				Name:        label.Name,
+				Color:       label.Color,
+				Description: label.Description,
 				Id:          l.Id,
 			})
 			if err != nil {
@@ -80,9 +81,9 @@ func (c *GitHubV4Client) SyncLabels(repo string, labels []Label) error {
 			// Label name doesn't exist, so we need to create it
 			log.Debug().Interface("label", label).Msg("label does not exist")
 			_, err := CreateLabel(c.Context, c.client, CreateLabelInput{
-				Name:         l.Name,
-				Color:        l.Color,
-				Description:  l.Description,
+				Name:         label.Name,
+				Color:        label.Color,
+				Description:  label.Description,
 				RepositoryId: repoID,
 			})
 			if err != nil {

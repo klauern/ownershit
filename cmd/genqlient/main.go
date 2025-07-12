@@ -16,7 +16,7 @@ func main() {
 	if _, err := client.GetRateLimit(); err != nil {
 		log.Error().Err(err).Msg("failed to get rate limit")
 	}
-	if _, err := client.GetTeams(); err != nil {
+	if _, err := client.GetTeams("github"); err != nil {
 		log.Error().Err(err).Msg("failed to get teams")
 	}
 }
