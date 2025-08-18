@@ -1,13 +1,6 @@
----
-id: task-3
-title: Implement enhanced branch protection features
-status: Done
-assignee: []
-created_date: '2025-07-10'
-updated_date: '2025-08-18 03:11'
-labels: []
-dependencies: []
----
+______________________________________________________________________
+
+## id: task-3 title: Implement enhanced branch protection features status: Done assignee: [] created_date: '2025-07-10' updated_date: '2025-08-18 03:11' labels: [] dependencies: []
 
 ## Description
 
