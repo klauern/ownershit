@@ -1,12 +1,6 @@
----
-id: task-15
-title: Add performance monitoring and optimization
-status: To Do
-assignee: []
-created_date: '2025-07-12'
-labels: []
-dependencies: []
----
+______________________________________________________________________
+
+## id: task-15 title: Add performance monitoring and optimization status: To Do assignee: [] created_date: '2025-07-12' labels: [] dependencies: []
 
 ## Description
 

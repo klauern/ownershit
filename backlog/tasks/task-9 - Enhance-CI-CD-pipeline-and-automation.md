@@ -1,12 +1,6 @@
----
-id: task-9
-title: Enhance CI/CD pipeline and automation
-status: To Do
-assignee: []
-created_date: '2025-07-10'
-labels: []
-dependencies: []
----
+______________________________________________________________________
+
+## id: task-9 title: Enhance CI/CD pipeline and automation status: To Do assignee: [] created_date: '2025-07-10' labels: [] dependencies: []
 
 ## Description
 
