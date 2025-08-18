@@ -36,18 +36,21 @@ task install
 ## Quick Start
 
 1. Create a configuration file:
+
    ```bash
    ownershit init
    ```
 
-2. Edit `repositories.yaml` with your organization details
+1. Edit `repositories.yaml` with your organization details
 
-3. Set up your GitHub token:
+1. Set up your GitHub token:
+
    ```bash
    export GITHUB_TOKEN=your_github_token_here
    ```
 
-4. Synchronize your repositories:
+1. Synchronize your repositories:
+
    ```bash
    ownershit sync
    ```
@@ -275,11 +278,13 @@ repositories.yaml
 
 1. Create a Personal Access Token at: https://github.com/settings/tokens
 
-2. Required scopes:
+1. Required scopes:
+
    - `repo` - Full repository access
    - `admin:org` - Organization admin access (for team management)
 
-3. Set the token as an environment variable:
+1. Set the token as an environment variable:
+
    ```bash
    export GITHUB_TOKEN=your_token_here
    ```
@@ -327,18 +332,21 @@ ownershit label --config repositories.yaml
 ### Common Issues
 
 **Configuration file not found**
+
 ```bash
 # Create a new configuration file
 ownershit init
 ```
 
 **GitHub API rate limits**
+
 ```bash
 # Check current rate limit status
 ownershit ratelimit --debug
 ```
 
 **Permission errors**
+
 ```bash
 # Verify token has required scopes:
 # - repo (full repository access)
@@ -346,6 +354,7 @@ ownershit ratelimit --debug
 ```
 
 **Debug mode**
+
 ```bash
 # Enable verbose logging
 ownershit sync --debug
@@ -364,12 +373,12 @@ ownershit sync
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests (`task test-all`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+1. Create a feature branch (`git checkout -b feature/amazing-feature`)
+1. Make your changes
+1. Run tests (`task test-all`)
+1. Commit your changes (`git commit -m 'Add amazing feature'`)
+1. Push to the branch (`git push origin feature/amazing-feature`)
+1. Open a Pull Request
 
 ## License
 
