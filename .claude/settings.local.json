@@ -54,7 +54,8 @@
       "mcp__github__get_pull_request",
       "Bash(gh pr list:*)",
       "Bash(gh pr checkout:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": []
   },

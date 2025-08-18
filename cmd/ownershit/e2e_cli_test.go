@@ -26,7 +26,7 @@ func TestE2E_CLI_Commands(t *testing.T) {
 	// Use test organization/repo from environment or defaults
 	testOrg := getEnvOrDefault("E2E_TEST_ORG", "test-org")
 	testRepo := getEnvOrDefault("E2E_TEST_REPO", "test-repo")
-	
+
 	// Create test configuration
 	configContent := generateTestConfig(testOrg, testRepo)
 	configFile := createTempConfig(t, configContent)
@@ -112,7 +112,7 @@ func testE2ESyncCommand(t *testing.T, configFile string, dryRun bool) {
 
 	// Run sync command
 	err = syncCommand(c)
-	
+
 	if dryRun {
 		// For dry run, we expect it to work without making changes
 		if err != nil {
@@ -130,7 +130,7 @@ func testE2ESyncCommand(t *testing.T, configFile string, dryRun bool) {
 	if settings == nil {
 		t.Error("Settings should be loaded after sync command")
 	}
-	
+
 	if settings != nil && settings.Organization == nil {
 		t.Error("Organization should be set in settings")
 	}
@@ -142,10 +142,10 @@ func TestE2E_CLI_ConfigValidation(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		configContent  string
-		expectError    bool
-		description    string
+		name          string
+		configContent string
+		expectError   bool
+		description   string
 	}{
 		{
 			name: "valid_complete_config",
@@ -219,7 +219,7 @@ branches:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("Testing: %s", tt.description)
-			
+
 			configFile := createTempConfig(t, tt.configContent)
 			defer os.Remove(configFile)
 
@@ -238,7 +238,7 @@ branches:
 
 			// Try to read config
 			err := readConfig(c)
-			
+
 			if (err != nil) != tt.expectError {
 				t.Errorf("readConfig() error = %v, expectError %v", err, tt.expectError)
 				return
@@ -356,12 +356,12 @@ branches:
 
 func createTempConfig(t *testing.T, content string) string {
 	t.Helper()
-	
+
 	tmpFile := filepath.Join(t.TempDir(), "test_repositories.yaml")
 	err := os.WriteFile(tmpFile, []byte(strings.TrimSpace(content)), 0o600)
 	if err != nil {
 		t.Fatalf("Failed to create temp config file: %v", err)
 	}
-	
+
 	return tmpFile
 }
