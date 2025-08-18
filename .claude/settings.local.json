@@ -45,8 +45,52 @@
       "Bash(export RUN_E2E_TESTS=true)",
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(backlog task:*)",
+      "mcp__github__get_pull_request",
+      "mcp__github__get_pull_request",
+      "mcp__github__get_pull_request",
+      "mcp__github__get_pull_request",
+      "mcp__github__get_pull_request",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checkout:*)",
+      "Bash(gh pr view:*)"
     ],
     "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ccguard"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ccguard"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "ccguard"
+          }
+        ]
+      }
+    ]
   }
 }
