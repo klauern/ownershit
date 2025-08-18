@@ -1,10 +1,10 @@
 ---
 id: task-21
 title: Fix linting issues before merging feature/phase3-cli-testing to main
-status: Done
+status: In Progress
 assignee: []
 created_date: '2025-07-12'
-updated_date: '2025-07-12'
+updated_date: '2025-08-18 03:10'
 labels: []
 dependencies: []
 ---
