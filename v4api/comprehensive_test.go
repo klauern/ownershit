@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Khan/genqlient/graphql"
 	"go.uber.org/mock/gomock"
 
 	mock_graphql "github.com/klauern/ownershit/v4api/mocks"
@@ -55,37 +56,39 @@ func TestGitHubV4Client_SyncLabels_CompleteScenarios(t *testing.T) {
 				mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, req interface{}, resp interface{}) error {
 						// Simulate response with existing labels
-						if r, ok := resp.(*GetRepositoryIssueLabelsResponse); ok {
-							r.Repository = GetRepositoryIssueLabelsRepository{
-								Id: "repo-id-123",
-								Labels: GetRepositoryIssueLabelsRepositoryLabelsLabelConnection{
-									Edges: []GetRepositoryIssueLabelsRepositoryLabelsLabelConnectionEdgesLabelEdge{
-										{
-											Node: GetRepositoryIssueLabelsRepositoryLabelsLabelConnectionEdgesLabelEdgeNodeLabel{
-												Name:        "existing-label",
-												Color:       "ff0000", // Different color - will be updated
-												Description: "Old description",
-												Id:          "existing-label-id",
-												CreatedAt:   testTime,
-												UpdatedAt:   testTime,
-												IsDefault:   false,
-												Url:         *testURL,
+						if graphQLResp, ok := resp.(*graphql.Response); ok {
+							if r, ok := graphQLResp.Data.(*GetRepositoryIssueLabelsResponse); ok {
+								r.Repository = GetRepositoryIssueLabelsRepository{
+									Id: "repo-id-123",
+									Labels: GetRepositoryIssueLabelsRepositoryLabelsLabelConnection{
+										Edges: []GetRepositoryIssueLabelsRepositoryLabelsLabelConnectionEdgesLabelEdge{
+											{
+												Node: GetRepositoryIssueLabelsRepositoryLabelsLabelConnectionEdgesLabelEdgeNodeLabel{
+													Name:        "existing-label",
+													Color:       "ff0000", // Different color - will be updated
+													Description: "Old description",
+													Id:          "existing-label-id",
+													CreatedAt:   testTime,
+													UpdatedAt:   testTime,
+													IsDefault:   false,
+													Url:         *testURL,
+												},
 											},
-										},
-										{
-											Node: GetRepositoryIssueLabelsRepositoryLabelsLabelConnectionEdgesLabelEdgeNodeLabel{
-												Name:        "label-to-delete",
-												Color:       "0000ff",
-												Description: "This will be deleted",
-												Id:          "delete-label-id",
-												CreatedAt:   testTime,
-												UpdatedAt:   testTime,
-												IsDefault:   false,
-												Url:         *testURL,
+											{
+												Node: GetRepositoryIssueLabelsRepositoryLabelsLabelConnectionEdgesLabelEdgeNodeLabel{
+													Name:        "label-to-delete",
+													Color:       "0000ff",
+													Description: "This will be deleted",
+													Id:          "delete-label-id",
+													CreatedAt:   testTime,
+													UpdatedAt:   testTime,
+													IsDefault:   false,
+													Url:         *testURL,
+												},
 											},
 										},
 									},
-								},
+								}
 							}
 						}
 						return nil
@@ -164,28 +167,30 @@ func TestGitHubV4Client_GetTeams_Comprehensive(t *testing.T) {
 				// First page
 				mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, req interface{}, resp interface{}) error {
-						if r, ok := resp.(*GetTeamsResponse); ok {
-							r.Organization = GetTeamsOrganization{
-								Teams: GetTeamsOrganizationTeamsTeamConnection{
-									PageInfo: GetTeamsOrganizationTeamsTeamConnectionPageInfo{
-										HasNextPage: true,
-										EndCursor:   "cursor-1",
-									},
-									Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge{
-										{
-											Node: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeam{
-												Name:        "team1",
-												Description: "First team",
-												Members: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamMembersTeamMemberConnection{
-													Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamMembersTeamMemberConnectionEdgesTeamMemberEdge{},
-												},
-												ChildTeams: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamChildTeamsTeamConnection{
-													Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamChildTeamsTeamConnectionEdgesTeamEdge{},
+						if graphQLResp, ok := resp.(*graphql.Response); ok {
+							if r, ok := graphQLResp.Data.(*GetTeamsResponse); ok {
+								r.Organization = GetTeamsOrganization{
+									Teams: GetTeamsOrganizationTeamsTeamConnection{
+										PageInfo: GetTeamsOrganizationTeamsTeamConnectionPageInfo{
+											HasNextPage: true,
+											EndCursor:   "cursor-1",
+										},
+										Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge{
+											{
+												Node: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeam{
+													Name:        "team1",
+													Description: "First team",
+													Members: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamMembersTeamMemberConnection{
+														Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamMembersTeamMemberConnectionEdgesTeamMemberEdge{},
+													},
+													ChildTeams: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamChildTeamsTeamConnection{
+														Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamChildTeamsTeamConnectionEdgesTeamEdge{},
+													},
 												},
 											},
 										},
 									},
-								},
+								}
 							}
 						}
 						return nil
@@ -195,28 +200,30 @@ func TestGitHubV4Client_GetTeams_Comprehensive(t *testing.T) {
 				// Second page
 				mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, req interface{}, resp interface{}) error {
-						if r, ok := resp.(*GetTeamsResponse); ok {
-							r.Organization = GetTeamsOrganization{
-								Teams: GetTeamsOrganizationTeamsTeamConnection{
-									PageInfo: GetTeamsOrganizationTeamsTeamConnectionPageInfo{
-										HasNextPage: false,
-										EndCursor:   "cursor-2",
-									},
-									Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge{
-										{
-											Node: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeam{
-												Name:        "team2",
-												Description: "Second team",
-												Members: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamMembersTeamMemberConnection{
-													Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamMembersTeamMemberConnectionEdgesTeamMemberEdge{},
-												},
-												ChildTeams: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamChildTeamsTeamConnection{
-													Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamChildTeamsTeamConnectionEdgesTeamEdge{},
+						if graphQLResp, ok := resp.(*graphql.Response); ok {
+							if r, ok := graphQLResp.Data.(*GetTeamsResponse); ok {
+								r.Organization = GetTeamsOrganization{
+									Teams: GetTeamsOrganizationTeamsTeamConnection{
+										PageInfo: GetTeamsOrganizationTeamsTeamConnectionPageInfo{
+											HasNextPage: false,
+											EndCursor:   "cursor-2",
+										},
+										Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge{
+											{
+												Node: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeam{
+													Name:        "team2",
+													Description: "Second team",
+													Members: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamMembersTeamMemberConnection{
+														Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamMembersTeamMemberConnectionEdgesTeamMemberEdge{},
+													},
+													ChildTeams: GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamChildTeamsTeamConnection{
+														Edges: []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdgeNodeTeamChildTeamsTeamConnectionEdgesTeamEdge{},
+													},
 												},
 											},
 										},
 									},
-								},
+								}
 							}
 						}
 						return nil
@@ -287,15 +294,17 @@ func TestGitHubV4Client_GetRateLimit_Comprehensive(t *testing.T) {
 				resetTime := time.Now().Add(time.Hour)
 				mockClient.EXPECT().MakeRequest(ctx, gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, req interface{}, resp interface{}) error {
-						if r, ok := resp.(*GetRateLimitResponse); ok {
-							r.RateLimit = GetRateLimitRateLimit{
-								Limit:     5000,
-								Cost:      1,
-								Remaining: 4999,
-								ResetAt:   resetTime,
-							}
-							r.Viewer = GetRateLimitViewerUser{
-								Login: "test-user",
+						if graphQLResp, ok := resp.(*graphql.Response); ok {
+							if r, ok := graphQLResp.Data.(*GetRateLimitResponse); ok {
+								r.RateLimit = GetRateLimitRateLimit{
+									Limit:     5000,
+									Cost:      1,
+									Remaining: 4999,
+									ResetAt:   resetTime,
+								}
+								r.Viewer = GetRateLimitViewerUser{
+									Login: "test-user",
+								}
 							}
 						}
 						return nil
