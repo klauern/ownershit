@@ -58,16 +58,16 @@ func setupE2ETest(t *testing.T) *E2ETestConfig {
 
 func TestE2E_RateLimit(t *testing.T) {
 	_ = setupE2ETest(t)
-	
+
 	// Test using the V4 API directly
 	v4Client := v4api.NewGHv4Client()
-	
+
 	rateLimit, err := v4Client.GetRateLimit()
 	if err != nil {
 		t.Fatalf("Failed to get rate limit: %v", err)
 	}
 
-	t.Logf("Rate limit info: Limit=%d, Remaining=%d, Reset=%s", 
+	t.Logf("Rate limit info: Limit=%d, Remaining=%d, Reset=%s",
 		rateLimit.RateLimit.Limit, rateLimit.RateLimit.Remaining, rateLimit.RateLimit.ResetAt.Format(time.RFC3339))
 
 	// Validate rate limit response
@@ -84,9 +84,9 @@ func TestE2E_RateLimit(t *testing.T) {
 
 func TestE2E_GetTeams(t *testing.T) {
 	config := setupE2ETest(t)
-	
+
 	v4Client := v4api.NewGHv4Client()
-	
+
 	teams, err := v4Client.GetTeams(config.Organization)
 	if err != nil {
 		// This might fail if the org doesn't exist or we don't have access
@@ -95,7 +95,7 @@ func TestE2E_GetTeams(t *testing.T) {
 	}
 
 	t.Logf("Found %d teams in organization %s", len(teams), config.Organization)
-	
+
 	// Basic validation of team structure
 	for _, team := range teams {
 		if team.Node.Name == "" {
@@ -107,7 +107,7 @@ func TestE2E_GetTeams(t *testing.T) {
 
 func TestE2E_RepositoryOperations(t *testing.T) {
 	config := setupE2ETest(t)
-	
+
 	ctx := context.Background()
 	client, err := ownershit.NewSecureGitHubClient(ctx)
 	if err != nil {
@@ -127,7 +127,7 @@ func TestE2E_RepositoryOperations(t *testing.T) {
 
 func TestE2E_ConfigurationValidation(t *testing.T) {
 	config := setupE2ETest(t)
-	
+
 	// Test various configuration scenarios
 	tests := []struct {
 		name        string
@@ -155,8 +155,8 @@ func TestE2E_ConfigurationValidation(t *testing.T) {
 				},
 				BranchPermissions: ownershit.BranchPermissions{
 					RequirePullRequestReviews: boolPtr(true),
-					ApproverCount:            intPtr(1),
-					RequireCodeOwners:        boolPtr(false),
+					ApproverCount:             intPtr(1),
+					RequireCodeOwners:         boolPtr(false),
 				},
 			},
 			expectError: false,
@@ -168,7 +168,7 @@ func TestE2E_ConfigurationValidation(t *testing.T) {
 				Organization: &config.Organization,
 				BranchPermissions: ownershit.BranchPermissions{
 					RequirePullRequestReviews: boolPtr(true),
-					ApproverCount:            intPtr(-1), // Invalid
+					ApproverCount:             intPtr(-1), // Invalid
 				},
 			},
 			expectError: true,
@@ -180,7 +180,7 @@ func TestE2E_ConfigurationValidation(t *testing.T) {
 				Organization: &config.Organization,
 				BranchPermissions: ownershit.BranchPermissions{
 					RequirePullRequestReviews: boolPtr(true),
-					ApproverCount:            intPtr(150), // Too high
+					ApproverCount:             intPtr(150), // Too high
 				},
 			},
 			expectError: true,
@@ -191,7 +191,7 @@ func TestE2E_ConfigurationValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("Testing: %s", tt.description)
-			
+
 			err := ownershit.ValidateBranchPermissions(&tt.settings.BranchPermissions)
 			if (err != nil) != tt.expectError {
 				t.Errorf("ValidateBranchPermissions() error = %v, expectError %v", err, tt.expectError)
@@ -206,7 +206,7 @@ func TestE2E_ConfigurationValidation(t *testing.T) {
 
 func TestE2E_TokenValidation(t *testing.T) {
 	config := setupE2ETest(t)
-	
+
 	// Test token validation with real token
 	err := ownershit.ValidateGitHubToken(config.Token)
 	if err != nil {

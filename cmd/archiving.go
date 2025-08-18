@@ -111,9 +111,7 @@ func queryCommand(c *cli.Context) error {
 	}
 	tableBuf := strings.Builder{}
 	table := tablewriter.NewWriter(&tableBuf)
-	table.SetHeader(
-		[]string{"repository", "forks", "stars", "watchers", "last updated"},
-	)
+	table.Header("repository", "forks", "stars", "watchers", "last updated")
 
 	repos = shit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
@@ -121,9 +119,13 @@ func queryCommand(c *cli.Context) error {
 		repoStars := strconv.Itoa(int(repo.StargazerCount))
 		repoWatchers := strconv.Itoa(int(repo.Watchers.TotalCount))
 		lastUpdated := repo.UpdatedAt.Time
-		table.Append([]string{string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String()})
+		if err := table.Append(string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String()); err != nil {
+			return fmt.Errorf("failed to append row to table: %w", err)
+		}
 	}
-	table.Render()
+	if err := table.Render(); err != nil {
+		return fmt.Errorf("failed to render table: %w", err)
+	}
 	fmt.Println(tableBuf.String())
 	return nil
 }
