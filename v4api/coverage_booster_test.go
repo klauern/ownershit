@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const testLabelName = "test-label"
+
 // Additional tests to boost coverage to 80%+
 
 // Test all remaining getter methods from generated.go
@@ -16,7 +18,7 @@ func TestCreateLabelCreateLabelCreateLabelPayload_GetLabel(t *testing.T) {
 
 	payload := &CreateLabelCreateLabelCreateLabelPayload{
 		Label: CreateLabelCreateLabelCreateLabelPayloadLabel{
-			Name:        "test-label",
+			Name:        testLabelName,
 			CreatedAt:   testTime,
 			Color:       "ff0000",
 			Description: "Test label",
@@ -27,8 +29,8 @@ func TestCreateLabelCreateLabelCreateLabelPayload_GetLabel(t *testing.T) {
 	}
 
 	result := payload.GetLabel()
-	if result.Name != "test-label" {
-		t.Errorf("GetLabel().Name = %v, want %v", result.Name, "test-label")
+	if result.Name != testLabelName {
+		t.Errorf("GetLabel().Name = %v, want %v", result.Name, testLabelName)
 	}
 }
 
@@ -37,7 +39,7 @@ func TestCreateLabelCreateLabelCreateLabelPayloadLabel_Getters(t *testing.T) {
 	testURL, _ := url.Parse("https://github.com/test/label")
 
 	label := &CreateLabelCreateLabelCreateLabelPayloadLabel{
-		Name:        "test-label",
+		Name:        testLabelName,
 		CreatedAt:   testTime,
 		Color:       "ff0000",
 		Description: "Test label description",
@@ -46,8 +48,8 @@ func TestCreateLabelCreateLabelCreateLabelPayloadLabel_Getters(t *testing.T) {
 		Url:         *testURL,
 	}
 
-	if label.GetName() != "test-label" {
-		t.Errorf("GetName() = %v, want %v", label.GetName(), "test-label")
+	if label.GetName() != testLabelName {
+		t.Errorf("GetName() = %v, want %v", label.GetName(), testLabelName)
 	}
 	if !label.GetCreatedAt().Equal(testTime) {
 		t.Errorf("GetCreatedAt() = %v, want %v", label.GetCreatedAt(), testTime)

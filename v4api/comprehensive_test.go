@@ -350,7 +350,7 @@ func TestGitHubV4Client_GetRateLimit_Comprehensive(t *testing.T) {
 	}
 }
 
-// Helper function to check if error message contains substring
+// Helper function to check if error message contains substring.
 func contains(str, substr string) bool {
 	for i := 0; i <= len(str)-len(substr); i++ {
 		if str[i:i+len(substr)] == substr {
