@@ -56,7 +56,8 @@
       "Bash(gh pr checkout:*)",
       "Bash(gh pr view:*)",
       "Bash(gh run view:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(ln:*)"
     ],
     "deny": []
   },
