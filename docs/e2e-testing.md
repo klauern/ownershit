@@ -9,11 +9,13 @@ The E2E tests validate the complete functionality of ownershit by making actual 
 ## Prerequisites
 
 ### Required
+
 - **GitHub Token**: A valid GitHub personal access token or GitHub App token
 - **Go**: Go 1.19+ installed
 - **Repository Access**: Access to a GitHub organization and repository for testing
 
 ### Recommended
+
 - **GitHub CLI**: For easier authentication and user detection
 - **Test Organization**: A dedicated test organization to avoid affecting production repositories
 
@@ -48,6 +50,7 @@ export E2E_TEST_USER=your-github-username
 ## Test Categories
 
 ### Read-Only Tests
+
 These tests only read data from GitHub and make no modifications:
 
 - **Rate Limit**: Tests GitHub API rate limiting
@@ -57,6 +60,7 @@ These tests only read data from GitHub and make no modifications:
 - **Team Access**: Attempts to read organization teams (may fail without access)
 
 ### Modification Tests
+
 These tests may make changes to repositories (requires explicit consent):
 
 - **Repository Sync**: Tests repository settings synchronization
@@ -114,18 +118,24 @@ go test -v -run "TestE2E" ./...
 ## Safety Features
 
 ### Skipping by Default
+
 E2E tests are skipped by default unless explicitly enabled with `RUN_E2E_TESTS=true`.
 
 ### Read-Only First
+
 Most tests are read-only operations that don't modify any GitHub resources.
 
 ### Explicit Consent
+
 Modification tests require explicit consent via:
+
 - Setting `E2E_ALLOW_MODIFICATIONS=true`, or
 - Confirming when prompted by the test script
 
 ### Error Handling
+
 Tests are designed to gracefully handle common error conditions:
+
 - Missing repository access
 - Insufficient permissions
 - Non-existent organizations/repositories
@@ -133,6 +143,7 @@ Tests are designed to gracefully handle common error conditions:
 ## Test Configuration
 
 ### Basic Test Config
+
 ```yaml
 organization: test-org
 repositories:
@@ -151,6 +162,7 @@ branches:
 ```
 
 ### Testing Different Scenarios
+
 You can create custom configuration files to test different scenarios:
 
 ```bash
@@ -164,24 +176,29 @@ go test -v -run "TestE2E_CLI_ConfigValidation" ./cmd/ownershit/...
 ### Common Issues
 
 **"Skipping E2E tests"**
+
 - Ensure `RUN_E2E_TESTS=true` is set
 - Verify `GITHUB_TOKEN` is set and valid
 
 **"Failed to get teams for org"**
+
 - Organization may not exist or you may not have access
 - This is expected and won't fail the tests
 
 **"Repository operations failed"**
+
 - Repository may not exist or you may not have write access
 - Tests will log warnings but continue
 
 **Token validation failed**
+
 - Check your token format (should start with `ghp_`, `github_pat_`, or `ghs_`)
 - Ensure token has appropriate scopes
 
 ### Debug Mode
 
 Enable debug logging for more detailed output:
+
 ```bash
 export OWNERSHIT_DEBUG=true
 go test -v -run "TestE2E" ./...
@@ -205,17 +222,17 @@ For automated testing in CI/CD pipelines:
 ## Best Practices
 
 1. **Use Test Organizations**: Always use dedicated test organizations/repositories
-2. **Start with Read-Only**: Run read-only tests first to validate setup
-3. **Review Modifications**: Carefully review what modification tests will do
-4. **Token Permissions**: Use tokens with minimal required permissions
-5. **Regular Testing**: Run E2E tests as part of your development workflow
+1. **Start with Read-Only**: Run read-only tests first to validate setup
+1. **Review Modifications**: Carefully review what modification tests will do
+1. **Token Permissions**: Use tokens with minimal required permissions
+1. **Regular Testing**: Run E2E tests as part of your development workflow
 
 ## Contributing
 
 When adding new E2E tests:
 
 1. Make them read-only when possible
-2. Add appropriate skip conditions
-3. Handle error cases gracefully
-4. Document any special requirements
-5. Test both success and failure scenarios
+1. Add appropriate skip conditions
+1. Handle error cases gracefully
+1. Document any special requirements
+1. Test both success and failure scenarios

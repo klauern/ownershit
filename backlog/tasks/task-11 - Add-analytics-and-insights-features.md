@@ -1,12 +1,6 @@
----
-id: task-11
-title: Add analytics and insights features
-status: To Do
-assignee: []
-created_date: '2025-07-10'
-labels: []
-dependencies: []
----
+______________________________________________________________________
+
+## id: task-11 title: Add analytics and insights features status: To Do assignee: [] created_date: '2025-07-10' labels: [] dependencies: []
 
 ## Description
 
