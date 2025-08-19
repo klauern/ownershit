@@ -11,10 +11,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// E2E CLI tests that can run against real GitHub repositories
+const trueValue = "true"
+
+// E2E CLI tests that can run against real GitHub repositories.
 func TestE2E_CLI_Commands(t *testing.T) {
 	// Skip unless explicitly requested
-	if os.Getenv("RUN_E2E_TESTS") != "true" {
+	if os.Getenv("RUN_E2E_TESTS") != trueValue {
 		t.Skip("Skipping E2E CLI tests. Set RUN_E2E_TESTS=true to enable")
 	}
 
@@ -42,7 +44,7 @@ func TestE2E_CLI_Commands(t *testing.T) {
 	})
 
 	// Only run actual sync if explicitly requested
-	if os.Getenv("E2E_ALLOW_MODIFICATIONS") == "true" {
+	if os.Getenv("E2E_ALLOW_MODIFICATIONS") == trueValue {
 		t.Run("sync_real", func(t *testing.T) {
 			testE2ESyncCommand(t, configFile, false)
 		})
@@ -137,7 +139,7 @@ func testE2ESyncCommand(t *testing.T, configFile string, dryRun bool) {
 }
 
 func TestE2E_CLI_ConfigValidation(t *testing.T) {
-	if os.Getenv("RUN_E2E_TESTS") != "true" {
+	if os.Getenv("RUN_E2E_TESTS") != trueValue {
 		t.Skip("Skipping E2E CLI config tests. Set RUN_E2E_TESTS=true to enable")
 	}
 
@@ -264,9 +266,9 @@ branches:
 	}
 }
 
-// Test the init command to ensure it creates valid configuration
+// Test the init command to ensure it creates valid configuration.
 func TestE2E_CLI_InitCommand(t *testing.T) {
-	if os.Getenv("RUN_E2E_TESTS") != "true" {
+	if os.Getenv("RUN_E2E_TESTS") != trueValue {
 		t.Skip("Skipping E2E init command test. Set RUN_E2E_TESTS=true to enable")
 	}
 
@@ -287,7 +289,7 @@ func TestE2E_CLI_InitCommand(t *testing.T) {
 	}
 
 	// Verify config file was created
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(configPath); os.IsNotExist(statErr) {
 		t.Fatal("Init command should have created config file")
 	}
 
@@ -316,7 +318,7 @@ func TestE2E_CLI_InitCommand(t *testing.T) {
 	}
 }
 
-// Helper functions
+// Helper functions.
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

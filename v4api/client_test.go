@@ -658,7 +658,7 @@ func TestNewGHv4Client_TokenValidationError(t *testing.T) {
 	_ = NewGHv4Client()
 }
 
-// Helper type for testing error transport
+// Helper type for testing error transport.
 type errorTransport struct{}
 
 func (t *errorTransport) RoundTrip(req *http.Request) (*http.Response, error) {

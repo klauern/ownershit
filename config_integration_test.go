@@ -430,7 +430,7 @@ func TestBranchPermissions_TeamAndUserValidation(t *testing.T) {
 }
 
 // Helper function to test that we have a ValidateBranchPermissions function.
-// This would need to be implemented if it doesn't exist
+// This would need to be implemented if it doesn't exist.
 func ensureValidateBranchPermissionsExists(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {

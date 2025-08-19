@@ -10,7 +10,9 @@ import (
 	"github.com/klauern/ownershit/v4api"
 )
 
-// E2ETestConfig holds configuration for end-to-end tests
+const trueValue = "true"
+
+// E2ETestConfig holds configuration for end-to-end tests.
 type E2ETestConfig struct {
 	Organization string
 	TestRepo     string
@@ -18,12 +20,12 @@ type E2ETestConfig struct {
 	UserLogin    string
 }
 
-// setupE2ETest prepares the environment for end-to-end testing
+// setupE2ETest prepares the environment for end-to-end testing.
 func setupE2ETest(t *testing.T) *E2ETestConfig {
 	t.Helper()
 
 	// Check if we're in CI or have explicit E2E testing enabled
-	if os.Getenv("RUN_E2E_TESTS") != "true" && os.Getenv("CI") != "true" {
+	if os.Getenv("RUN_E2E_TESTS") != trueValue && os.Getenv("CI") != trueValue {
 		t.Skip("Skipping E2E tests. Set RUN_E2E_TESTS=true to enable")
 	}
 
@@ -229,7 +231,7 @@ func TestE2E_TokenValidation(t *testing.T) {
 	}
 }
 
-// Helper functions for creating pointers
+// Helper functions for creating pointers.
 func stringPtr(s string) *string {
 	return &s
 }
