@@ -190,7 +190,7 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 	return branchPerms, nil
 }
 
-// convertBranchProtection converts GitHub branch protection to ownershit format
+// convertBranchProtection converts GitHub branch protection to ownershit format.
 func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	if protection == nil {
 		return &BranchPermissions{}
@@ -226,8 +226,26 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	if protection.Restrictions != nil {
 		trueVal := true
 		perms.RestrictPushes = &trueVal
-		// Note: GitHub API doesn't provide push allowlist in the same format
-		// This would need additional API calls to get team/user restrictions
+
+		// Extract push allowlist from restrictions
+		var allowlist []string
+
+		// Add team slugs to allowlist
+		for _, team := range protection.Restrictions.Teams {
+			if team.Slug != nil {
+				allowlist = append(allowlist, *team.Slug)
+			}
+		}
+
+		// Add user logins to allowlist
+		for _, user := range protection.Restrictions.Users {
+			if user.Login != nil {
+				allowlist = append(allowlist, *user.Login)
+			}
+		}
+
+		// Set the push allowlist
+		perms.PushAllowlist = allowlist
 	}
 
 	// Advanced settings - now available in github.Protection struct

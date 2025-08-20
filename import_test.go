@@ -85,6 +85,74 @@ func TestConvertBranchProtection(t *testing.T) {
 				AllowDeletions:        github.Bool(false),
 			},
 		},
+		{
+			name: "protection with push restrictions - teams and users",
+			protection: &github.Protection{
+				Restrictions: &github.BranchRestrictions{
+					Teams: []*github.Team{
+						{Slug: github.String("admin-team")},
+						{Slug: github.String("maintainers")},
+					},
+					Users: []*github.User{
+						{Login: github.String("admin-user")},
+						{Login: github.String("maintainer")},
+					},
+				},
+			},
+			expected: &BranchPermissions{
+				RestrictPushes: github.Bool(true),
+				PushAllowlist:  []string{"admin-team", "maintainers", "admin-user", "maintainer"},
+			},
+		},
+		{
+			name: "protection with push restrictions - teams only",
+			protection: &github.Protection{
+				Restrictions: &github.BranchRestrictions{
+					Teams: []*github.Team{
+						{Slug: github.String("core-team")},
+					},
+					Users: []*github.User{},
+				},
+			},
+			expected: &BranchPermissions{
+				RestrictPushes: github.Bool(true),
+				PushAllowlist:  []string{"core-team"},
+			},
+		},
+		{
+			name: "protection with push restrictions - users only",
+			protection: &github.Protection{
+				Restrictions: &github.BranchRestrictions{
+					Teams: []*github.Team{},
+					Users: []*github.User{
+						{Login: github.String("admin")},
+					},
+				},
+			},
+			expected: &BranchPermissions{
+				RestrictPushes: github.Bool(true),
+				PushAllowlist:  []string{"admin"},
+			},
+		},
+		{
+			name: "protection with push restrictions - nil slug/login handled gracefully",
+			protection: &github.Protection{
+				Restrictions: &github.BranchRestrictions{
+					Teams: []*github.Team{
+						{Slug: github.String("valid-team")},
+						{Slug: nil}, // This should be skipped
+					},
+					Users: []*github.User{
+						{Login: github.String("valid-user")},
+						{Login: nil}, // This should be skipped
+					},
+				},
+			},
+			expected: &BranchPermissions{
+				RestrictPushes: github.Bool(true),
+				PushAllowlist:  []string{"valid-team", "valid-user"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -142,6 +210,24 @@ func TestConvertBranchProtection(t *testing.T) {
 				for i, check := range result.StatusChecks {
 					if check != tt.expected.StatusChecks[i] {
 						t.Errorf("StatusChecks[%d] mismatch: got %s, want %s", i, check, tt.expected.StatusChecks[i])
+					}
+				}
+			}
+
+			// Check push restrictions
+			if !compareBoolPointers(result.RestrictPushes, tt.expected.RestrictPushes) {
+				t.Errorf("RestrictPushes mismatch: got %v, want %v",
+					getBoolPointerValue(result.RestrictPushes),
+					getBoolPointerValue(tt.expected.RestrictPushes))
+			}
+
+			// Check push allowlist
+			if len(result.PushAllowlist) != len(tt.expected.PushAllowlist) {
+				t.Errorf("PushAllowlist length mismatch: got %d, want %d", len(result.PushAllowlist), len(tt.expected.PushAllowlist))
+			} else {
+				for i, actor := range result.PushAllowlist {
+					if actor != tt.expected.PushAllowlist[i] {
+						t.Errorf("PushAllowlist[%d] mismatch: got %s, want %s", i, actor, tt.expected.PushAllowlist[i])
 					}
 				}
 			}
