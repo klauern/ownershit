@@ -35,6 +35,12 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 		return nil, fmt.Errorf("failed to get branch protection rules: %w", err)
 	}
 
+	// Get repository labels
+	repoLabels, err := getRepositoryLabels(client, owner, repo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get repository labels: %w", err)
+	}
+
 	// Create PermissionsSettings structure
 	config := &PermissionsSettings{
 		Organization:      &owner,
@@ -42,13 +48,19 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 		TeamPermissions:   teamPermissions,
 		Repositories: []*Repository{
 			{
-				Name:     &repo,
-				Wiki:     repoDetails.Wiki,
-				Issues:   repoDetails.Issues,
-				Projects: repoDetails.Projects,
+				Name:          &repo,
+				Wiki:          repoDetails.Wiki,
+				Issues:        repoDetails.Issues,
+				Projects:      repoDetails.Projects,
+				DefaultBranch: repoDetails.DefaultBranch,
+				Private:       repoDetails.Private,
+				Archived:      repoDetails.Archived,
+				Template:      repoDetails.Template,
+				Description:   repoDetails.Description,
+				Homepage:      repoDetails.Homepage,
 			},
 		},
-		DefaultLabels: []RepoLabel{}, // Empty for now, could be populated later
+		DefaultLabels: repoLabels,
 	}
 
 	return config, nil
@@ -56,9 +68,15 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 
 // repositoryDetails holds the basic repository configuration.
 type repositoryDetails struct {
-	Wiki     *bool
-	Issues   *bool
-	Projects *bool
+	Wiki          *bool
+	Issues        *bool
+	Projects      *bool
+	DefaultBranch *string
+	Private       *bool
+	Archived      *bool
+	Template      *bool
+	Description   *string
+	Homepage      *string
 }
 
 // getRepositoryDetails retrieves basic repository settings via GitHub v3 API.
@@ -68,15 +86,21 @@ func getRepositoryDetails(client *GitHubClient, owner, repo string) (*repository
 		Str("repo", repo).
 		Msg("fetching repository details")
 
-	repoInfo, _, err := client.v3.Repositories.Get(client.Context, owner, repo)
+	repoInfo, _, err := client.Repositories.Get(client.Context, owner, repo)
 	if err != nil {
 		return nil, NewGitHubAPIError(0, "get repository", repo, "failed to fetch repository details", err)
 	}
 
 	details := &repositoryDetails{
-		Wiki:     repoInfo.HasWiki,
-		Issues:   repoInfo.HasIssues,
-		Projects: repoInfo.HasProjects,
+		Wiki:          repoInfo.HasWiki,
+		Issues:        repoInfo.HasIssues,
+		Projects:      repoInfo.HasProjects,
+		DefaultBranch: repoInfo.DefaultBranch,
+		Private:       repoInfo.Private,
+		Archived:      repoInfo.Archived,
+		Template:      repoInfo.IsTemplate,
+		Description:   repoInfo.Description,
+		Homepage:      repoInfo.Homepage,
 	}
 
 	log.Debug().
@@ -86,14 +110,14 @@ func getRepositoryDetails(client *GitHubClient, owner, repo string) (*repository
 	return details, nil
 }
 
-// getTeamPermissions retrieves team permissions for the repository
+// getTeamPermissions retrieves team permissions for the repository.
 func getTeamPermissions(client *GitHubClient, owner, repo string) ([]*Permissions, error) {
 	log.Debug().
 		Str("owner", owner).
 		Str("repo", repo).
 		Msg("fetching team permissions")
 
-	teams, _, err := client.v3.Repositories.ListTeams(client.Context, owner, repo, nil)
+	teams, _, err := client.Repositories.ListTeams(client.Context, owner, repo, nil)
 	if err != nil {
 		return nil, NewGitHubAPIError(0, "list teams", repo, "failed to fetch team permissions", err)
 	}
@@ -115,7 +139,7 @@ func getTeamPermissions(client *GitHubClient, owner, repo string) ([]*Permission
 	return permissions, nil
 }
 
-// convertPermissionLevel converts GitHub API permission strings to ownershit permission levels
+// convertPermissionLevel converts GitHub API permission strings to ownershit permission levels.
 func convertPermissionLevel(ghPermission *string) *string {
 	if ghPermission == nil {
 		return nil
@@ -136,7 +160,7 @@ func convertPermissionLevel(ghPermission *string) *string {
 	return &level
 }
 
-// getBranchProtectionRules retrieves branch protection configuration
+// getBranchProtectionRules retrieves branch protection configuration.
 func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*BranchPermissions, error) {
 	log.Debug().
 		Str("owner", owner).
@@ -149,7 +173,7 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 	var err error
 
 	for _, branch := range branches {
-		protection, _, err = client.v3.Repositories.GetBranchProtection(client.Context, owner, repo, branch)
+		protection, _, err = client.Repositories.GetBranchProtection(client.Context, owner, repo, branch)
 		if err == nil {
 			log.Debug().
 				Str("branch", branch).
@@ -168,7 +192,7 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 	branchPerms := convertBranchProtection(protection)
 
 	// Get merge settings from repository details
-	repoInfo, _, err := client.v3.Repositories.Get(client.Context, owner, repo)
+	repoInfo, _, err := client.Repositories.Get(client.Context, owner, repo)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get repository merge settings")
 	} else {
@@ -184,7 +208,7 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 	return branchPerms, nil
 }
 
-// convertBranchProtection converts GitHub branch protection to ownershit format
+// convertBranchProtection converts GitHub branch protection to ownershit format.
 func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	if protection == nil {
 		return &BranchPermissions{}
@@ -220,12 +244,90 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	if protection.Restrictions != nil {
 		trueVal := true
 		perms.RestrictPushes = &trueVal
-		// Note: GitHub API doesn't provide push allowlist in the same format
-		// This would need additional API calls to get team/user restrictions
+
+		// Extract push allowlist from restrictions
+		var allowlist []string
+
+		// Add team slugs to allowlist
+		for _, team := range protection.Restrictions.Teams {
+			if team.Slug != nil {
+				allowlist = append(allowlist, *team.Slug)
+			}
+		}
+
+		// Add user logins to allowlist
+		for _, user := range protection.Restrictions.Users {
+			if user.Login != nil {
+				allowlist = append(allowlist, *user.Login)
+			}
+		}
+
+		// Set the push allowlist
+		perms.PushAllowlist = allowlist
 	}
 
-	// Advanced settings (these may require additional API calls or GraphQL)
-	// For now, we'll leave them as nil since they require more complex queries
+	// Advanced settings - now available in github.Protection struct
+	if protection.RequiredConversationResolution != nil {
+		perms.RequireConversationResolution = &protection.RequiredConversationResolution.Enabled
+	}
+
+	if protection.RequireLinearHistory != nil {
+		perms.RequireLinearHistory = &protection.RequireLinearHistory.Enabled
+	}
+
+	if protection.AllowForcePushes != nil {
+		perms.AllowForcePushes = &protection.AllowForcePushes.Enabled
+	}
+
+	if protection.AllowDeletions != nil {
+		perms.AllowDeletions = &protection.AllowDeletions.Enabled
+	}
 
 	return perms
+}
+
+// getRepositoryLabels retrieves all labels for the repository.
+func getRepositoryLabels(client *GitHubClient, owner, repo string) ([]RepoLabel, error) {
+	log.Debug().
+		Str("owner", owner).
+		Str("repo", repo).
+		Msg("fetching repository labels")
+
+	const defaultPageSize = 100
+	opt := &github.ListOptions{PerPage: defaultPageSize}
+	var allLabels []RepoLabel
+
+	for {
+		labels, resp, err := client.Issues.ListLabels(client.Context, owner, repo, opt)
+		if err != nil {
+			return nil, NewGitHubAPIError(0, "list labels", repo, "failed to fetch repository labels", err)
+		}
+
+		// Convert GitHub labels to RepoLabel format
+		for _, label := range labels {
+			repoLabel := RepoLabel{
+				Name:  *label.Name,
+				Color: *label.Color,
+			}
+
+			// Handle optional fields
+			if label.Description != nil {
+				repoLabel.Description = *label.Description
+			}
+
+			allLabels = append(allLabels, repoLabel)
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+
+	log.Debug().
+		Int("labelCount", len(allLabels)).
+		Interface("labels", allLabels).
+		Msg("repository labels retrieved")
+
+	return allLabels, nil
 }

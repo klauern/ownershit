@@ -44,6 +44,9 @@ type IssuesService interface {
 // RepositoriesService is a wrapper interface for the GitHub V3 API to support mocking and testing for the Repository API endpoints.
 type RepositoriesService interface {
 	Edit(ctx context.Context, org, repo string, repository *github.Repository) (*github.Repository, *github.Response, error)
+	Get(ctx context.Context, owner, repo string) (*github.Repository, *github.Response, error)
+	ListTeams(ctx context.Context, owner string, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error)
+	GetBranchProtection(ctx context.Context, owner, repo, branch string) (*github.Protection, *github.Response, error)
 }
 
 // NewGitHubClient creates a new GitHub context using OAuth2.

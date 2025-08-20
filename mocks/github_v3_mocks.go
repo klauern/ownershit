@@ -183,3 +183,51 @@ func (mr *MockRepositoriesServiceMockRecorder) Edit(ctx, org, repo, repository a
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Edit", reflect.TypeOf((*MockRepositoriesService)(nil).Edit), ctx, org, repo, repository)
 }
+
+// Get mocks base method.
+func (m *MockRepositoriesService) Get(ctx context.Context, owner, repo string) (*github.Repository, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, owner, repo)
+	ret0, _ := ret[0].(*github.Repository)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockRepositoriesServiceMockRecorder) Get(ctx, owner, repo any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRepositoriesService)(nil).Get), ctx, owner, repo)
+}
+
+// GetBranchProtection mocks base method.
+func (m *MockRepositoriesService) GetBranchProtection(ctx context.Context, owner, repo, branch string) (*github.Protection, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBranchProtection", ctx, owner, repo, branch)
+	ret0, _ := ret[0].(*github.Protection)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetBranchProtection indicates an expected call of GetBranchProtection.
+func (mr *MockRepositoriesServiceMockRecorder) GetBranchProtection(ctx, owner, repo, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBranchProtection", reflect.TypeOf((*MockRepositoriesService)(nil).GetBranchProtection), ctx, owner, repo, branch)
+}
+
+// ListTeams mocks base method.
+func (m *MockRepositoriesService) ListTeams(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTeams", ctx, owner, repo, opts)
+	ret0, _ := ret[0].([]*github.Team)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListTeams indicates an expected call of ListTeams.
+func (mr *MockRepositoriesServiceMockRecorder) ListTeams(ctx, owner, repo, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTeams", reflect.TypeOf((*MockRepositoriesService)(nil).ListTeams), ctx, owner, repo, opts)
+}
