@@ -35,6 +35,12 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 		return nil, fmt.Errorf("failed to get branch protection rules: %w", err)
 	}
 
+	// Get repository labels
+	repoLabels, err := getRepositoryLabels(client, owner, repo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get repository labels: %w", err)
+	}
+
 	// Create PermissionsSettings structure
 	config := &PermissionsSettings{
 		Organization:      &owner,
@@ -48,7 +54,7 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 				Projects: repoDetails.Projects,
 			},
 		},
-		DefaultLabels: []RepoLabel{}, // Empty for now, could be populated later
+		DefaultLabels: repoLabels,
 	}
 
 	return config, nil
@@ -228,4 +234,50 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	// For now, we'll leave them as nil since they require more complex queries
 
 	return perms
+}
+
+// getRepositoryLabels retrieves all labels for the repository.
+func getRepositoryLabels(client *GitHubClient, owner, repo string) ([]RepoLabel, error) {
+	log.Debug().
+		Str("owner", owner).
+		Str("repo", repo).
+		Msg("fetching repository labels")
+
+	const defaultPageSize = 100
+	opt := &github.ListOptions{PerPage: defaultPageSize}
+	var allLabels []RepoLabel
+
+	for {
+		labels, resp, err := client.v3.Issues.ListLabels(client.Context, owner, repo, opt)
+		if err != nil {
+			return nil, NewGitHubAPIError(0, "list labels", repo, "failed to fetch repository labels", err)
+		}
+
+		// Convert GitHub labels to RepoLabel format
+		for _, label := range labels {
+			repoLabel := RepoLabel{
+				Name:  *label.Name,
+				Color: *label.Color,
+			}
+
+			// Handle optional fields
+			if label.Description != nil {
+				repoLabel.Description = *label.Description
+			}
+
+			allLabels = append(allLabels, repoLabel)
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+
+	log.Debug().
+		Int("labelCount", len(allLabels)).
+		Interface("labels", allLabels).
+		Msg("repository labels retrieved")
+
+	return allLabels, nil
 }
