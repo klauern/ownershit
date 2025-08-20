@@ -4,6 +4,7 @@ title: Add multiple branch protection import support
 status: To Do
 assignee: []
 created_date: '2025-08-20 15:03'
+updated_date: '2025-08-20 18:34'
 labels:
   - enhancement
   - github-api
@@ -19,5 +20,11 @@ Enhance the import command to discover and extract protection rules for all prot
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Import command discovers all branches with protection rules using GitHub API,Import extracts protection rules for each protected branch individually,Generated YAML includes separate branch protection configuration for each protected branch,Import handles repositories with 10+ protected branches efficiently,Import correctly identifies branch-specific protection rule differences,Import maintains backward compatibility with single main/master branch protection,Import handles repositories with no protected branches gracefully
+- [ ] Import command discovers all branches with protection rules using GitHub API
+- [ ] Import extracts protection rules for each protected branch individually
+- [ ] Generated YAML includes separate branch protection configuration for each protected branch
+- [ ] Import handles repositories with 10+ protected branches efficiently
+- [ ] Import correctly identifies branch-specific protection rule differences
+- [ ] Import maintains backward compatibility with single main/master branch protection
+- [ ] Import handles repositories with no protected branches gracefully
 <!-- AC:END -->
