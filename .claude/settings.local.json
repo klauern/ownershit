@@ -57,7 +57,8 @@
       "Bash(gh pr view:*)",
       "Bash(gh run view:*)",
       "Bash(true)",
-      "Bash(ln:*)"
+      "Bash(ln:*)",
+      "Bash(OWNERSHIT_DEBUG=false go run ./cmd/ownershit/main.go import klauern/dotfiles --output test-output.yaml)"
     ],
     "deny": [],
     "additionalDirectories": [
