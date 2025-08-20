@@ -458,3 +458,237 @@ func TestGetValidatedGitHubToken(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateSchemaVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		version *string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "nil version should be valid (defaults to legacy)",
+			version: nil,
+			wantErr: false,
+		},
+		{
+			name:    "empty version should be valid",
+			version: stringPtr(""),
+			wantErr: false,
+		},
+		{
+			name:    "current version should be valid",
+			version: stringPtr(CurrentSchemaVersion),
+			wantErr: false,
+		},
+		{
+			name:    "legacy version should be valid",
+			version: stringPtr(LegacySchemaVersion),
+			wantErr: false,
+		},
+		{
+			name:    "unsupported version should error",
+			version: stringPtr("2.0"),
+			wantErr: true,
+			errMsg:  "unsupported schema version",
+		},
+		{
+			name:    "invalid version format should error",
+			version: stringPtr("invalid"),
+			wantErr: true,
+			errMsg:  "unsupported schema version",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSchemaVersion(tt.version)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("ValidateSchemaVersion() error = nil, wantErr %v", tt.wantErr)
+					return
+				}
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("ValidateSchemaVersion() error = %v, want error containing %v", err, tt.errMsg)
+				}
+			} else if err != nil {
+				t.Errorf("ValidateSchemaVersion() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMigrateConfigurationSchema(t *testing.T) {
+	tests := []struct {
+		name            string
+		settings        *PermissionsSettings
+		wantErr         bool
+		errMsg          string
+		expectedVersion string
+	}{
+		{
+			name:     "nil settings should error",
+			settings: nil,
+			wantErr:  true,
+			errMsg:   "settings cannot be nil for migration",
+		},
+		{
+			name: "current version needs no migration",
+			settings: &PermissionsSettings{
+				Version:      stringPtr(CurrentSchemaVersion),
+				Organization: stringPtr("test-org"),
+			},
+			wantErr:         false,
+			expectedVersion: CurrentSchemaVersion,
+		},
+		{
+			name: "legacy version should migrate to current",
+			settings: &PermissionsSettings{
+				Version:      stringPtr(LegacySchemaVersion),
+				Organization: stringPtr("test-org"),
+			},
+			wantErr:         false,
+			expectedVersion: CurrentSchemaVersion,
+		},
+		{
+			name: "nil version should migrate to current",
+			settings: &PermissionsSettings{
+				Version:      nil,
+				Organization: stringPtr("test-org"),
+			},
+			wantErr:         false,
+			expectedVersion: CurrentSchemaVersion,
+		},
+		{
+			name: "unsupported version should error",
+			settings: &PermissionsSettings{
+				Version:      stringPtr("2.0"),
+				Organization: stringPtr("test-org"),
+			},
+			wantErr: true,
+			errMsg:  "cannot migrate unsupported schema version",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := MigrateConfigurationSchema(tt.settings)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("MigrateConfigurationSchema() error = nil, wantErr %v", tt.wantErr)
+					return
+				}
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("MigrateConfigurationSchema() error = %v, want error containing %v", err, tt.errMsg)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("MigrateConfigurationSchema() error = %v, wantErr %v", err, tt.wantErr)
+					return
+				}
+				if tt.settings != nil && tt.settings.Version != nil {
+					if *tt.settings.Version != tt.expectedVersion {
+						t.Errorf("MigrateConfigurationSchema() version = %v, want %v", *tt.settings.Version, tt.expectedVersion)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestGetSchemaVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings *PermissionsSettings
+		expected string
+	}{
+		{
+			name:     "nil settings should return legacy version",
+			settings: nil,
+			expected: LegacySchemaVersion,
+		},
+		{
+			name: "nil version should return legacy version",
+			settings: &PermissionsSettings{
+				Version: nil,
+			},
+			expected: LegacySchemaVersion,
+		},
+		{
+			name: "empty version should return legacy version",
+			settings: &PermissionsSettings{
+				Version: stringPtr(""),
+			},
+			expected: LegacySchemaVersion,
+		},
+		{
+			name: "current version should return current version",
+			settings: &PermissionsSettings{
+				Version: stringPtr(CurrentSchemaVersion),
+			},
+			expected: CurrentSchemaVersion,
+		},
+		{
+			name: "legacy version should return legacy version",
+			settings: &PermissionsSettings{
+				Version: stringPtr(LegacySchemaVersion),
+			},
+			expected: LegacySchemaVersion,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetSchemaVersion(tt.settings)
+			if result != tt.expected {
+				t.Errorf("GetSchemaVersion() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsCurrentSchemaVersion(t *testing.T) {
+	tests := []struct {
+		name     string
+		settings *PermissionsSettings
+		expected bool
+	}{
+		{
+			name:     "nil settings should return false",
+			settings: nil,
+			expected: false,
+		},
+		{
+			name: "current version should return true",
+			settings: &PermissionsSettings{
+				Version: stringPtr(CurrentSchemaVersion),
+			},
+			expected: true,
+		},
+		{
+			name: "legacy version should return false",
+			settings: &PermissionsSettings{
+				Version: stringPtr(LegacySchemaVersion),
+			},
+			expected: false,
+		},
+		{
+			name: "nil version should return false",
+			settings: &PermissionsSettings{
+				Version: nil,
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsCurrentSchemaVersion(tt.settings)
+			if result != tt.expected {
+				t.Errorf("IsCurrentSchemaVersion() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

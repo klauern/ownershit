@@ -19,6 +19,12 @@ const (
 
 	// MaxApproverCount defines the maximum reasonable number of required approvers.
 	MaxApproverCount = 100
+
+	// CurrentSchemaVersion is the current configuration schema version.
+	CurrentSchemaVersion = "1.0"
+
+	// LegacySchemaVersion for migration support.
+	LegacySchemaVersion = "0.9"
 )
 
 type Permissions struct {
@@ -48,6 +54,7 @@ type BranchPermissions struct {
 }
 
 type PermissionsSettings struct {
+	Version           *string `yaml:"version,omitempty"`
 	BranchPermissions `yaml:"branches"`
 	TeamPermissions   []*Permissions `yaml:"team"`
 	Repositories      []*Repository  `yaml:"repositories"`
@@ -143,27 +150,27 @@ func GetValidatedGitHubToken() (string, error) {
 func GetRequiredTokenPermissions() map[string][]string {
 	return map[string][]string{
 		"classic_token_scopes": {
-			"repo",            // Full repository access
-			"admin:org",       // Organization administration
-			"read:org",        // Read organization data
-			"user",            // User profile access
+			"repo",      // Full repository access
+			"admin:org", // Organization administration
+			"read:org",  // Read organization data
+			"user",      // User profile access
 		},
 		"fine_grained_permissions": {
 			"Repository permissions:",
-			"- Administration: Write",     // Manage repository settings
-			"- Metadata: Read",           // Read repository metadata  
-			"- Contents: Read",           // Read repository contents
-			"- Pull requests: Write",     // Manage branch protection
-			"- Issues: Write",            // Manage repository issues
+			"- Administration: Write", // Manage repository settings
+			"- Metadata: Read",        // Read repository metadata
+			"- Contents: Read",        // Read repository contents
+			"- Pull requests: Write",  // Manage branch protection
+			"- Issues: Write",         // Manage repository issues
 			"",
 			"Organization permissions:",
-			"- Administration: Read",     // Read org settings
-			"- Members: Read",           // Read organization members
-			"- Team membership: Read",   // Read team memberships
+			"- Administration: Read",  // Read org settings
+			"- Members: Read",         // Read organization members
+			"- Team membership: Read", // Read team memberships
 		},
 		"operations_requiring_permissions": {
 			"Sync repositories: repo, admin:org",
-			"Import repository config: repo, read:org", 
+			"Import repository config: repo, read:org",
 			"Manage branch protection: repo",
 			"Archive repositories: repo, admin:org",
 			"Manage teams: admin:org",
@@ -273,6 +280,11 @@ func ValidatePermissionsSettings(settings *PermissionsSettings) error {
 		return NewConfigValidationError("settings", nil, "permissions settings cannot be nil", nil)
 	}
 
+	// Validate schema version
+	if err := ValidateSchemaVersion(settings.Version); err != nil {
+		return err
+	}
+
 	// Validate organization field
 	if settings.Organization == nil || *settings.Organization == "" {
 		return NewConfigValidationError("organization", settings.Organization,
@@ -318,6 +330,82 @@ func ValidatePermissionsSettings(settings *PermissionsSettings) error {
 	}
 
 	return nil
+}
+
+// ValidateSchemaVersion validates the configuration schema version.
+func ValidateSchemaVersion(version *string) error {
+	if version == nil {
+		// Assume legacy version if not specified
+		return nil
+	}
+
+	versionStr := strings.TrimSpace(*version)
+	switch versionStr {
+	case CurrentSchemaVersion, LegacySchemaVersion:
+		return nil
+	case "":
+		// Empty version is allowed (defaults to current)
+		return nil
+	default:
+		return NewConfigValidationError("version", versionStr,
+			fmt.Sprintf("unsupported schema version, supported versions: %s, %s",
+				CurrentSchemaVersion, LegacySchemaVersion), nil)
+	}
+}
+
+// MigrateConfigurationSchema migrates configuration from older schema versions to current.
+func MigrateConfigurationSchema(settings *PermissionsSettings) error {
+	if settings == nil {
+		return NewConfigValidationError("settings", nil, "settings cannot be nil for migration", nil)
+	}
+
+	// Determine the current version
+	currentVersion := LegacySchemaVersion // Default for configs without version
+	if settings.Version != nil && *settings.Version != "" {
+		currentVersion = strings.TrimSpace(*settings.Version)
+	}
+
+	// Validate the version is supported
+	if err := ValidateSchemaVersion(&currentVersion); err != nil {
+		return fmt.Errorf("cannot migrate unsupported schema version: %w", err)
+	}
+
+	// No migration needed if already current
+	if currentVersion == CurrentSchemaVersion {
+		return nil
+	}
+
+	// Migrate from legacy version to current
+	if currentVersion == LegacySchemaVersion {
+		log.Info().
+			Str("fromVersion", currentVersion).
+			Str("toVersion", CurrentSchemaVersion).
+			Msg("migrating configuration schema")
+
+		// Migration steps from 0.9 to 1.0
+		// In this case, no structural changes are needed - just version bump
+		newVersion := CurrentSchemaVersion
+		settings.Version = &newVersion
+
+		log.Info().
+			Str("version", CurrentSchemaVersion).
+			Msg("configuration schema migration completed")
+	}
+
+	return nil
+}
+
+// GetSchemaVersion returns the schema version, defaulting to legacy if not set.
+func GetSchemaVersion(settings *PermissionsSettings) string {
+	if settings == nil || settings.Version == nil || *settings.Version == "" {
+		return LegacySchemaVersion
+	}
+	return strings.TrimSpace(*settings.Version)
+}
+
+// IsCurrentSchemaVersion checks if the configuration uses the current schema version.
+func IsCurrentSchemaVersion(settings *PermissionsSettings) bool {
+	return GetSchemaVersion(settings) == CurrentSchemaVersion
 }
 
 // GitHubTokenEnv was removed for security reasons.

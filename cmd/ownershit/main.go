@@ -89,8 +89,8 @@ func main() {
 				},
 			},
 			{
-				Name:  "permissions",
-				Usage: "Show required GitHub token permissions for ownershit operations",
+				Name:   "permissions",
+				Usage:  "Show required GitHub token permissions for ownershit operations",
 				Action: permissionsCommand,
 			},
 		},
@@ -193,6 +193,15 @@ func readConfig(c *cli.Context) error {
 			Str("operation", "parseConfigFile").
 			Msg("YAML unmarshal error with config file")
 		return shit.NewConfigFileError(configPath, "parse", "failed to parse YAML configuration", err)
+	}
+
+	// Perform schema migration if needed
+	if err := shit.MigrateConfigurationSchema(settings); err != nil {
+		log.Err(err).
+			Str("configPath", configPath).
+			Str("operation", "migrateConfigSchema").
+			Msg("configuration schema migration failed")
+		return shit.NewConfigFileError(configPath, "migrate", "failed to migrate configuration schema", err)
 	}
 
 	return nil
@@ -303,6 +312,9 @@ func initCommand(c *cli.Context) error {
 func getStubConfig() string {
 	return `# ownershit configuration file
 # This file defines repository ownership, team permissions, and branch protection rules
+
+# Configuration schema version
+version: "1.0"
 
 # Your GitHub organization name (REQUIRED - update this!)
 organization: your-org-name
