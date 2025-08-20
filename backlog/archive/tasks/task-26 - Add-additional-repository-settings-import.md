@@ -4,8 +4,8 @@ title: Add additional repository settings import
 status: Done
 assignee:
   - '@klauern'
-created_date: '2025-08-20 15:03'
-updated_date: '2025-08-20 15:43'
+created_date: '2025-08-20'
+updated_date: '2025-08-20'
 labels:
   - enhancement
   - github-api
