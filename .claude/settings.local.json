@@ -58,11 +58,15 @@
       "Bash(gh run view:*)",
       "Bash(true)",
       "Bash(ln:*)",
-      "Bash(OWNERSHIT_DEBUG=false go run ./cmd/ownershit/main.go import klauern/dotfiles --output test-output.yaml)"
+      "Bash(OWNERSHIT_DEBUG=false go run ./cmd/ownershit/main.go import klauern/dotfiles --output test-output.yaml)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(gh pr checks:*)"
     ],
     "deny": [],
     "additionalDirectories": [
-      "/Users/klauer/dev/ownershit-import-enhancements"
+      "/Users/klauer/dev/ownershit-import-enhancements",
+      "/tmp"
     ]
   },
   "hooks": {}

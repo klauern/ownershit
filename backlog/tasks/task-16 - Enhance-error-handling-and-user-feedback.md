@@ -1,6 +1,13 @@
-______________________________________________________________________
-
-## id: task-16 title: Enhance error handling and user feedback status: Done assignee: [] created_date: '2025-07-12' updated_date: '2025-08-18 03:12' labels: [] dependencies: []
+---
+id: task-16
+title: Enhance error handling and user feedback
+status: Done
+assignee: []
+created_date: '2025-07-12'
+updated_date: '2025-08-18 03:12'
+labels: []
+dependencies: []
+---
 
 ## Description
 

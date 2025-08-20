@@ -1,7 +1,16 @@
+---
+id: 001-dual-api-architecture
+title: Decision Record - Dual API Architecture
+type: decision
+status: Accepted
+date: '2025-07-12'
+deciders: Development Team
+---
+
 # Decision Record: Dual API Architecture
 
-**Date**: 2025-07-12\
-**Status**: Accepted\
+**Date**: 2025-07-12  
+**Status**: Accepted  
 **Deciders**: Development Team
 
 ## Context

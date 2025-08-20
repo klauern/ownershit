@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## id: task-8 title: Add dry-run mode and configuration validation status: To Do assignee: [] created_date: '2025-07-10' labels: [] dependencies: []
+---
+id: task-8
+title: Add dry-run mode and configuration validation
+status: To Do
+assignee: []
+created_date: '2025-07-10'
+labels: []
+dependencies: []
+---
 
 ## Description
 
