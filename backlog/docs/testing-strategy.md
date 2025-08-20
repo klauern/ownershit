@@ -1,7 +1,7 @@
 ---
-id: testing-strategy
+id: doc-3
 title: Testing Strategy
-type: documentation
+type: other
 created_date: '2025-07-12'
 updated_date: '2025-08-20'
 ---

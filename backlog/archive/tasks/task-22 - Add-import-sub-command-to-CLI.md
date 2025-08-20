@@ -4,8 +4,8 @@ title: Add import sub-command to CLI
 status: Done
 assignee:
   - '@klauern'
-created_date: '2025-08-20 02:36'
-updated_date: '2025-08-20 02:45'
+created_date: '2025-08-20'
+updated_date: '2025-08-20'
 labels:
   - enhancement
   - cli

@@ -1,7 +1,7 @@
 ---
-id: project-overview
+id: doc-2
 title: Project Overview - ownershit
-type: documentation
+type: other
 created_date: '2025-07-12'
 updated_date: '2025-08-20'
 ---

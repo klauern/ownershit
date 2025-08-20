@@ -4,7 +4,7 @@ statuses: ["To Do", "In Progress", "Done"]
 labels: []
 milestones: []
 date_format: yyyy-mm-dd
-max_column_width: 20
+max_column_width: 40
 default_editor: "vim"
 auto_open_browser: true
 default_port: 6420

@@ -4,8 +4,8 @@ title: Add advanced branch protection settings import
 status: Done
 assignee:
   - '@klauern'
-created_date: '2025-08-20 15:03'
-updated_date: '2025-08-20 15:21'
+created_date: '2025-08-20'
+updated_date: '2025-08-20'
 labels:
   - enhancement
   - github-api

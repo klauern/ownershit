@@ -3,8 +3,8 @@ id: task-27
 title: Add multiple branch protection import support
 status: To Do
 assignee: []
-created_date: '2025-08-20 15:03'
-updated_date: '2025-08-20 18:34'
+created_date: '2025-08-20'
+updated_date: '2025-08-20'
 labels:
   - enhancement
   - github-api
