@@ -1,46 +1,22 @@
-# =============================================================================
-# ownershit Configuration File - Comprehensive Example
-# =============================================================================
-#
-# This file demonstrates all available configuration options for the ownershit
-# GitHub repository management tool. It provides a complete reference for
-# setting up organization-wide repository policies, team permissions, and
-# branch protection rules.
+# ownershit Configuration Example
+# GitHub repository management tool configuration
 
-# =============================================================================
-# Organization Configuration
-# =============================================================================
-
-# Your GitHub organization name (REQUIRED)
+# Organization name (REQUIRED)
 organization: my-awesome-org
 
-# =============================================================================
-# Global Branch Protection Rules
-# =============================================================================
-#
-# These settings ensure consistent security and workflow policies across
-# ALL repositories in your organization.
-
+# Branch protection rules applied to all repositories
 branches:
-  # ---------------------------------------------------------------------------
-  # Pull Request Requirements
-  # ---------------------------------------------------------------------------
+  # Pull request requirements
   require_pull_request_reviews: true
   require_approving_count: 2
   require_code_owners: true
 
-  # ---------------------------------------------------------------------------
-  # Merge Strategy Controls
-  # ---------------------------------------------------------------------------
-  # Enforce consistent merge practices across all repositories
-  allow_merge_commit: false  # Disable merge commits for cleaner history
-  allow_squash_merge: true   # Allow squash merging
-  allow_rebase_merge: true   # Allow rebase merging
+  # Merge strategy controls - enforce consistent merge practices
+  allow_merge_commit: false    # Disable merge commits for cleaner history
+  allow_squash_merge: true     # Allow squash merging
+  allow_rebase_merge: true     # Allow rebase merging
 
-  # ---------------------------------------------------------------------------
-  # Status Checks Configuration
-  # ---------------------------------------------------------------------------
-  # Ensure CI/CD passes before merging
+  # Status checks - ensure CI/CD passes before merging
   require_status_checks: true
   status_checks:
     - "ci/build"
@@ -48,11 +24,9 @@ branches:
     - "ci/lint"
     - "security/scan"
     - "codecov/patch"
-  require_up_to_date_branch: true  # Require branches to be up-to-date before merging
+  require_up_to_date_branch: true
 
-  # ---------------------------------------------------------------------------
-  # Advanced Protection Settings
-  # ---------------------------------------------------------------------------
+  # Advanced protection settings
   enforce_admins: true                     # Apply protection rules to administrators
   restrict_pushes: true                    # Restrict who can push to protected branches
   push_allowlist:                          # Teams/users allowed to push to protected branches
@@ -63,13 +37,7 @@ branches:
   allow_force_pushes: false                # Disable force pushes
   allow_deletions: false                   # Disable branch deletions
 
-# =============================================================================
-# Team Permissions Configuration
-# =============================================================================
-#
-# Define which teams have what level of access across your repositories.
-# Available levels: pull (read-only), push (read/write), admin (full access)
-
+# Team permissions (levels: pull, push, admin)
 team:
   - name: developers
     level: push                            # Can push code and create PRs
@@ -86,33 +54,21 @@ team:
   - name: devops-team
     level: admin                           # DevOps needs admin for CI/CD setup
 
-# =============================================================================
-# Repository Configurations
-# =============================================================================
-#
-# Each repository can have different feature settings (wiki, issues, projects).
-# Configure these based on your team's workflow and project requirements.
-
+# Repository configurations (wiki, issues, projects)
 repositories:
-  # ---------------------------------------------------------------------------
-  # Main Application Repository
-  # ---------------------------------------------------------------------------
+  # Main application repository
   - name: web-application
     wiki: true                             # Enable wiki for documentation
     issues: true                           # Enable GitHub issues for bug tracking
     projects: true                         # Enable GitHub projects for project management
 
-  # ---------------------------------------------------------------------------
-  # API Service Repository
-  # ---------------------------------------------------------------------------
+  # API service repository
   - name: user-api-service
     wiki: true                             # API documentation in wiki
     issues: true                           # Bug tracking enabled
     projects: false                        # No project management needed
 
-  # ---------------------------------------------------------------------------
-  # Mobile Applications
-  # ---------------------------------------------------------------------------
+  # Mobile applications
   - name: mobile-app-ios
     wiki: false                            # Documentation elsewhere
     issues: true                           # Bug tracking for mobile issues
@@ -123,9 +79,7 @@ repositories:
     issues: true                           # Separate Android issue tracking
     projects: true                         # Android-specific project board
 
-  # ---------------------------------------------------------------------------
   # Infrastructure & DevOps
-  # ---------------------------------------------------------------------------
   - name: terraform-infrastructure
     wiki: true                             # Infrastructure documentation
     issues: true                           # Infrastructure issues/requests
@@ -136,9 +90,7 @@ repositories:
     issues: true                           # Bug reports for internal tools
     projects: false                        # No project management
 
-  # ---------------------------------------------------------------------------
   # Documentation & Legacy
-  # ---------------------------------------------------------------------------
   - name: company-docs
     wiki: false                            # Content is the repository itself
     issues: true                           # Documentation improvement requests
@@ -149,18 +101,9 @@ repositories:
     issues: true                           # Still need bug tracking
     projects: false                        # No active development
 
-# =============================================================================
-# Default Labels Configuration
-# =============================================================================
-#
-# These labels are applied to ALL repositories and provide consistent issue
-# categorization across your organization. Customize these to match your
-# workflow and terminology.
-
+# Default labels applied to all repositories
 default_labels:
-  # ---------------------------------------------------------------------------
-  # Bug Tracking Labels
-  # ---------------------------------------------------------------------------
+  # Bug tracking
   - name: "bug"
     color: "d73a4a"
     emoji: "🐛"
@@ -171,9 +114,7 @@ default_labels:
     emoji: "🚨"
     description: "Critical issue requiring immediate attention"
 
-  # ---------------------------------------------------------------------------
-  # Feature Development Labels
-  # ---------------------------------------------------------------------------
+  # Features
   - name: "enhancement"
     color: "a2eeef"
     emoji: "✨"
@@ -184,9 +125,7 @@ default_labels:
     emoji: "💡"
     description: "User-requested new functionality"
 
-  # ---------------------------------------------------------------------------
-  # Development Workflow Labels
-  # ---------------------------------------------------------------------------
+  # Workflow
   - name: "good first issue"
     color: "7057ff"
     emoji: "👋"
@@ -202,9 +141,7 @@ default_labels:
     emoji: "🚫"
     description: "This will not be worked on"
 
-  # ---------------------------------------------------------------------------
-  # Documentation Labels
-  # ---------------------------------------------------------------------------
+  # Documentation
   - name: "documentation"
     color: "0075ca"
     emoji: "📚"
@@ -215,9 +152,7 @@ default_labels:
     emoji: "📝"
     description: "Requires documentation updates"
 
-  # ---------------------------------------------------------------------------
-  # Security Labels
-  # ---------------------------------------------------------------------------
+  # Security
   - name: "security"
     color: "ff6b6b"
     emoji: "🔒"
@@ -228,9 +163,7 @@ default_labels:
     emoji: "⚠️"
     description: "Security vulnerability"
 
-  # ---------------------------------------------------------------------------
-  # Priority Level Labels
-  # ---------------------------------------------------------------------------
+  # Priority
   - name: "priority: high"
     color: "ff9500"
     emoji: "🔥"
@@ -246,9 +179,7 @@ default_labels:
     emoji: "📝"
     description: "Low priority issue"
 
-  # ---------------------------------------------------------------------------
-  # Component Labels
-  # ---------------------------------------------------------------------------
+  # Components
   - name: "frontend"
     color: "f9d71c"
     emoji: "🎨"
@@ -269,9 +200,7 @@ default_labels:
     emoji: "🏗️"
     description: "Infrastructure/DevOps related"
 
-  # ---------------------------------------------------------------------------
-  # Special Workflow Labels
-  # ---------------------------------------------------------------------------
+  # Special workflow
   - name: "duplicate"
     color: "cfd3d7"
     emoji: "👥"
@@ -291,20 +220,14 @@ default_labels:
     color: "0366d6"
     emoji: "📦"
     description: "Dependency updates"
-# =============================================================================
+
 # Usage Instructions
-# =============================================================================
-#
 # Getting Started:
 #   1. Update the 'organization' field with your GitHub organization name
 #   2. Modify team names and permissions to match your organization structure
 #   3. Add/remove repositories as needed with appropriate feature settings
 #   4. Customize labels to match your workflow and terminology
 #   5. Adjust branch protection rules based on your security requirements
-#
-# Prerequisites:
-#   - GitHub Personal Access Token with appropriate permissions
-#   - ownershit CLI tool installed
 #
 # To apply this configuration:
 #   1. Set your GitHub token: export GITHUB_TOKEN=your_token_here
@@ -315,5 +238,3 @@ default_labels:
 #   - ownershit branches   # Update only branch protection rules
 #   - ownershit label      # Sync only labels
 #   - ownershit ratelimit  # Check API rate limits
-#
-# For more information, visit: https://github.com/your-org/ownershit
