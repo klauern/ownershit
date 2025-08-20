@@ -56,10 +56,16 @@ type PermissionsSettings struct {
 }
 
 type Repository struct {
-	Name     *string
-	Wiki     *bool
-	Issues   *bool
-	Projects *bool
+	Name          *string `yaml:"name"`
+	Wiki          *bool   `yaml:"wiki"`
+	Issues        *bool   `yaml:"issues"`
+	Projects      *bool   `yaml:"projects"`
+	DefaultBranch *string `yaml:"default_branch"`
+	Private       *bool   `yaml:"private"`
+	Archived      *bool   `yaml:"archived"`
+	Template      *bool   `yaml:"template"`
+	Description   *string `yaml:"description"`
+	Homepage      *string `yaml:"homepage"`
 }
 
 type RepoLabel struct {

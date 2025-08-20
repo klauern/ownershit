@@ -48,10 +48,16 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 		TeamPermissions:   teamPermissions,
 		Repositories: []*Repository{
 			{
-				Name:     &repo,
-				Wiki:     repoDetails.Wiki,
-				Issues:   repoDetails.Issues,
-				Projects: repoDetails.Projects,
+				Name:          &repo,
+				Wiki:          repoDetails.Wiki,
+				Issues:        repoDetails.Issues,
+				Projects:      repoDetails.Projects,
+				DefaultBranch: repoDetails.DefaultBranch,
+				Private:       repoDetails.Private,
+				Archived:      repoDetails.Archived,
+				Template:      repoDetails.Template,
+				Description:   repoDetails.Description,
+				Homepage:      repoDetails.Homepage,
 			},
 		},
 		DefaultLabels: repoLabels,
@@ -62,9 +68,15 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 
 // repositoryDetails holds the basic repository configuration.
 type repositoryDetails struct {
-	Wiki     *bool
-	Issues   *bool
-	Projects *bool
+	Wiki          *bool
+	Issues        *bool
+	Projects      *bool
+	DefaultBranch *string
+	Private       *bool
+	Archived      *bool
+	Template      *bool
+	Description   *string
+	Homepage      *string
 }
 
 // getRepositoryDetails retrieves basic repository settings via GitHub v3 API.
@@ -74,15 +86,21 @@ func getRepositoryDetails(client *GitHubClient, owner, repo string) (*repository
 		Str("repo", repo).
 		Msg("fetching repository details")
 
-	repoInfo, _, err := client.v3.Repositories.Get(client.Context, owner, repo)
+	repoInfo, _, err := client.Repositories.Get(client.Context, owner, repo)
 	if err != nil {
 		return nil, NewGitHubAPIError(0, "get repository", repo, "failed to fetch repository details", err)
 	}
 
 	details := &repositoryDetails{
-		Wiki:     repoInfo.HasWiki,
-		Issues:   repoInfo.HasIssues,
-		Projects: repoInfo.HasProjects,
+		Wiki:          repoInfo.HasWiki,
+		Issues:        repoInfo.HasIssues,
+		Projects:      repoInfo.HasProjects,
+		DefaultBranch: repoInfo.DefaultBranch,
+		Private:       repoInfo.Private,
+		Archived:      repoInfo.Archived,
+		Template:      repoInfo.IsTemplate,
+		Description:   repoInfo.Description,
+		Homepage:      repoInfo.Homepage,
 	}
 
 	log.Debug().
@@ -99,7 +117,7 @@ func getTeamPermissions(client *GitHubClient, owner, repo string) ([]*Permission
 		Str("repo", repo).
 		Msg("fetching team permissions")
 
-	teams, _, err := client.v3.Repositories.ListTeams(client.Context, owner, repo, nil)
+	teams, _, err := client.Repositories.ListTeams(client.Context, owner, repo, nil)
 	if err != nil {
 		return nil, NewGitHubAPIError(0, "list teams", repo, "failed to fetch team permissions", err)
 	}
@@ -155,7 +173,7 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 	var err error
 
 	for _, branch := range branches {
-		protection, _, err = client.v3.Repositories.GetBranchProtection(client.Context, owner, repo, branch)
+		protection, _, err = client.Repositories.GetBranchProtection(client.Context, owner, repo, branch)
 		if err == nil {
 			log.Debug().
 				Str("branch", branch).
@@ -174,7 +192,7 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 	branchPerms := convertBranchProtection(protection)
 
 	// Get merge settings from repository details
-	repoInfo, _, err := client.v3.Repositories.Get(client.Context, owner, repo)
+	repoInfo, _, err := client.Repositories.Get(client.Context, owner, repo)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get repository merge settings")
 	} else {
@@ -280,7 +298,7 @@ func getRepositoryLabels(client *GitHubClient, owner, repo string) ([]RepoLabel,
 	var allLabels []RepoLabel
 
 	for {
-		labels, resp, err := client.v3.Issues.ListLabels(client.Context, owner, repo, opt)
+		labels, resp, err := client.Issues.ListLabels(client.Context, owner, repo, opt)
 		if err != nil {
 			return nil, NewGitHubAPIError(0, "list labels", repo, "failed to fetch repository labels", err)
 		}
