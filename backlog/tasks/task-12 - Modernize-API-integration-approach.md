@@ -1,6 +1,13 @@
-______________________________________________________________________
-
-## id: task-12 title: Modernize API integration approach status: In Progress assignee: [] created_date: '2025-07-10' updated_date: '2025-08-18 03:13' labels: [] dependencies: []
+---
+id: task-12
+title: Modernize API integration approach
+status: In Progress
+assignee: []
+created_date: '2025-07-10'
+updated_date: '2025-08-18 03:13'
+labels: []
+dependencies: []
+---
 
 ## Description
 

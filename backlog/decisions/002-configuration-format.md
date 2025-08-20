@@ -1,7 +1,16 @@
+---
+id: 002-configuration-format
+title: Decision Record - Configuration Format Choice
+type: decision
+status: Accepted
+date: '2025-07-12'
+deciders: Development Team
+---
+
 # Decision Record: Configuration Format Choice
 
-**Date**: 2025-07-12\
-**Status**: Accepted\
+**Date**: 2025-07-12  
+**Status**: Accepted  
 **Deciders**: Development Team
 
 ## Context

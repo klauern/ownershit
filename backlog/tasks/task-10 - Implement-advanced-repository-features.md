@@ -1,6 +1,12 @@
-______________________________________________________________________
-
-## id: task-10 title: Implement advanced repository features status: To Do assignee: [] created_date: '2025-07-10' labels: [] dependencies: []
+---
+id: task-10
+title: Implement advanced repository features
+status: To Do
+assignee: []
+created_date: '2025-07-10'
+labels: []
+dependencies: []
+---
 
 ## Description
 

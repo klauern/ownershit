@@ -1,16 +1,14 @@
-______________________________________________________________________
-
+---
 id: task-2
 title: Complete GraphQL API test coverage
 status: Done
 assignee:
-- '@claude'
+  - '@claude'
 created_date: '2025-07-10'
 updated_date: '2025-07-12'
 labels: []
 dependencies: []
-
-______________________________________________________________________
+---
 
 ## Description
 
