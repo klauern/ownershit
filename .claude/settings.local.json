@@ -61,7 +61,8 @@
       "Bash(OWNERSHIT_DEBUG=false go run ./cmd/ownershit/main.go import klauern/dotfiles --output test-output.yaml)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
-      "Bash(gh pr checks:*)"
+      "Bash(gh pr checks:*)",
+      "WebSearch"
     ],
     "deny": [],
     "additionalDirectories": [
