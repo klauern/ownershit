@@ -92,7 +92,7 @@ func getRepositoryDetails(client *GitHubClient, owner, repo string) (*repository
 	return details, nil
 }
 
-// getTeamPermissions retrieves team permissions for the repository
+// getTeamPermissions retrieves team permissions for the repository.
 func getTeamPermissions(client *GitHubClient, owner, repo string) ([]*Permissions, error) {
 	log.Debug().
 		Str("owner", owner).
@@ -121,7 +121,7 @@ func getTeamPermissions(client *GitHubClient, owner, repo string) ([]*Permission
 	return permissions, nil
 }
 
-// convertPermissionLevel converts GitHub API permission strings to ownershit permission levels
+// convertPermissionLevel converts GitHub API permission strings to ownershit permission levels.
 func convertPermissionLevel(ghPermission *string) *string {
 	if ghPermission == nil {
 		return nil
@@ -142,7 +142,7 @@ func convertPermissionLevel(ghPermission *string) *string {
 	return &level
 }
 
-// getBranchProtectionRules retrieves branch protection configuration
+// getBranchProtectionRules retrieves branch protection configuration.
 func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*BranchPermissions, error) {
 	log.Debug().
 		Str("owner", owner).
@@ -230,8 +230,22 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 		// This would need additional API calls to get team/user restrictions
 	}
 
-	// Advanced settings (these may require additional API calls or GraphQL)
-	// For now, we'll leave them as nil since they require more complex queries
+	// Advanced settings - now available in github.Protection struct
+	if protection.RequiredConversationResolution != nil {
+		perms.RequireConversationResolution = &protection.RequiredConversationResolution.Enabled
+	}
+
+	if protection.RequireLinearHistory != nil {
+		perms.RequireLinearHistory = &protection.RequireLinearHistory.Enabled
+	}
+
+	if protection.AllowForcePushes != nil {
+		perms.AllowForcePushes = &protection.AllowForcePushes.Enabled
+	}
+
+	if protection.AllowDeletions != nil {
+		perms.AllowDeletions = &protection.AllowDeletions.Enabled
+	}
 
 	return perms
 }
