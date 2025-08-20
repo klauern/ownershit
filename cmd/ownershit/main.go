@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	shit "github.com/klauern/ownershit"
 	"github.com/klauern/ownershit/cmd"
@@ -73,6 +74,20 @@ func main() {
 				Before: configureClient,
 				Action: rateLimitCommand,
 			},
+			{
+				Name:      "import",
+				Usage:     "Import repository configuration from GitHub and output as YAML",
+				UsageText: "ownershit import owner/repo [--output filename.yaml]",
+				Before:    configureImportClient,
+				Action:    importCommand,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "output",
+						Aliases: []string{"o"},
+						Usage:   "output file path (default: stdout)",
+					},
+				},
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -113,6 +128,22 @@ func configureClient(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("reading config file: %w", err)
 	}
+	if c.Bool("debug") {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	client, err := shit.NewSecureGitHubClient(c.Context)
+	if err != nil {
+		log.Err(err).
+			Str("operation", "initializeGitHubClient").
+			Msg("GitHub client initialization failed")
+		return fmt.Errorf("failed to initialize GitHub client: %w", err)
+	}
+	githubClient = client
+	return nil
+}
+
+func configureImportClient(c *cli.Context) error {
 	if c.Bool("debug") {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
@@ -183,6 +214,52 @@ func labelCommand(c *cli.Context) error {
 func rateLimitCommand(c *cli.Context) error {
 	log.Info().Msg("getting ratelimit information")
 	githubClient.GetRateLimit()
+	return nil
+}
+
+func importCommand(c *cli.Context) error {
+	if c.NArg() == 0 {
+		return fmt.Errorf("expected exactly one argument: owner/repo")
+	}
+
+	repoPath := c.Args().Get(0)
+	parts := strings.Split(repoPath, "/")
+	if len(parts) != 2 {
+		return fmt.Errorf("repository path must be in format owner/repo, got: %s", repoPath)
+	}
+
+	owner := parts[0]
+	repo := parts[1]
+
+	log.Info().
+		Str("owner", owner).
+		Str("repo", repo).
+		Msg("importing repository configuration")
+
+	config, err := shit.ImportRepositoryConfig(owner, repo, githubClient)
+	if err != nil {
+		return fmt.Errorf("failed to import repository configuration: %w", err)
+	}
+
+	yamlData, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal configuration to YAML: %w", err)
+	}
+
+	outputPath := c.String("output")
+	log.Debug().Str("outputPath", outputPath).Msg("checking output path")
+	if outputPath != "" {
+		log.Debug().Str("file", outputPath).Msg("writing to file")
+		err = os.WriteFile(outputPath, yamlData, 0o600)
+		if err != nil {
+			return fmt.Errorf("failed to write output file: %w", err)
+		}
+		log.Info().Str("file", outputPath).Msg("configuration exported")
+	} else {
+		log.Debug().Msg("writing to stdout")
+		fmt.Print(string(yamlData))
+	}
+
 	return nil
 }
 
