@@ -34,7 +34,7 @@ func TestPermissionsCommand(t *testing.T) {
 	// Restore stdout and capture output
 	w.Close()
 	os.Stdout = old
-	
+
 	var buf bytes.Buffer
 	io.Copy(&buf, r)
 	output := buf.String()

@@ -11,7 +11,7 @@ func TestGetRequiredTokenPermissions(t *testing.T) {
 	// Test that all expected categories are present
 	expectedCategories := []string{
 		"classic_token_scopes",
-		"fine_grained_permissions", 
+		"fine_grained_permissions",
 		"operations_requiring_permissions",
 	}
 
@@ -24,7 +24,7 @@ func TestGetRequiredTokenPermissions(t *testing.T) {
 	// Test classic token scopes
 	classicScopes := permissions["classic_token_scopes"]
 	expectedScopes := []string{"repo", "admin:org", "read:org", "user"}
-	
+
 	for _, expectedScope := range expectedScopes {
 		found := false
 		for _, scope := range classicScopes {
@@ -41,7 +41,7 @@ func TestGetRequiredTokenPermissions(t *testing.T) {
 	// Test that fine-grained permissions contain key terms
 	fineGrainedPerms := permissions["fine_grained_permissions"]
 	expectedTerms := []string{"Repository permissions:", "Organization permissions:", "Administration", "Metadata"}
-	
+
 	permText := strings.Join(fineGrainedPerms, " ")
 	for _, term := range expectedTerms {
 		if !strings.Contains(permText, term) {
