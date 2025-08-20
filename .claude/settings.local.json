@@ -59,8 +59,10 @@
       "Bash(true)",
       "Bash(ln:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/Users/klauer/dev/ownershit-import-enhancements"
+    ]
   },
-  "hooks": {
-  }
+  "hooks": {}
 }
