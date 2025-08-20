@@ -138,6 +138,39 @@ func GetValidatedGitHubToken() (string, error) {
 	return token, nil
 }
 
+// GetRequiredTokenPermissions returns the minimum required GitHub token permissions
+// for ownershit operations, categorized by token type.
+func GetRequiredTokenPermissions() map[string][]string {
+	return map[string][]string{
+		"classic_token_scopes": {
+			"repo",            // Full repository access
+			"admin:org",       // Organization administration
+			"read:org",        // Read organization data
+			"user",            // User profile access
+		},
+		"fine_grained_permissions": {
+			"Repository permissions:",
+			"- Administration: Write",     // Manage repository settings
+			"- Metadata: Read",           // Read repository metadata  
+			"- Contents: Read",           // Read repository contents
+			"- Pull requests: Write",     // Manage branch protection
+			"- Issues: Write",            // Manage repository issues
+			"",
+			"Organization permissions:",
+			"- Administration: Read",     // Read org settings
+			"- Members: Read",           // Read organization members
+			"- Team membership: Read",   // Read team memberships
+		},
+		"operations_requiring_permissions": {
+			"Sync repositories: repo, admin:org",
+			"Import repository config: repo, read:org", 
+			"Manage branch protection: repo",
+			"Archive repositories: repo, admin:org",
+			"Manage teams: admin:org",
+		},
+	}
+}
+
 // ValidateBranchPermissions validates branch protection configuration.
 func ValidateBranchPermissions(perms *BranchPermissions) error {
 	if perms == nil {

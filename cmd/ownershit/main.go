@@ -88,6 +88,11 @@ func main() {
 					},
 				},
 			},
+			{
+				Name:  "permissions",
+				Usage: "Show required GitHub token permissions for ownershit operations",
+				Action: permissionsCommand,
+			},
 		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -364,4 +369,47 @@ default_labels:
 # Environment setup:
 # export GITHUB_TOKEN=your_github_token_here
 `
+}
+
+func permissionsCommand(c *cli.Context) error {
+	fmt.Println("GitHub Token Permissions Required for ownershit")
+	fmt.Println("=" + strings.Repeat("=", 48))
+	fmt.Println()
+
+	permissions := shit.GetRequiredTokenPermissions()
+
+	fmt.Println("CLASSIC PERSONAL ACCESS TOKEN SCOPES:")
+	fmt.Println("-------------------------------------")
+	for _, scope := range permissions["classic_token_scopes"] {
+		fmt.Printf("✓ %s\n", scope)
+	}
+	fmt.Println()
+
+	fmt.Println("FINE-GRAINED PERSONAL ACCESS TOKEN PERMISSIONS:")
+	fmt.Println("-----------------------------------------------")
+	for _, perm := range permissions["fine_grained_permissions"] {
+		if perm == "" {
+			fmt.Println()
+		} else {
+			fmt.Println(perm)
+		}
+	}
+	fmt.Println()
+
+	fmt.Println("PERMISSION REQUIREMENTS BY OPERATION:")
+	fmt.Println("------------------------------------")
+	for _, op := range permissions["operations_requiring_permissions"] {
+		fmt.Printf("• %s\n", op)
+	}
+	fmt.Println()
+
+	fmt.Println("SETUP INSTRUCTIONS:")
+	fmt.Println("------------------")
+	fmt.Println("1. Create a token at: https://github.com/settings/tokens")
+	fmt.Println("2. For classic tokens: Select the scopes listed above")
+	fmt.Println("3. For fine-grained tokens: Configure repository and organization permissions as shown")
+	fmt.Println("4. Set your token: export GITHUB_TOKEN=your_token_here")
+	fmt.Println("5. Verify with: ownershit ratelimit")
+
+	return nil
 }
