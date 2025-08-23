@@ -63,16 +63,19 @@ type PermissionsSettings struct {
 }
 
 type Repository struct {
-	Name          *string `yaml:"name"`
-	Wiki          *bool   `yaml:"wiki"`
-	Issues        *bool   `yaml:"issues"`
-	Projects      *bool   `yaml:"projects"`
-	DefaultBranch *string `yaml:"default_branch"`
-	Private       *bool   `yaml:"private"`
-	Archived      *bool   `yaml:"archived"`
-	Template      *bool   `yaml:"template"`
-	Description   *string `yaml:"description"`
-	Homepage      *string `yaml:"homepage"`
+	Name                   *string `yaml:"name"`
+	Wiki                   *bool   `yaml:"wiki"`
+	Issues                 *bool   `yaml:"issues"`
+	Projects               *bool   `yaml:"projects"`
+	DefaultBranch          *string `yaml:"default_branch"`
+	Private                *bool   `yaml:"private"`
+	Archived               *bool   `yaml:"archived"`
+	Template               *bool   `yaml:"template"`
+	Description            *string `yaml:"description"`
+	Homepage               *string `yaml:"homepage"`
+	DeleteBranchOnMerge    *bool   `yaml:"delete_branch_on_merge"`
+	HasDiscussionsEnabled  *bool   `yaml:"discussions_enabled"`
+	HasSponsorshipsEnabled *bool   `yaml:"sponsorships_enabled"`
 }
 
 type RepoLabel struct {
@@ -475,15 +478,35 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 					Msg("setting branch protection fallback via REST API")
 			}
 
-			// Set repository features (wiki, issues, projects)
-			err := client.SetRepository(&repoID, repo.Wiki, repo.Issues, repo.Projects)
+			// Set repository features (wiki, issues, projects, discussions, sponsorships)
+			err := client.SetRepository(&repoID, repo.Wiki, repo.Issues, repo.Projects, repo.HasDiscussionsEnabled, repo.HasSponsorshipsEnabled)
 			if err != nil {
-				log.Err(err).
+				logEvent := log.Err(err).
 					Interface("repoID", repoID).
 					Bool("wikiEnabled", *repo.Wiki).
 					Bool("issuesEnabled", *repo.Issues).
-					Bool("projectsEnabled", *repo.Projects).
-					Msg("setting repository fields")
+					Bool("projectsEnabled", *repo.Projects)
+
+				if repo.HasDiscussionsEnabled != nil {
+					logEvent = logEvent.Bool("discussionsEnabled", *repo.HasDiscussionsEnabled)
+				}
+				if repo.HasSponsorshipsEnabled != nil {
+					logEvent = logEvent.Bool("sponsorshipsEnabled", *repo.HasSponsorshipsEnabled)
+				}
+
+				logEvent.Msg("setting repository fields")
+			}
+
+			// Set advanced repository settings (delete branch on merge) via REST API
+			if repo.DeleteBranchOnMerge != nil {
+				err := client.SetRepositoryAdvancedSettings(*settings.Organization, *repo.Name, repo.DeleteBranchOnMerge)
+				if err != nil {
+					log.Err(err).
+						Str("repository", *repo.Name).
+						Str("organization", *settings.Organization).
+						Bool("deleteBranchOnMerge", *repo.DeleteBranchOnMerge).
+						Msg("setting advanced repository settings")
+				}
 			}
 		}
 	}
