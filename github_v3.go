@@ -160,6 +160,47 @@ func (c *GitHubClient) UpdateBranchPermissions(org, repo string, perms *BranchPe
 	return nil
 }
 
+// SetRepositoryAdvancedSettings configures repository settings that require REST API (not available in GraphQL).
+func (c *GitHubClient) SetRepositoryAdvancedSettings(org, repo string, deleteBranchOnMerge *bool) error {
+	if deleteBranchOnMerge == nil {
+		return nil
+	}
+
+	r := &github.Repository{
+		DeleteBranchOnMerge: deleteBranchOnMerge,
+	}
+
+	_, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
+	if err != nil {
+		statusCode := 0
+		if resp != nil {
+			statusCode = resp.StatusCode
+		}
+		log.Err(err).
+			Str("org", org).
+			Str("repo", repo).
+			Int("statusCode", statusCode).
+			Bool("deleteBranchOnMerge", *deleteBranchOnMerge).
+			Str("operation", "setRepositoryAdvancedSettings").
+			Msg("Error setting advanced repository settings")
+		if resp != nil {
+			resp, _ := httputil.DumpResponse(resp.Response, true)
+			log.Debug().Str("response-body", string(resp))
+		}
+		return NewGitHubAPIError(statusCode, "set advanced repository settings",
+			fmt.Sprintf("%s/%s", org, repo), "failed to set advanced repository settings", err)
+	}
+
+	log.Info().
+		Str("org", org).
+		Str("repo", repo).
+		Bool("deleteBranchOnMerge", *deleteBranchOnMerge).
+		Int("statusCode", resp.StatusCode).
+		Msg("Successfully set advanced repository settings")
+
+	return nil
+}
+
 // SetBranchProtectionFallback applies advanced branch protection features via REST API
 // that are not available in the GraphQL CreateBranchProtectionRuleInput.
 func (c *GitHubClient) SetBranchProtectionFallback(org, repo, branch string, perms *BranchPermissions) error {

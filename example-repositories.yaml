@@ -61,12 +61,18 @@ repositories:
     wiki: true                             # Enable wiki for documentation
     issues: true                           # Enable GitHub issues for bug tracking
     projects: true                         # Enable GitHub projects for project management
+    delete_branch_on_merge: true           # Automatically delete head branches after merge
+    discussions_enabled: true              # Enable GitHub discussions for community Q&A
+    sponsorships_enabled: false            # Disable sponsorship button
 
   # API service repository
   - name: user-api-service
     wiki: true                             # API documentation in wiki
     issues: true                           # Bug tracking enabled
     projects: false                        # No project management needed
+    delete_branch_on_merge: true           # Clean up branches automatically
+    discussions_enabled: false             # API discussions handled elsewhere
+    sponsorships_enabled: false            # Internal service, no sponsorships
 
   # Mobile applications
   - name: mobile-app-ios
@@ -95,6 +101,9 @@ repositories:
     wiki: false                            # Content is the repository itself
     issues: true                           # Documentation improvement requests
     projects: true                         # Editorial calendar in projects
+    delete_branch_on_merge: true           # Keep repository clean
+    discussions_enabled: true              # Enable community discussions about docs
+    sponsorships_enabled: true             # Allow sponsorship for open-source docs
 
   - name: legacy-java-app
     wiki: false                            # Deprecated, no new docs
@@ -226,8 +235,12 @@ default_labels:
 #   1. Update the 'organization' field with your GitHub organization name
 #   2. Modify team names and permissions to match your organization structure
 #   3. Add/remove repositories as needed with appropriate feature settings
-#   4. Customize labels to match your workflow and terminology
-#   5. Adjust branch protection rules based on your security requirements
+#   4. Configure advanced repository features:
+#      - delete_branch_on_merge: Automatically clean up PR branches after merge
+#      - discussions_enabled: Enable GitHub discussions for community engagement
+#      - sponsorships_enabled: Show sponsorship button for funding
+#   5. Customize labels to match your workflow and terminology
+#   6. Adjust branch protection rules based on your security requirements
 #
 # To apply this configuration:
 #   1. Set your GitHub token: export GITHUB_TOKEN=your_token_here
