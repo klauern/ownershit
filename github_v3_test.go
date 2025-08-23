@@ -302,3 +302,36 @@ func TestGitHubClient_AddPermissions(t *testing.T) {
 		})
 	}
 }
+
+func TestGitHubClient_SetRepositoryAdvancedSettings(t *testing.T) {
+	mock := setupMocks(t)
+	
+	// Test successful call
+	mock.repoMock.EXPECT().Edit(gomock.Any(), "testorg", "testrepo", gomock.Any()).
+		Return(&github.Repository{}, &github.Response{
+			Response: &http.Response{StatusCode: 200},
+		}, nil)
+	
+	deleteBranchOnMerge := true
+	err := mock.client.SetRepositoryAdvancedSettings("testorg", "testrepo", &deleteBranchOnMerge)
+	if err != nil {
+		t.Errorf("SetRepositoryAdvancedSettings() error = %v, wantErr = false", err)
+	}
+	
+	// Test error handling
+	mock.repoMock.EXPECT().Edit(gomock.Any(), "testorg", "testrepo", gomock.Any()).
+		Return(nil, &github.Response{
+			Response: &http.Response{StatusCode: 500},
+		}, ErrDummyV3Error)
+	
+	err = mock.client.SetRepositoryAdvancedSettings("testorg", "testrepo", &deleteBranchOnMerge)
+	if err == nil {
+		t.Errorf("SetRepositoryAdvancedSettings() error = nil, wantErr = true")
+	}
+	
+	// Test nil parameter (should return without error)
+	err = mock.client.SetRepositoryAdvancedSettings("testorg", "testrepo", nil)
+	if err != nil {
+		t.Errorf("SetRepositoryAdvancedSettings() with nil parameter error = %v, wantErr = false", err)
+	}
+}

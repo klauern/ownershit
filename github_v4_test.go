@@ -20,10 +20,10 @@ func TestGitHubClient_SetRepository(t *testing.T) {
 	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(ErrTestV4Error)
 
-	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr(false)); (err != nil) != false {
+	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(false)); (err != nil) != false {
 		t.Errorf("GitHubClient.SetRepository() error = %v, wantErr %v", err, false)
 	}
-	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr(false)); (err != nil) != true {
+	if err := mock.client.SetRepository(githubv4.ID("test"), boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(false), boolPtr(false)); (err != nil) != true {
 		t.Errorf("GitHubClient.SetRepository() error = %v, wantErr %v", err, true)
 	}
 }

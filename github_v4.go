@@ -15,15 +15,17 @@ type GraphQLClient interface {
 	Mutate(ctx context.Context, m interface{}, input githubv4.Input, variables map[string]interface{}) error
 }
 
-func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project *bool) error {
+func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project, discussions, sponsorships *bool) error {
 	var mutation struct {
 		UpdateRepository struct {
 			ClientMutationID githubv4.ID
 			Repository       struct {
-				ID                 githubv4.ID
-				HasWikiEnabled     githubv4.Boolean
-				HasIssuesEnabled   githubv4.Boolean
-				HasProjectsEnabled githubv4.Boolean
+				ID                     githubv4.ID
+				HasWikiEnabled         githubv4.Boolean
+				HasIssuesEnabled       githubv4.Boolean
+				HasProjectsEnabled     githubv4.Boolean
+				HasDiscussionsEnabled  githubv4.Boolean
+				HasSponsorshipsEnabled githubv4.Boolean
 			}
 		} `graphql:"updateRepository(input: $input)"`
 	}
@@ -32,6 +34,14 @@ func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project *bool
 		HasWikiEnabled:     githubv4.NewBoolean(githubv4.Boolean(*wiki)),
 		HasIssuesEnabled:   githubv4.NewBoolean(githubv4.Boolean(*issues)),
 		HasProjectsEnabled: githubv4.NewBoolean(githubv4.Boolean(*project)),
+	}
+
+	// Only set optional fields if they are not nil
+	if discussions != nil {
+		input.HasDiscussionsEnabled = githubv4.NewBoolean(githubv4.Boolean(*discussions))
+	}
+	if sponsorships != nil {
+		input.HasSponsorshipsEnabled = githubv4.NewBoolean(githubv4.Boolean(*sponsorships))
 	}
 	log.Debug().
 		Interface("mutation", mutation).
