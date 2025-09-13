@@ -12,7 +12,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// getCSVHeaders returns the standardized CSV column headers for repository configuration export
+// getCSVHeaders returns the ordered CSV column headers used when exporting repository configuration.
+// The headers correspond to repository metadata and branch/permission settings and must match the CSV import/export format.
 func getCSVHeaders() []string {
 	return []string{
 		"owner", "repo", "organization", "wiki_enabled", "issues_enabled",
@@ -26,7 +27,10 @@ func getCSVHeaders() []string {
 	}
 }
 
-// convertToCSVRow converts a PermissionsSettings configuration to a CSV row
+// convertToCSVRow converts a PermissionsSettings for a single repository into a CSV row.
+// If config is nil or contains no repository entries, it returns an empty row with the
+// same number of columns as getCSVHeaders(). The returned slice's fields correspond to
+// the columns defined by getCSVHeaders(), in the same order.
 func convertToCSVRow(config *PermissionsSettings, owner, repo string) []string {
 	if config == nil || len(config.Repositories) == 0 {
 		// Return empty row with correct number of columns
@@ -68,7 +72,7 @@ func convertToCSVRow(config *PermissionsSettings, owner, repo string) []string {
 	}
 }
 
-// Helper functions for safe value extraction
+// safeBoolValue returns an empty string if ptr is nil; otherwise it returns the boolean value as "true" or "false".
 func safeBoolValue(ptr *bool) string {
 	if ptr == nil {
 		return ""
@@ -76,6 +80,7 @@ func safeBoolValue(ptr *bool) string {
 	return strconv.FormatBool(*ptr)
 }
 
+// safeStringValue returns the string pointed to by ptr, or an empty string if ptr is nil.
 func safeStringValue(ptr *string) string {
 	if ptr == nil {
 		return ""
@@ -83,6 +88,8 @@ func safeStringValue(ptr *string) string {
 	return *ptr
 }
 
+// safeIntValue returns the decimal string representation of the integer pointed to by ptr.
+// If ptr is nil, it returns an empty string.
 func safeIntValue(ptr *int) string {
 	if ptr == nil {
 		return ""
@@ -90,6 +97,8 @@ func safeIntValue(ptr *int) string {
 	return strconv.Itoa(*ptr)
 }
 
+// joinStringSlice joins the elements of slice using '|' as the delimiter.
+// If slice is empty, it returns an empty string.
 func joinStringSlice(slice []string) string {
 	if len(slice) == 0 {
 		return ""
@@ -97,7 +106,14 @@ func joinStringSlice(slice []string) string {
 	return strings.Join(slice, "|")
 }
 
-// ProcessRepositoriesCSV processes multiple repositories and outputs CSV format
+// ProcessRepositoriesCSV processes multiple repositories and writes their configuration rows
+// to the provided writer in CSV format.
+//
+// The repos slice must contain repository identifiers in the form "owner/repo". If writeHeader
+// is true, a standardized CSV header row is written first. Each repository is processed
+// independently; invalid repository formats or per-repository failures are collected and do
+// not stop the overall run. If any repository fails to be processed, the function returns a
+// *BatchProcessingError describing totals and per-repository errors; otherwise it returns nil.
 func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClient, writeHeader bool) error {
 	csvWriter := csv.NewWriter(output)
 	defer csvWriter.Flush()
@@ -193,7 +209,9 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 	return nil
 }
 
-// processRepositoryToCSV processes a single repository and writes its CSV row
+// processRepositoryToCSV imports the repository configuration for the given owner and repo,
+// converts it into a CSV row, and writes that row to the provided csv.Writer.
+// Returns an error if importing the configuration or writing the CSV row fails.
 func processRepositoryToCSV(owner, repo string, writer *csv.Writer, client *GitHubClient) error {
 	// Import repository configuration using existing function
 	config, err := ImportRepositoryConfig(owner, repo, client)
@@ -212,7 +230,11 @@ func processRepositoryToCSV(owner, repo string, writer *csv.Writer, client *GitH
 	return nil
 }
 
-// ParseRepositoryList parses repository list from command args and optional batch file
+// ParseRepositoryList parses repository identifiers from command-line arguments and an optional
+// batch file, validates each entry is in "owner/repo" format, and returns a deduplicated
+// slice preserving the first occurrence order. If any command-line argument is invalid the
+// function returns an error; if a batch file is provided, failures to read or parse that file
+// are returned as errors.
 func ParseRepositoryList(args []string, batchFile string) ([]string, error) {
 	var repos []string
 
@@ -237,7 +259,9 @@ func ParseRepositoryList(args []string, batchFile string) ([]string, error) {
 	return removeDuplicates(repos), nil
 }
 
-// validateRepoFormat validates repository format as owner/repo
+// validateRepoFormat checks that the repo string is in the form "owner/repo"
+// with non-empty owner and repository parts. It returns an error when the format
+// is invalid.
 func validateRepoFormat(repo string) error {
 	parts := strings.Split(repo, "/")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
@@ -246,7 +270,12 @@ func validateRepoFormat(repo string) error {
 	return nil
 }
 
-// readBatchFile reads repository list from a file
+// readBatchFile reads repository entries from the named file and returns them as a slice.
+// 
+// Lines that are empty or start with `#` are ignored. Each non-comment line must be a
+// repository in the form `owner/repo`; lines that fail validation cause an immediate error
+// that includes the offending line number and content. Any error while opening or scanning
+// the file is returned wrapped.
 func readBatchFile(filename string) ([]string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -281,7 +310,8 @@ func readBatchFile(filename string) ([]string, error) {
 	return repos, nil
 }
 
-// removeDuplicates removes duplicate repository entries
+// removeDuplicates returns a new slice containing the elements of repos with duplicates removed,
+// preserving the original order of first occurrences.
 func removeDuplicates(repos []string) []string {
 	seen := make(map[string]bool)
 	var result []string
@@ -296,7 +326,7 @@ func removeDuplicates(repos []string) []string {
 	return result
 }
 
-// ValidateCSVAppendMode validates that existing CSV has compatible headers
+// returned directly.
 func ValidateCSVAppendMode(filename string) error {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -324,7 +354,8 @@ func ValidateCSVAppendMode(filename string) error {
 	return nil
 }
 
-// sliceEqual compares two string slices for equality
+// sliceEqual reports whether two string slices have identical length and elements in the same order.
+// Nil and empty slices are treated as equal (both have length zero).
 func sliceEqual(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

@@ -26,6 +26,8 @@ var (
 	builtBy = "unknown"
 )
 
+// main is the program entry point. It configures global logging and constructs and runs the CLI application
+// (ownershit) with its commands, flags, and lifecycle hooks.
 func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -320,6 +322,16 @@ func rateLimitCommand(c *cli.Context) error {
 	return nil
 }
 
+// importCommand imports a single repository's configuration and emits it as YAML.
+// 
+// importCommand expects exactly one positional argument in the form `owner/repo`.
+// It uses the global GitHub client to fetch the repository configuration, marshals
+// the result to YAML, and either writes the YAML to the file specified by the
+// `--output` flag (created/truncated with mode 0600) or prints it to stdout when
+// no output path is given.
+//
+// Returns an error when the argument is missing or malformed, when the import
+// operation fails, when YAML marshaling fails, or when writing the output file fails.
 func importCommand(c *cli.Context) error {
 	if c.NArg() == 0 {
 		return fmt.Errorf("expected exactly one argument: owner/repo")
@@ -366,6 +378,18 @@ func importCommand(c *cli.Context) error {
 	return nil
 }
 
+// importCSVCommand imports repository configurations from one or more GitHub repositories
+// and writes a CSV representation to either stdout or a file.
+//
+// The command accepts repository identifiers via CLI arguments in "owner/repo" format
+// or via the --batch-file flag. If --output is provided the CSV is written to that file;
+// otherwise it is written to stdout. When --append is used, the existing file header is
+// validated for compatibility before appending; without --append the output file is
+// truncated/overwritten.
+//
+// The function uses the global GitHub client to fetch repository data. On failure it
+// returns an error. If processing returns a BatchProcessingError with some successful
+// items, the function logs per-item failures and returns nil to indicate partial success.
 func importCSVCommand(c *cli.Context) error {
 	// Parse repository list from args and/or batch file
 	repos, err := shit.ParseRepositoryList(c.Args().Slice(), c.String("batch-file"))
@@ -444,6 +468,14 @@ func importCSVCommand(c *cli.Context) error {
 	return nil
 }
 
+// initCommand creates a new ownershit YAML configuration file at the path taken
+// from the CLI `--config` flag, writing a bundled stub configuration with file
+// mode 0600.
+//
+// If a configuration file already exists at that path, the command does nothing
+// and prints a message instructing the user to remove the file before creating
+// a new one. On success it prints next-step guidance to stdout. If writing the
+// file fails, an error is returned.
 func initCommand(c *cli.Context) error {
 	configPath := c.String("config")
 
@@ -476,6 +508,11 @@ func initCommand(c *cli.Context) error {
 	return nil
 }
 
+// getStubConfig returns a YAML stub configuration for ownershit.
+// The returned string is a ready-to-write example configuration that includes
+// schema version, an organization placeholder, global branch protection defaults,
+// example team permission entries, a sample repository entry, and default labels.
+// It also includes a commented note about setting the GITHUB_TOKEN environment variable.
 func getStubConfig() string {
 	return `# ownershit configuration file
 # This file defines repository ownership, team permissions, and branch protection rules
