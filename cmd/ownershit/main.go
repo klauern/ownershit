@@ -402,15 +402,25 @@ func importCSVCommand(c *cli.Context) error {
 
 	var output *os.File
 	var shouldClose bool
+	fileExisted := false
+	if outputPath != "" {
+		if _, statErr := os.Stat(outputPath); statErr == nil {
+			fileExisted = true
+		} else if !os.IsNotExist(statErr) {
+			return fmt.Errorf("failed to stat output file: %w", statErr)
+		}
+	}
 
 	if outputPath != "" {
 		// File output
 		flag := os.O_CREATE | os.O_WRONLY
 		if appendMode {
 			flag |= os.O_APPEND
-			// Validate header compatibility in append mode
-			if err := shit.ValidateCSVAppendMode(outputPath); err != nil {
-				return fmt.Errorf("append mode validation failed: %w", err)
+			// Validate header compatibility only when appending to an existing file
+			if fileExisted {
+				if err := shit.ValidateCSVAppendMode(outputPath); err != nil {
+					return fmt.Errorf("append mode validation failed: %w", err)
+				}
 			}
 		} else {
 			flag |= os.O_TRUNC
@@ -430,8 +440,22 @@ func importCSVCommand(c *cli.Context) error {
 		defer output.Close()
 	}
 
+	// Determine whether to write the CSV header
+	writeHeader := true
+	if outputPath == "" {
+		// stdout: always write header; append has no meaning here
+		if appendMode {
+			log.Warn().Msg("--append is ignored when writing to stdout")
+		}
+	} else {
+		// file output
+		if appendMode && fileExisted {
+			writeHeader = false
+		}
+	}
+
 	// Process repositories and generate CSV
-	err = shit.ProcessRepositoriesCSV(repos, output, githubClient, !appendMode)
+	err = shit.ProcessRepositoriesCSV(repos, output, githubClient, writeHeader)
 	if err != nil {
 		// Check if it's a batch processing error with partial success
 		if batchErr, ok := err.(*shit.BatchProcessingError); ok {
