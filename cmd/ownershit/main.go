@@ -147,6 +147,37 @@ func main() {
 				},
 			},
 			{
+				Name:      "import-csv",
+				Usage:     "Import repository configurations from multiple GitHub repositories and output as CSV",
+				UsageText: "ownershit import-csv [flags] owner1/repo1 [owner2/repo2] ...",
+				Before:    configureImportClient,
+				Action:    importCSVCommand,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "output",
+						Aliases: []string{"o"},
+						Usage:   "output CSV file path (default: stdout)",
+					},
+					&cli.BoolFlag{
+						Name:    "append",
+						Aliases: []string{"a"},
+						Usage:   "append to existing CSV file instead of overwriting",
+					},
+					&cli.StringFlag{
+						Name:    "batch-file",
+						Aliases: []string{"f"},
+						Usage:   "read repository list from file (one owner/repo per line)",
+					},
+					&cli.BoolFlag{
+						Name:    "debug",
+						Aliases: []string{"d"},
+						EnvVars: []string{"OWNERSHIT_DEBUG"},
+						Usage:   "enable debug logging",
+						Value:   false,
+					},
+				},
+			},
+			{
 				Name:   "permissions",
 				Usage:  "Show required GitHub token permissions for ownershit operations",
 				Action: permissionsCommand,
@@ -335,6 +366,84 @@ func importCommand(c *cli.Context) error {
 	return nil
 }
 
+func importCSVCommand(c *cli.Context) error {
+	// Parse repository list from args and/or batch file
+	repos, err := shit.ParseRepositoryList(c.Args().Slice(), c.String("batch-file"))
+	if err != nil {
+		return fmt.Errorf("failed to parse repository list: %w", err)
+	}
+
+	if len(repos) == 0 {
+		return fmt.Errorf("no repositories specified. Use 'owner/repo' format or --batch-file")
+	}
+
+	// Setup output destination
+	outputPath := c.String("output")
+	appendMode := c.Bool("append")
+
+	var output *os.File
+	var shouldClose bool
+
+	if outputPath != "" {
+		// File output
+		flag := os.O_CREATE | os.O_WRONLY
+		if appendMode {
+			flag |= os.O_APPEND
+			// Validate header compatibility in append mode
+			if err := shit.ValidateCSVAppendMode(outputPath); err != nil {
+				return fmt.Errorf("append mode validation failed: %w", err)
+			}
+		} else {
+			flag |= os.O_TRUNC
+		}
+
+		output, err = os.OpenFile(outputPath, flag, 0o644)
+		if err != nil {
+			return fmt.Errorf("failed to open output file: %w", err)
+		}
+		shouldClose = true
+	} else {
+		// Stdout output
+		output = os.Stdout
+	}
+
+	if shouldClose {
+		defer output.Close()
+	}
+
+	// Process repositories and generate CSV
+	err = shit.ProcessRepositoriesCSV(repos, output, githubClient, !appendMode)
+	if err != nil {
+		// Check if it's a batch processing error with partial success
+		if batchErr, ok := err.(*shit.BatchProcessingError); ok {
+			log.Warn().
+				Int("successful", batchErr.SuccessCount).
+				Int("failed", batchErr.ErrorCount).
+				Msg("CSV import completed with some failures")
+
+			// Log detailed errors
+			for _, errDetail := range batchErr.GetDetailedErrors() {
+				log.Error().Msg(errDetail)
+			}
+
+			// Return success if we had any successful imports
+			if batchErr.SuccessCount > 0 {
+				return nil
+			}
+		}
+		return fmt.Errorf("CSV import failed: %w", err)
+	}
+
+	if outputPath != "" {
+		log.Info().
+			Str("file", outputPath).
+			Int("repositories", len(repos)).
+			Msg("CSV export completed successfully")
+	}
+
+	return nil
+}
+
 func initCommand(c *cli.Context) error {
 	configPath := c.String("config")
 
@@ -383,19 +492,19 @@ branches:
   require_pull_request_reviews: true
   require_approving_count: 1
   require_code_owners: false
-  
+
   # Merge strategy controls
   allow_merge_commit: true
   allow_squash_merge: true
   allow_rebase_merge: false
-  
+
   # Status checks (uncomment and configure as needed)
   # require_status_checks: true
   # status_checks:
   #   - "ci/build"
   #   - "ci/test"
   # require_up_to_date_branch: true
-  
+
   # Advanced protection (uncomment as needed)
   # enforce_admins: true
   # restrict_pushes: false

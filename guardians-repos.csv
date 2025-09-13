@@ -1,0 +1,3 @@
+zendesk,identity-sync-service,zendesk,false,true,true,true,false,false,main,true,false,true,1,true,false,true,false,false,false,true,false,false,false,false,false,,
+zendesk,aws_organizations,zendesk,false,false,false,true,false,false,master,true,false,true,1,true,false,true,false,true,true,true,true,false,false,false,false,"Linters (lint modules, task lint-modules)|Linters (lint shallow, task lint-shallow)|Linters (terraform fmt, task fmt-check)",engineering|zendesk-ops-ci
+zendesk,zendesk-identity-governance,zendesk,false,false,false,true,false,false,master,true,false,true,1,true,false,true,false,true,false,true,false,false,false,false,false,lint-and-validate,
