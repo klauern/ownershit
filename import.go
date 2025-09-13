@@ -48,16 +48,18 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 		TeamPermissions:   teamPermissions,
 		Repositories: []*Repository{
 			{
-				Name:          &repo,
-				Wiki:          repoDetails.Wiki,
-				Issues:        repoDetails.Issues,
-				Projects:      repoDetails.Projects,
-				DefaultBranch: repoDetails.DefaultBranch,
-				Private:       repoDetails.Private,
-				Archived:      repoDetails.Archived,
-				Template:      repoDetails.Template,
-				Description:   repoDetails.Description,
-				Homepage:      repoDetails.Homepage,
+				Name:                  &repo,
+				Wiki:                  repoDetails.Wiki,
+				Issues:                repoDetails.Issues,
+				Projects:              repoDetails.Projects,
+				DefaultBranch:         repoDetails.DefaultBranch,
+				Private:               repoDetails.Private,
+				Archived:              repoDetails.Archived,
+				Template:              repoDetails.Template,
+				Description:           repoDetails.Description,
+				Homepage:              repoDetails.Homepage,
+				DeleteBranchOnMerge:   repoDetails.DeleteBranchOnMerge,
+				HasDiscussionsEnabled: repoDetails.HasDiscussionsEnabled,
 			},
 		},
 		DefaultLabels: repoLabels,
@@ -68,15 +70,17 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 
 // repositoryDetails holds the basic repository configuration.
 type repositoryDetails struct {
-	Wiki          *bool
-	Issues        *bool
-	Projects      *bool
-	DefaultBranch *string
-	Private       *bool
-	Archived      *bool
-	Template      *bool
-	Description   *string
-	Homepage      *string
+	Wiki                  *bool
+	Issues                *bool
+	Projects              *bool
+	DefaultBranch         *string
+	Private               *bool
+	Archived              *bool
+	Template              *bool
+	Description           *string
+	Homepage              *string
+	DeleteBranchOnMerge   *bool
+	HasDiscussionsEnabled *bool
 }
 
 // getRepositoryDetails retrieves basic repository settings via GitHub v3 API.
@@ -92,15 +96,17 @@ func getRepositoryDetails(client *GitHubClient, owner, repo string) (*repository
 	}
 
 	details := &repositoryDetails{
-		Wiki:          repoInfo.HasWiki,
-		Issues:        repoInfo.HasIssues,
-		Projects:      repoInfo.HasProjects,
-		DefaultBranch: repoInfo.DefaultBranch,
-		Private:       repoInfo.Private,
-		Archived:      repoInfo.Archived,
-		Template:      repoInfo.IsTemplate,
-		Description:   repoInfo.Description,
-		Homepage:      repoInfo.Homepage,
+		Wiki:                  repoInfo.HasWiki,
+		Issues:                repoInfo.HasIssues,
+		Projects:              repoInfo.HasProjects,
+		DefaultBranch:         repoInfo.DefaultBranch,
+		Private:               repoInfo.Private,
+		Archived:              repoInfo.Archived,
+		Template:              repoInfo.IsTemplate,
+		Description:           repoInfo.Description,
+		Homepage:              repoInfo.Homepage,
+		DeleteBranchOnMerge:   repoInfo.DeleteBranchOnMerge,
+		HasDiscussionsEnabled: repoInfo.HasDiscussions,
 	}
 
 	log.Debug().
