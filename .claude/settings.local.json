@@ -63,7 +63,8 @@
       "mcp__context7__get-library-docs",
       "Bash(gh pr checks:*)",
       "WebSearch",
-      "Bash(gh pr merge:*)"
+      "Bash(gh pr merge:*)",
+      "WebFetch(domain:pkg.go.dev)"
     ],
     "deny": [],
     "additionalDirectories": [
