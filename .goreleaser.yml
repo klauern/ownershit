@@ -12,10 +12,8 @@ builds:
   - darwin
   goarch:
   - amd64
+  - arm64
   - arm
-  ignore:
-  - goos: darwin
-    goarch: amd64
 archives:
   - id: archive
 snapshot:
@@ -36,3 +34,6 @@ brews:
       name: goreleaserbot
       email: bot@goreleaser.com
     description: "Manage the ownership of your repositories."
+    homepage: "https://github.com/klauern/ownershit"
+    license: "MIT"
+    skip_upload: false
