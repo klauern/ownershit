@@ -30,7 +30,7 @@ func getCSVHeaders() []string {
 func convertToCSVRow(config *PermissionsSettings, owner, repo string) []string {
 	if config == nil || len(config.Repositories) == 0 {
 		// Return empty row with correct number of columns
-		return make([]string, 27)
+		return make([]string, len(getCSVHeaders()))
 	}
 
 	repoConfig := config.Repositories[0] // Single repository context
