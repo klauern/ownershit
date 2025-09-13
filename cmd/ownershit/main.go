@@ -128,7 +128,7 @@ func main() {
 			{
 				Name:      "import",
 				Usage:     "Import repository configuration from GitHub and output as YAML",
-				UsageText: "ownershit import owner/repo [--output filename.yaml]",
+				UsageText: "ownershit import [--output filename.yaml] owner/repo",
 				Before:    configureImportClient,
 				Action:    importCommand,
 				Flags: []cli.Flag{
@@ -136,6 +136,13 @@ func main() {
 						Name:    "output",
 						Aliases: []string{"o"},
 						Usage:   "output file path (default: stdout)",
+					},
+					&cli.BoolFlag{
+						Name:    "debug",
+						Aliases: []string{"d"},
+						EnvVars: []string{"OWNERSHIT_DEBUG"},
+						Usage:   "set output to debug logging",
+						Value:   false,
 					},
 				},
 			},
