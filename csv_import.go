@@ -198,7 +198,7 @@ func processRepositoryToCSV(owner, repo string, writer *csv.Writer, client *GitH
 	// Import repository configuration using existing function
 	config, err := ImportRepositoryConfig(owner, repo, client)
 	if err != nil {
-		return fmt.Errorf("failed to import repository configuration: %w", err)
+		return fmt.Errorf("failed to import repository configuration for %s/%s: %w", owner, repo, err)
 	}
 
 	// Convert to CSV row
