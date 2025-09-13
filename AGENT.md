@@ -28,6 +28,14 @@ This project uses [Task](https://taskfile.dev) for task management. Run tasks wi
 - `task gql:download-schema` - Download GitHub's GraphQL schema
 - `task gql:generate-client` - Generate GraphQL client code
 
+### Security and Releases
+
+- `task security` - Run security vulnerability check with govulncheck
+- `task test-all` - Run tests with security checks
+- `task release` - Show available release commands
+- `task release:patch` - Create patch release (runs tests + security checks)
+- `task release:minor` - Create minor release (runs tests + security checks)
+
 ### Manual Testing
 
 - `task test-query` - Run a test query with hardcoded username
@@ -54,10 +62,24 @@ This is a Go CLI tool for managing GitHub repository ownership and permissions. 
 
 The tool expects a `repositories.yaml` file defining:
 
-- Organization settings
-- Team permissions (admin/push/pull levels)
-- Repository configurations (wiki, issues, projects settings)
-- Branch protection rules
+- Organization settings (required)
+- Team permissions with levels: admin/push/pull/triage/maintain
+- Repository configurations (wiki, issues, projects, default labels)
+- Advanced branch protection rules with status checks and admin enforcement
+- Merge strategy controls (merge commits, squash, rebase)
+
+### CLI Commands Structure
+
+Core commands available:
+- `init` - Create stub configuration file
+- `sync` - Synchronize repository settings (main command)
+- `branches` - Update branch merge strategies only
+- `label` - Sync default labels across repositories
+- `archive query/execute` - Find and archive inactive repositories
+- `ratelimit` - Check GitHub API rate limits
+- `import` - Import existing repository configurations
+
+Global flags: `--config` (default: repositories.yaml), `--debug/-d`
 
 ### Testing
 
@@ -72,10 +94,20 @@ The tool expects a `repositories.yaml` file defining:
 - GraphQL client generation: `github.com/Khan/genqlient`
 - Configuration: `gopkg.in/yaml.v3`
 - Logging: `github.com/rs/zerolog`
+- Testing: `go.uber.org/mock` for mock generation
+- Security: `golang.org/x/vuln/cmd/govulncheck` for vulnerability scanning
+
+### Environment Variables
+
+- `GITHUB_TOKEN` - GitHub Personal Access Token (required, scopes: repo, admin:org)
+- `OWNERSHIT_DEBUG` - Enable debug logging (alternative to --debug flag)
 
 ## Development Workflow
 
 - When tests pass, we should commit changes before we make more changes
+- Run `task mocks` after modifying interfaces to regenerate test mocks
+- Use `task test-all` (includes security checks) before releases
+- After modifying GraphQL queries, run `task gql:generate-client` to update generated code
 
 <!-- BACKLOG.MD GUIDELINES START -->
 
