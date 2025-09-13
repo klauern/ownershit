@@ -50,7 +50,7 @@ func TestNewGHv4Client(t *testing.T) {
         },
         {
             name:        "missing token returns error",
-            envVars:     map[string]string{},
+            envVars:     map[string]string{"GITHUB_TOKEN": ""}, // Explicitly unset token
             wantRetries: defaultConfig.maxRetries,
             wantTimeout: defaultConfig.timeoutSeconds,
             wantErr:     true,
