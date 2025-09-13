@@ -108,25 +108,25 @@ func parseEnv() *retryParams {
 	return params
 }
 
-func NewGHv4Client() *GitHubV4Client {
-	params := parseEnv()
-	retryLogger := log.With().Str("component", "retryablehttp").Logger()
-	globalLog.SetOutput(retryLogger)
+func NewGHv4Client() (*GitHubV4Client, error) {
+    params := parseEnv()
+    retryLogger := log.With().Str("component", "retryablehttp").Logger()
+    globalLog.SetOutput(retryLogger)
 
-	key, err := ownershit.GetValidatedGitHubToken()
-	if err != nil {
-		panic(fmt.Sprintf("GitHub token validation failed: %v", err))
-	}
+    key, err := ownershit.GetValidatedGitHubToken()
+    if err != nil {
+        return nil, fmt.Errorf("GitHub token validation failed: %w", err)
+    }
 
-	client := buildClient(params, key)
+    client := buildClient(params, key)
 
-	graphqlClient := graphql.NewClient("https://api.github.com/graphql", client.StandardClient())
+    graphqlClient := graphql.NewClient("https://api.github.com/graphql", client.StandardClient())
 
-	return &GitHubV4Client{
-		baseClient:  client.StandardClient(),
-		retryClient: client,
-		client:      graphqlClient,
-	}
+    return &GitHubV4Client{
+        baseClient:  client.StandardClient(),
+        retryClient: client,
+        client:      graphqlClient,
+    }, nil
 }
 
 // buildClient sets up the retry functionality and attaches authentication to the client.
