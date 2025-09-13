@@ -26,6 +26,10 @@ var (
 	builtBy = "unknown"
 )
 
+// main is the entry point for the ownershit CLI application.
+// It configures logging, constructs the command-line interface with subcommands
+// (init, branches, sync, archive, label, ratelimit, import, import-csv, permissions),
+// and runs the app, terminating with a fatal error if execution fails.
 func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
@@ -320,6 +324,13 @@ func rateLimitCommand(c *cli.Context) error {
 	return nil
 }
 
+// importCommand imports a repository's ownershit configuration from GitHub and writes it as YAML.
+//
+// importCommand expects a single CLI argument in the form `owner/repo`. It fetches the repository
+// configuration via the GitHub client, marshals it to YAML, and either prints the YAML to stdout
+// or writes it to the path specified by the `--output` flag (file created with mode 0600).
+// It returns an error if the argument is missing or malformed, if the import or YAML marshaling
+// fails, or if writing the output file fails.
 func importCommand(c *cli.Context) error {
 	if c.NArg() == 0 {
 		return fmt.Errorf("expected exactly one argument: owner/repo")
@@ -366,6 +377,14 @@ func importCommand(c *cli.Context) error {
 	return nil
 }
 
+// importCSVCommand parses a list of repositories and writes their configuration as CSV to stdout or a file.
+//
+// It accepts repository arguments in `owner/repo` form and/or a batch file path (flag `--batch-file`), and requires at least one repository.
+// If `--output` is provided the command writes to that file; `--append` will open the file in append mode after validating header compatibility.
+// The CSV generation is delegated to shit.ProcessRepositoriesCSV; if that returns a *shit.BatchProcessingError the command logs per-item errors and
+// returns nil when at least one repository was processed successfully (partial success), otherwise an error is returned.
+//
+// Returns an error when repository parsing, output file opening, append-mode validation, or the CSV processing (with no successes) fails.
 func importCSVCommand(c *cli.Context) error {
 	// Parse repository list from args and/or batch file
 	repos, err := shit.ParseRepositoryList(c.Args().Slice(), c.String("batch-file"))
@@ -444,6 +463,10 @@ func importCSVCommand(c *cli.Context) error {
 	return nil
 }
 
+// initCommand creates a stub configuration file at the path specified by the CLI `--config` flag.
+// If a file already exists at that path it does nothing and informs the user. Otherwise it writes
+// a template configuration (0600 permissions), prints next-step guidance to stdout, and returns
+// any error encountered while writing the file.
 func initCommand(c *cli.Context) error {
 	configPath := c.String("config")
 
@@ -476,6 +499,10 @@ func initCommand(c *cli.Context) error {
 	return nil
 }
 
+// getStubConfig returns a starter YAML configuration used to create a new ownershit config file.
+// The returned string contains a complete example configuration (organization placeholder,
+// branch protection defaults, team permissions, repository entries, and default labels) intended
+// to be written as the initial config file and edited by the user.
 func getStubConfig() string {
 	return `# ownershit configuration file
 # This file defines repository ownership, team permissions, and branch protection rules

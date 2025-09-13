@@ -10,7 +10,12 @@ import (
 )
 
 // ImportRepositoryConfig extracts repository configuration from GitHub APIs
-// and returns it in the PermissionsSettings format used by ownershit.
+// ImportRepositoryConfig fetches configuration for the given GitHub repository and returns it as a PermissionsSettings.
+// 
+// It retrieves repository metadata, branch protection rules, team permissions, and labels from GitHub and assembles
+// them into a PermissionsSettings where Organization is set to owner and Repositories contains a single Repository for repo.
+// If fetching team permissions fails the error is logged and an empty team permissions list is used; failures to fetch
+// repository details, branch protection rules, or labels are returned as errors.
 func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*PermissionsSettings, error) {
 	log.Info().
 		Str("owner", owner).
