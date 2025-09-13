@@ -239,6 +239,11 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 			perms.StatusChecks = make([]string, len(*protection.RequiredStatusChecks.Contexts))
 			copy(perms.StatusChecks, *protection.RequiredStatusChecks.Contexts)
 		}
+	} else {
+		// Explicitly set to false when status checks are disabled
+		falseVal := false
+		perms.RequireStatusChecks = &falseVal
+		perms.RequireUpToDateBranch = &falseVal
 	}
 
 	// Admin enforcement
@@ -270,6 +275,10 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 
 		// Set the push allowlist
 		perms.PushAllowlist = allowlist
+	} else {
+		// Explicitly set to false when push restrictions are disabled
+		falseVal := false
+		perms.RestrictPushes = &falseVal
 	}
 
 	// Advanced settings - now available in github.Protection struct
