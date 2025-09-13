@@ -217,7 +217,13 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 // convertBranchProtection converts GitHub branch protection to ownershit format.
 func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	if protection == nil {
-		return &BranchPermissions{}
+		// Return explicit false values for all boolean fields when no protection exists
+		falseVal := false
+		return &BranchPermissions{
+			RequireStatusChecks:   &falseVal,
+			RequireUpToDateBranch: &falseVal,
+			RestrictPushes:        &falseVal,
+		}
 	}
 
 	perms := &BranchPermissions{}
