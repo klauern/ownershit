@@ -43,8 +43,8 @@ func convertToCSVRow(config *PermissionsSettings, owner, repo string) []string {
 	branchPerms := &config.BranchPermissions
 
 	return []string{
-		owner,                                                    // owner
-		repo,                                                     // repo
+		sanitizeCSV(owner),                                       // owner
+		sanitizeCSV(repo),                                        // repo
 		safeStringValue(config.Organization),                     // organization
 		safeBoolValue(repoConfig.Wiki),                           // wiki_enabled
 		safeBoolValue(repoConfig.Issues),                         // issues_enabled
@@ -88,7 +88,7 @@ func safeStringValue(ptr *string) string {
 	if ptr == nil {
 		return ""
 	}
-	return *ptr
+	return sanitizeCSV(*ptr)
 }
 
 // safeIntValue returns the string representation of the int pointed to by ptr.
@@ -105,7 +105,25 @@ func joinStringSlice(slice []string) string {
 	if len(slice) == 0 {
 		return ""
 	}
-	return strings.Join(slice, "|")
+	return sanitizeCSV(strings.Join(slice, "|"))
+}
+
+// sanitizeCSV prefixes risky values to prevent CSV formula injection in spreadsheet viewers.
+func sanitizeCSV(s string) string {
+	if s == "" {
+		return ""
+	}
+	i := 0
+	for i < len(s) && (s[i] == ' ' || s[i] == '\t') {
+		i++
+	}
+	if i < len(s) {
+		switch s[i] {
+		case '=', '+', '-', '@':
+			return "'" + s
+		}
+	}
+	return s
 }
 
 // ProcessRepositoriesCSV writes CSV rows for each repository in repos to the provided output writer.
@@ -229,7 +247,7 @@ func processRepositoryToCSV(owner, repo string, writer *csv.Writer, client *GitH
 }
 
 // ParseRepositoryList parses a list of repositories from command-line arguments and an optional batch file.
-// 
+//
 // It validates each repository string to ensure it follows the `owner/repo` format, appends repositories read
 // from the provided batch file (if any), and returns a deduplicated list preserving the order of first occurrence.
 // If any command-line argument is invalid the function returns an error immediately. If reading the batch file fails,
