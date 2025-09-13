@@ -48,6 +48,20 @@ func main() {
 				Usage:  "Perform branch management steps from repositories.yaml",
 				Before: configureClient,
 				Action: branchCommand,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "config",
+						Value: "repositories.yaml",
+						Usage: "configuration of repository updates to perform",
+					},
+					&cli.BoolFlag{
+						Name:    "debug",
+						Aliases: []string{"d"},
+						EnvVars: []string{"OWNERSHIT_DEBUG"},
+						Usage:   "set output to debug logging",
+						Value:   false,
+					},
+				},
 			},
 			{
 				Name:      "sync",
@@ -55,6 +69,20 @@ func main() {
 				UsageText: "ownershit sync --config repositories.yaml",
 				Before:    configureClient,
 				Action:    syncCommand,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "config",
+						Value: "repositories.yaml",
+						Usage: "configuration of repository updates to perform",
+					},
+					&cli.BoolFlag{
+						Name:    "debug",
+						Aliases: []string{"d"},
+						EnvVars: []string{"OWNERSHIT_DEBUG"},
+						Usage:   "set output to debug logging",
+						Value:   false,
+					},
+				},
 			},
 			{
 				Name:        "archive",
@@ -67,17 +95,40 @@ func main() {
 				Usage:  "set default labels for repositories",
 				Before: configureClient,
 				Action: labelCommand,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "config",
+						Value: "repositories.yaml",
+						Usage: "configuration of repository updates to perform",
+					},
+					&cli.BoolFlag{
+						Name:    "debug",
+						Aliases: []string{"d"},
+						EnvVars: []string{"OWNERSHIT_DEBUG"},
+						Usage:   "set output to debug logging",
+						Value:   false,
+					},
+				},
 			},
 			{
 				Name:   "ratelimit",
 				Usage:  "get ratelimit information for the GitHub GraphQL v4 API",
 				Before: configureClient,
 				Action: rateLimitCommand,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "debug",
+						Aliases: []string{"d"},
+						EnvVars: []string{"OWNERSHIT_DEBUG"},
+						Usage:   "set output to debug logging",
+						Value:   false,
+					},
+				},
 			},
 			{
 				Name:      "import",
 				Usage:     "Import repository configuration from GitHub and output as YAML",
-				UsageText: "ownershit import owner/repo [--output filename.yaml]",
+				UsageText: "ownershit import [--output filename.yaml] owner/repo",
 				Before:    configureImportClient,
 				Action:    importCommand,
 				Flags: []cli.Flag{
@@ -85,6 +136,13 @@ func main() {
 						Name:    "output",
 						Aliases: []string{"o"},
 						Usage:   "output file path (default: stdout)",
+					},
+					&cli.BoolFlag{
+						Name:    "debug",
+						Aliases: []string{"d"},
+						EnvVars: []string{"OWNERSHIT_DEBUG"},
+						Usage:   "set output to debug logging",
+						Value:   false,
 					},
 				},
 			},

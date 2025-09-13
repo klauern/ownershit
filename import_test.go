@@ -18,9 +18,13 @@ func TestConvertBranchProtection(t *testing.T) {
 		expected   *BranchPermissions
 	}{
 		{
-			name:       "nil protection should return empty permissions",
+			name:       "nil protection should return empty permissions with explicit false values",
 			protection: nil,
-			expected:   &BranchPermissions{},
+			expected: &BranchPermissions{
+				RequireStatusChecks:   github.Bool(false),
+				RequireUpToDateBranch: github.Bool(false),
+				RestrictPushes:        github.Bool(false),
+			},
 		},
 		{
 			name: "advanced settings enabled",
@@ -31,6 +35,9 @@ func TestConvertBranchProtection(t *testing.T) {
 				AllowDeletions:                 &github.AllowDeletions{Enabled: true},
 			},
 			expected: &BranchPermissions{
+				RequireStatusChecks:           github.Bool(false),
+				RequireUpToDateBranch:         github.Bool(false),
+				RestrictPushes:                github.Bool(false),
 				RequireConversationResolution: github.Bool(true),
 				RequireLinearHistory:          github.Bool(true),
 				AllowForcePushes:              github.Bool(true),
@@ -46,6 +53,9 @@ func TestConvertBranchProtection(t *testing.T) {
 				AllowDeletions:                 &github.AllowDeletions{Enabled: false},
 			},
 			expected: &BranchPermissions{
+				RequireStatusChecks:           github.Bool(false),
+				RequireUpToDateBranch:         github.Bool(false),
+				RestrictPushes:                github.Bool(false),
 				RequireConversationResolution: github.Bool(false),
 				RequireLinearHistory:          github.Bool(false),
 				AllowForcePushes:              github.Bool(false),
@@ -64,6 +74,9 @@ func TestConvertBranchProtection(t *testing.T) {
 				AllowForcePushes:               &github.AllowForcePushes{Enabled: false},
 			},
 			expected: &BranchPermissions{
+				RequireStatusChecks:           github.Bool(false),
+				RequireUpToDateBranch:         github.Bool(false),
+				RestrictPushes:                github.Bool(false),
 				RequirePullRequestReviews:     github.Bool(true),
 				ApproverCount:                 github.Int(2),
 				RequireCodeOwners:             github.Bool(true),
@@ -85,6 +98,7 @@ func TestConvertBranchProtection(t *testing.T) {
 			expected: &BranchPermissions{
 				RequireStatusChecks:   github.Bool(true),
 				RequireUpToDateBranch: github.Bool(true),
+				RestrictPushes:        github.Bool(false),
 				StatusChecks:          []string{"ci/build", "ci/test"},
 				RequireLinearHistory:  github.Bool(true),
 				AllowDeletions:        github.Bool(false),
@@ -105,8 +119,10 @@ func TestConvertBranchProtection(t *testing.T) {
 				},
 			},
 			expected: &BranchPermissions{
-				RestrictPushes: github.Bool(true),
-				PushAllowlist:  []string{"admin-team", "maintainers", "admin-user", "maintainer"},
+				RequireStatusChecks:   github.Bool(false),
+				RequireUpToDateBranch: github.Bool(false),
+				RestrictPushes:        github.Bool(true),
+				PushAllowlist:         []string{"admin-team", "maintainers", "admin-user", "maintainer"},
 			},
 		},
 		{
@@ -120,8 +136,10 @@ func TestConvertBranchProtection(t *testing.T) {
 				},
 			},
 			expected: &BranchPermissions{
-				RestrictPushes: github.Bool(true),
-				PushAllowlist:  []string{"core-team"},
+				RequireStatusChecks:   github.Bool(false),
+				RequireUpToDateBranch: github.Bool(false),
+				RestrictPushes:        github.Bool(true),
+				PushAllowlist:         []string{"core-team"},
 			},
 		},
 		{
@@ -135,8 +153,10 @@ func TestConvertBranchProtection(t *testing.T) {
 				},
 			},
 			expected: &BranchPermissions{
-				RestrictPushes: github.Bool(true),
-				PushAllowlist:  []string{"admin"},
+				RequireStatusChecks:   github.Bool(false),
+				RequireUpToDateBranch: github.Bool(false),
+				RestrictPushes:        github.Bool(true),
+				PushAllowlist:         []string{"admin"},
 			},
 		},
 		{
@@ -154,8 +174,10 @@ func TestConvertBranchProtection(t *testing.T) {
 				},
 			},
 			expected: &BranchPermissions{
-				RestrictPushes: github.Bool(true),
-				PushAllowlist:  []string{"valid-team", "valid-user"},
+				RequireStatusChecks:   github.Bool(false),
+				RequireUpToDateBranch: github.Bool(false),
+				RestrictPushes:        github.Bool(true),
+				PushAllowlist:         []string{"valid-team", "valid-user"},
 			},
 		},
 	}

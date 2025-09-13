@@ -5,6 +5,7 @@ package ownershit
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
@@ -29,26 +30,34 @@ func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project, disc
 			}
 		} `graphql:"updateRepository(input: $input)"`
 	}
-	input := githubv4.UpdateRepositoryInput{
-		RepositoryID:       id,
-		HasWikiEnabled:     githubv4.NewBoolean(githubv4.Boolean(*wiki)),
-		HasIssuesEnabled:   githubv4.NewBoolean(githubv4.Boolean(*issues)),
-		HasProjectsEnabled: githubv4.NewBoolean(githubv4.Boolean(*project)),
-	}
+    // Start with only the repository ID set
+    inputRepo := githubv4.UpdateRepositoryInput{
+        RepositoryID: id,
+    }
+    // Only set fields if corresponding pointers are non-nil
+    if wiki != nil {
+        inputRepo.HasWikiEnabled = githubv4.NewBoolean(githubv4.Boolean(*wiki))
+    }
+    if issues != nil {
+        inputRepo.HasIssuesEnabled = githubv4.NewBoolean(githubv4.Boolean(*issues))
+    }
+    if project != nil {
+        inputRepo.HasProjectsEnabled = githubv4.NewBoolean(githubv4.Boolean(*project))
+    }
 
 	// Only set optional fields if they are not nil
-	if discussions != nil {
-		input.HasDiscussionsEnabled = githubv4.NewBoolean(githubv4.Boolean(*discussions))
-	}
-	if sponsorships != nil {
-		input.HasSponsorshipsEnabled = githubv4.NewBoolean(githubv4.Boolean(*sponsorships))
-	}
-	log.Debug().
-		Interface("mutation", mutation).
-		Interface("input", input).
-		Interface("repositoryID", id).
-		Msg("GitHubClient.SetRepository()")
-	err := c.Graph.Mutate(c.Context, &mutation, input, nil)
+    if discussions != nil {
+        inputRepo.HasDiscussionsEnabled = githubv4.NewBoolean(githubv4.Boolean(*discussions))
+    }
+    if sponsorships != nil {
+        inputRepo.HasSponsorshipsEnabled = githubv4.NewBoolean(githubv4.Boolean(*sponsorships))
+    }
+    log.Debug().
+        Interface("mutation", mutation).
+        Interface("input", inputRepo).
+        Interface("repositoryID", id).
+        Msg("GitHubClient.SetRepository()")
+    err := c.Graph.Mutate(c.Context, &mutation, inputRepo, nil)
 	if err != nil {
 		log.Err(err).
 			Str("operation", "updateRepository").
@@ -79,14 +88,17 @@ func (c *GitHubClient) SetEnhancedBranchProtection(id githubv4.ID, branchPattern
 		CreateBranchProtectionRule struct {
 			ClientMutationID     githubv4.ID
 			BranchProtectionRule struct {
-				RepositoryID                 githubv4.ID
-				Pattern                      githubv4.String
-				RequiresApprovingReviews     githubv4.Boolean
-				RequiresApprovingReviewCount githubv4.Int
-				RequiresCodeOwnerReviews     githubv4.Boolean
-				RequiresStatusChecks         githubv4.Boolean
-				RequiresStrictStatusChecks   githubv4.Boolean
-				RequiredStatusCheckContexts  []githubv4.String
+				ID                          githubv4.ID
+				Pattern                     githubv4.String
+				RequiresApprovingReviews    githubv4.Boolean
+				RequiredApprovingReviewCount githubv4.Int
+				RequiresCodeOwnerReviews    githubv4.Boolean
+				RequiresStatusChecks        githubv4.Boolean
+				RequiresStrictStatusChecks  githubv4.Boolean
+				RequiredStatusCheckContexts []githubv4.String
+				Repository                  struct {
+					ID githubv4.ID
+				}
 			}
 		} `graphql:"createBranchProtectionRule(input: $input)"`
 	}
@@ -164,18 +176,37 @@ func (c *GitHubClient) SetEnhancedBranchProtection(id githubv4.ID, branchPattern
 		Interface("mutation", mutation).
 		Interface("input", input).
 		Interface("repositoryID", id).
-		Msg("GitHubClient.SetEnhancedBranchProtection()")
+		Str("pattern", branchPattern).
+		Msg("GitHubClient.SetEnhancedBranchProtection() - Before GraphQL mutation")
 
 	err := c.Graph.Mutate(c.Context, &mutation, input, nil)
 	if err != nil {
+		// Check if this is a "Name already protected" error - this is expected and we should fall back to REST API
+		if strings.Contains(err.Error(), "Name already protected") {
+			log.Info().
+				Str("pattern", branchPattern).
+				Str("reason", "branch protection rule already exists").
+				Msg("GraphQL createBranchProtectionRule failed - will use REST API fallback")
+			return NewGitHubAPIError(0, "create branch protection rule", "",
+				fmt.Sprintf("branch protection rule already exists for pattern %s, falling back to REST API", branchPattern), err)
+		}
+		
+		// For other errors, log detailed information
 		log.Err(err).
 			Str("operation", "createBranchProtectionRule").
 			Interface("repositoryID", id).
 			Str("pattern", branchPattern).
+			Interface("input", input).
+			Interface("mutationStruct", mutation).
 			Msg("setting enhanced branch protection")
 		return NewGitHubAPIError(0, "create branch protection rule", "",
 			fmt.Sprintf("failed to create enhanced branch protection rule for pattern %s", branchPattern), err)
 	}
+
+	log.Debug().
+		Interface("result", mutation).
+		Str("pattern", branchPattern).
+		Msg("GitHubClient.SetEnhancedBranchProtection() - GraphQL mutation successful")
 	return nil
 }
 
