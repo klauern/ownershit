@@ -75,7 +75,7 @@ type Repository struct {
 	Homepage               *string `yaml:"homepage"`
 	DeleteBranchOnMerge    *bool   `yaml:"delete_branch_on_merge"`
 	HasDiscussionsEnabled  *bool   `yaml:"discussions_enabled"`
-	HasSponsorshipsEnabled *bool   `yaml:"sponsorships_enabled"`
+	HasSponsorshipsEnabled *bool   `yaml:"sponsorships_enabled,omitempty"`
 }
 
 type RepoLabel struct {
