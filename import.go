@@ -26,7 +26,12 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 	// Get team permissions
 	teamPermissions, err := getTeamPermissions(client, owner, repo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team permissions: %w", err)
+		log.Warn().
+			Str("owner", owner).
+			Str("repo", repo).
+			Err(err).
+			Msg("Failed to get team permissions, continuing with empty team permissions")
+		teamPermissions = []*Permissions{}
 	}
 
 	// Get branch protection rules
