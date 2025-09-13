@@ -97,28 +97,33 @@ func NewSecureGitHubClient(ctx context.Context) (*GitHubClient, error) {
 
 // AddPermissions adds a given team level repository permission.
 func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissions) error {
-	resp, err := c.Teams.
-		AddTeamRepoBySlug(
-			c.Context,
-			organization,
-			*perm.Team,
-			organization,
-			repo,
-			&github.TeamAddTeamRepoOptions{Permission: *perm.Level})
-	if err != nil {
-		log.Err(err).
-			Str("team", *perm.Team).
-			Str("repo", repo).
-			Str("response-status", resp.Status).
-			Msg("error adding team as collaborator to repo")
-		resp, _ := httputil.DumpResponse(resp.Response, true)
-		if resp != nil {
-			log.Debug().Str("response-body", string(resp))
-		}
-		return fmt.Errorf("adding team as collaborator to repo: %w", err)
-	}
-	log.Info().Int("status-code", resp.StatusCode).Msg("Successfully set repo")
-	return nil
+    resp, err := c.Teams.
+        AddTeamRepoBySlug(
+            c.Context,
+            organization,
+            *perm.Team,
+            organization,
+            repo,
+            &github.TeamAddTeamRepoOptions{Permission: *perm.Level})
+    if err != nil {
+        logEvent := log.Err(err).
+            Str("team", *perm.Team).
+            Str("repo", repo)
+        if resp != nil {
+            logEvent = logEvent.Str("response-status", resp.Status)
+            if log.Debug().Enabled() {
+                dumped, _ := httputil.DumpResponse(resp.Response, true)
+                if len(dumped) > 0 {
+                    log.Debug().Msg("response body follows")
+                    log.Debug().Str("response-body", string(dumped))
+                }
+            }
+        }
+        logEvent.Msg("error adding team as collaborator to repo")
+        return fmt.Errorf("adding team as collaborator to repo: %w", err)
+    }
+    log.Info().Int("status-code", resp.StatusCode).Msg("Successfully set repo")
+    return nil
 }
 
 // UpdateBranchPermissions changes the settings for branch permissions from `perms`.
@@ -133,25 +138,28 @@ func (c *GitHubClient) UpdateBranchPermissions(org, repo string, perms *BranchPe
 	if perms.AllowSquashMerge != nil {
 		r.AllowSquashMerge = perms.AllowSquashMerge
 	}
-	_, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
-	if err != nil {
-		statusCode := 0
-		if resp != nil {
-			statusCode = resp.StatusCode
-		}
-		log.Err(err).
-			Str("org", org).
-			Str("repo", repo).
-			Int("statusCode", statusCode).
-			Str("operation", "updateRepositorySettings").
-			Msg("Error updating repository settings")
-		if resp != nil {
-			resp, _ := httputil.DumpResponse(resp.Response, true)
-			log.Debug().Str("response-body", string(resp))
-		}
-		return NewGitHubAPIError(statusCode, "update repository settings",
-			fmt.Sprintf("%s/%s", org, repo), "failed to update repository settings", err)
-	}
+    _, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
+    if err != nil {
+        statusCode := 0
+        if resp != nil {
+            statusCode = resp.StatusCode
+        }
+        logEvent := log.Err(err).
+            Str("org", org).
+            Str("repo", repo).
+            Int("statusCode", statusCode).
+            Str("operation", "updateRepositorySettings")
+        if resp != nil && log.Debug().Enabled() {
+            dumped, _ := httputil.DumpResponse(resp.Response, true)
+            if len(dumped) > 0 {
+                log.Debug().Msg("response body follows")
+                log.Debug().Str("response-body", string(dumped))
+            }
+        }
+        logEvent.Msg("Error updating repository settings")
+        return NewGitHubAPIError(statusCode, "update repository settings",
+            fmt.Sprintf("%s/%s", org, repo), "failed to update repository settings", err)
+    }
 
 	log.Info().Fields(map[string]interface{}{
 		"code": resp.StatusCode,
@@ -170,26 +178,29 @@ func (c *GitHubClient) SetRepositoryAdvancedSettings(org, repo string, deleteBra
 		DeleteBranchOnMerge: deleteBranchOnMerge,
 	}
 
-	_, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
-	if err != nil {
-		statusCode := 0
-		if resp != nil {
-			statusCode = resp.StatusCode
-		}
-		log.Err(err).
-			Str("org", org).
-			Str("repo", repo).
-			Int("statusCode", statusCode).
-			Bool("deleteBranchOnMerge", *deleteBranchOnMerge).
-			Str("operation", "setRepositoryAdvancedSettings").
-			Msg("Error setting advanced repository settings")
-		if resp != nil {
-			resp, _ := httputil.DumpResponse(resp.Response, true)
-			log.Debug().Str("response-body", string(resp))
-		}
-		return NewGitHubAPIError(statusCode, "set advanced repository settings",
-			fmt.Sprintf("%s/%s", org, repo), "failed to set advanced repository settings", err)
-	}
+    _, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
+    if err != nil {
+        statusCode := 0
+        if resp != nil {
+            statusCode = resp.StatusCode
+        }
+        logEvent := log.Err(err).
+            Str("org", org).
+            Str("repo", repo).
+            Int("statusCode", statusCode).
+            Bool("deleteBranchOnMerge", *deleteBranchOnMerge).
+            Str("operation", "setRepositoryAdvancedSettings")
+        if resp != nil && log.Debug().Enabled() {
+            dumped, _ := httputil.DumpResponse(resp.Response, true)
+            if len(dumped) > 0 {
+                log.Debug().Msg("response body follows")
+                log.Debug().Str("response-body", string(dumped))
+            }
+        }
+        logEvent.Msg("Error setting advanced repository settings")
+        return NewGitHubAPIError(statusCode, "set advanced repository settings",
+            fmt.Sprintf("%s/%s", org, repo), "failed to set advanced repository settings", err)
+    }
 
 	log.Info().
 		Str("org", org).
@@ -285,22 +296,21 @@ func (c *GitHubClient) SetBranchProtectionFallback(org, repo, branch string, per
 		Msg("Setting branch protection via REST API")
 
 	// Apply protection via REST API
-	_, resp, err := c.v3.Repositories.UpdateBranchProtection(c.Context, org, repo, branch, protection)
-	if err != nil {
-		statusCode := 0
-		if resp != nil {
-			statusCode = resp.StatusCode
-		}
-		log.Err(err).
-			Str("org", org).
-			Str("repo", repo).
-			Str("branch", branch).
-			Int("statusCode", statusCode).
-			Str("operation", "updateBranchProtection").
-			Msg("Error setting branch protection via REST API")
-		return NewGitHubAPIError(statusCode, "update branch protection",
-			fmt.Sprintf("%s/%s", org, repo), "failed to set branch protection via REST API", err)
-	}
+    _, resp, err := c.v3.Repositories.UpdateBranchProtection(c.Context, org, repo, branch, protection)
+    if err != nil {
+        statusCode := 0
+        if resp != nil {
+            statusCode = resp.StatusCode
+        }
+        _ = log.Err(err).
+            Str("org", org).
+            Str("repo", repo).
+            Str("branch", branch).
+            Int("statusCode", statusCode).
+            Str("operation", "updateBranchProtection")
+        return NewGitHubAPIError(statusCode, "update branch protection",
+            fmt.Sprintf("%s/%s", org, repo), "failed to set branch protection via REST API", err)
+    }
 
 	log.Info().
 		Str("org", org).

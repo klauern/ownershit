@@ -75,7 +75,7 @@ type Repository struct {
 	Homepage               *string `yaml:"homepage"`
 	DeleteBranchOnMerge    *bool   `yaml:"delete_branch_on_merge"`
 	HasDiscussionsEnabled  *bool   `yaml:"discussions_enabled"`
-	HasSponsorshipsEnabled *bool   `yaml:"sponsorships_enabled"`
+	HasSponsorshipsEnabled *bool   `yaml:"sponsorships_enabled,omitempty"`
 }
 
 type RepoLabel struct {
@@ -478,24 +478,27 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 					Msg("setting branch protection fallback via REST API")
 			}
 
-			// Set repository features (wiki, issues, projects, discussions, sponsorships)
-			err := client.SetRepository(&repoID, repo.Wiki, repo.Issues, repo.Projects, repo.HasDiscussionsEnabled, repo.HasSponsorshipsEnabled)
-			if err != nil {
-				logEvent := log.Err(err).
-					Interface("repoID", repoID).
-					Bool("wikiEnabled", *repo.Wiki).
-					Bool("issuesEnabled", *repo.Issues).
-					Bool("projectsEnabled", *repo.Projects)
-
-				if repo.HasDiscussionsEnabled != nil {
-					logEvent = logEvent.Bool("discussionsEnabled", *repo.HasDiscussionsEnabled)
-				}
-				if repo.HasSponsorshipsEnabled != nil {
-					logEvent = logEvent.Bool("sponsorshipsEnabled", *repo.HasSponsorshipsEnabled)
-				}
-
-				logEvent.Msg("setting repository fields")
-			}
+            // Set repository features (wiki, issues, projects, discussions, sponsorships)
+            err := client.SetRepository(&repoID, repo.Wiki, repo.Issues, repo.Projects, repo.HasDiscussionsEnabled, repo.HasSponsorshipsEnabled)
+            if err != nil {
+                logEvent := log.Err(err).Interface("repoID", repoID)
+                if repo.Wiki != nil {
+                    logEvent = logEvent.Bool("wikiEnabled", *repo.Wiki)
+                }
+                if repo.Issues != nil {
+                    logEvent = logEvent.Bool("issuesEnabled", *repo.Issues)
+                }
+                if repo.Projects != nil {
+                    logEvent = logEvent.Bool("projectsEnabled", *repo.Projects)
+                }
+                if repo.HasDiscussionsEnabled != nil {
+                    logEvent = logEvent.Bool("discussionsEnabled", *repo.HasDiscussionsEnabled)
+                }
+                if repo.HasSponsorshipsEnabled != nil {
+                    logEvent = logEvent.Bool("sponsorshipsEnabled", *repo.HasSponsorshipsEnabled)
+                }
+                logEvent.Msg("setting repository fields")
+            }
 
 			// Set advanced repository settings (delete branch on merge) via REST API
 			if repo.DeleteBranchOnMerge != nil {
