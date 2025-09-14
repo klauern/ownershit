@@ -30,34 +30,34 @@ func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project, disc
 			}
 		} `graphql:"updateRepository(input: $input)"`
 	}
-    // Start with only the repository ID set
-    inputRepo := githubv4.UpdateRepositoryInput{
-        RepositoryID: id,
-    }
-    // Only set fields if corresponding pointers are non-nil
-    if wiki != nil {
-        inputRepo.HasWikiEnabled = githubv4.NewBoolean(githubv4.Boolean(*wiki))
-    }
-    if issues != nil {
-        inputRepo.HasIssuesEnabled = githubv4.NewBoolean(githubv4.Boolean(*issues))
-    }
-    if project != nil {
-        inputRepo.HasProjectsEnabled = githubv4.NewBoolean(githubv4.Boolean(*project))
-    }
+	// Start with only the repository ID set
+	inputRepo := githubv4.UpdateRepositoryInput{
+		RepositoryID: id,
+	}
+	// Only set fields if corresponding pointers are non-nil
+	if wiki != nil {
+		inputRepo.HasWikiEnabled = githubv4.NewBoolean(githubv4.Boolean(*wiki))
+	}
+	if issues != nil {
+		inputRepo.HasIssuesEnabled = githubv4.NewBoolean(githubv4.Boolean(*issues))
+	}
+	if project != nil {
+		inputRepo.HasProjectsEnabled = githubv4.NewBoolean(githubv4.Boolean(*project))
+	}
 
 	// Only set optional fields if they are not nil
-    if discussions != nil {
-        inputRepo.HasDiscussionsEnabled = githubv4.NewBoolean(githubv4.Boolean(*discussions))
-    }
-    if sponsorships != nil {
-        inputRepo.HasSponsorshipsEnabled = githubv4.NewBoolean(githubv4.Boolean(*sponsorships))
-    }
-    log.Debug().
-        Interface("mutation", mutation).
-        Interface("input", inputRepo).
-        Interface("repositoryID", id).
-        Msg("GitHubClient.SetRepository()")
-    err := c.Graph.Mutate(c.Context, &mutation, inputRepo, nil)
+	if discussions != nil {
+		inputRepo.HasDiscussionsEnabled = githubv4.NewBoolean(githubv4.Boolean(*discussions))
+	}
+	if sponsorships != nil {
+		inputRepo.HasSponsorshipsEnabled = githubv4.NewBoolean(githubv4.Boolean(*sponsorships))
+	}
+	log.Debug().
+		Interface("mutation", mutation).
+		Interface("input", inputRepo).
+		Interface("repositoryID", id).
+		Msg("GitHubClient.SetRepository()")
+	err := c.Graph.Mutate(c.Context, &mutation, inputRepo, nil)
 	if err != nil {
 		log.Err(err).
 			Str("operation", "updateRepository").
@@ -88,15 +88,15 @@ func (c *GitHubClient) SetEnhancedBranchProtection(id githubv4.ID, branchPattern
 		CreateBranchProtectionRule struct {
 			ClientMutationID     githubv4.ID
 			BranchProtectionRule struct {
-				ID                          githubv4.ID
-				Pattern                     githubv4.String
-				RequiresApprovingReviews    githubv4.Boolean
+				ID                           githubv4.ID
+				Pattern                      githubv4.String
+				RequiresApprovingReviews     githubv4.Boolean
 				RequiredApprovingReviewCount githubv4.Int
-				RequiresCodeOwnerReviews    githubv4.Boolean
-				RequiresStatusChecks        githubv4.Boolean
-				RequiresStrictStatusChecks  githubv4.Boolean
-				RequiredStatusCheckContexts []githubv4.String
-				Repository                  struct {
+				RequiresCodeOwnerReviews     githubv4.Boolean
+				RequiresStatusChecks         githubv4.Boolean
+				RequiresStrictStatusChecks   githubv4.Boolean
+				RequiredStatusCheckContexts  []githubv4.String
+				Repository                   struct {
 					ID githubv4.ID
 				}
 			}
@@ -190,7 +190,7 @@ func (c *GitHubClient) SetEnhancedBranchProtection(id githubv4.ID, branchPattern
 			return NewGitHubAPIError(0, "create branch protection rule", "",
 				fmt.Sprintf("branch protection rule already exists for pattern %s, falling back to REST API", branchPattern), err)
 		}
-		
+
 		// For other errors, log detailed information
 		log.Err(err).
 			Str("operation", "createBranchProtectionRule").

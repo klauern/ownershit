@@ -50,12 +50,12 @@ func (c *GitHubV4Client) GetRateLimit() (RateLimit, error) {
 }
 
 func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
-    labelsMap := map[string]Label{}
-    labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, owner, "")
-    if err != nil {
-        return fmt.Errorf("can't get labels: %w", err)
-    }
-    repoID := labelResp.Repository.Id
+	labelsMap := map[string]Label{}
+	labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, owner, "")
+	if err != nil {
+		return fmt.Errorf("can't get labels: %w", err)
+	}
+	repoID := labelResp.Repository.Id
 	for i := 0; i < len(labelResp.Repository.Labels.Edges); i++ {
 		label := labelResp.Repository.Labels.Edges[i]
 		labelsMap[label.Node.Name] = Label(label.Node)

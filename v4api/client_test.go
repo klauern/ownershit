@@ -21,44 +21,44 @@ type roundTripperFunc func(*http.Request) (*http.Response, error)
 func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
 func TestNewGHv4Client(t *testing.T) {
-    tests := []struct {
-        name        string
-        envVars     map[string]string
-        wantRetries int
-        wantTimeout int
-        wantErr     bool
-    }{
-        {
-            name: "default configuration",
-            envVars: map[string]string{
-                "GITHUB_TOKEN": "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
-            },
-            wantRetries: defaultConfig.maxRetries,
-            wantTimeout: defaultConfig.timeoutSeconds,
-            wantErr:     false,
-        },
-        {
-            name: "custom configuration",
-            envVars: map[string]string{
-                "GITHUB_TOKEN":                   "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
-                EnvVarPrefix + EnvMaxRetries:     "5",
-                EnvVarPrefix + EnvTimeoutSeconds: "30",
-            },
-            wantRetries: 5,
-            wantTimeout: 30,
-            wantErr:     false,
-        },
-        {
-            name:        "missing token returns error",
-            envVars:     map[string]string{"GITHUB_TOKEN": ""}, // Explicitly unset token
-            wantRetries: defaultConfig.maxRetries,
-            wantTimeout: defaultConfig.timeoutSeconds,
-            wantErr:     true,
-        },
-    }
+	tests := []struct {
+		name        string
+		envVars     map[string]string
+		wantRetries int
+		wantTimeout int
+		wantErr     bool
+	}{
+		{
+			name: "default configuration",
+			envVars: map[string]string{
+				"GITHUB_TOKEN": "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
+			},
+			wantRetries: defaultConfig.maxRetries,
+			wantTimeout: defaultConfig.timeoutSeconds,
+			wantErr:     false,
+		},
+		{
+			name: "custom configuration",
+			envVars: map[string]string{
+				"GITHUB_TOKEN":                   "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
+				EnvVarPrefix + EnvMaxRetries:     "5",
+				EnvVarPrefix + EnvTimeoutSeconds: "30",
+			},
+			wantRetries: 5,
+			wantTimeout: 30,
+			wantErr:     false,
+		},
+		{
+			name:        "missing token returns error",
+			envVars:     map[string]string{"GITHUB_TOKEN": ""}, // Explicitly unset token
+			wantRetries: defaultConfig.maxRetries,
+			wantTimeout: defaultConfig.timeoutSeconds,
+			wantErr:     true,
+		},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			oldVals := make(map[string]string)
 			for k, v := range tt.envVars {
@@ -71,13 +71,13 @@ func TestNewGHv4Client(t *testing.T) {
 				}
 			}()
 
-            client, err := NewGHv4Client()
-            if (err != nil) != tt.wantErr {
-                t.Fatalf("NewGHv4Client() error = %v, wantErr %v", err, tt.wantErr)
-            }
-            if err != nil {
-                return
-            }
+			client, err := NewGHv4Client()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("NewGHv4Client() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil {
+				return
+			}
 
 			// Access the underlying HTTP client
 			httpClient := client.retryClient
@@ -112,14 +112,14 @@ func Test_authedTransport_RoundTrip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-            // Use a stubbed RoundTripper to avoid real network/TLS
-            transport := &authedTransport{
-                key:     tt.key,
-                wrapped: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
-                    // Return a minimal valid response
-                    return &http.Response{StatusCode: 200, Body: http.NoBody, Header: make(http.Header)}, nil
-                }),
-            }
+			// Use a stubbed RoundTripper to avoid real network/TLS
+			transport := &authedTransport{
+				key: tt.key,
+				wrapped: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+					// Return a minimal valid response
+					return &http.Response{StatusCode: 200, Body: http.NoBody, Header: make(http.Header)}, nil
+				}),
+			}
 
 			req, err := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
 			if err != nil {
@@ -666,18 +666,18 @@ func TestBuildClient_ValidateRetryConfiguration(t *testing.T) {
 }
 
 func TestNewGHv4Client_TokenValidationError(t *testing.T) {
-    // Save original environment
-    oldToken := os.Getenv("GITHUB_TOKEN")
-    defer os.Setenv("GITHUB_TOKEN", oldToken)
+	// Save original environment
+	oldToken := os.Getenv("GITHUB_TOKEN")
+	defer os.Setenv("GITHUB_TOKEN", oldToken)
 
-    // Unset token to cause validation error
-    os.Unsetenv("GITHUB_TOKEN")
+	// Unset token to cause validation error
+	os.Unsetenv("GITHUB_TOKEN")
 
-    // Now we expect an error instead of a panic
-    _, err := NewGHv4Client()
-    if err == nil {
-        t.Error("Expected error due to token validation failure, but got none")
-    }
+	// Now we expect an error instead of a panic
+	_, err := NewGHv4Client()
+	if err == nil {
+		t.Error("Expected error due to token validation failure, but got none")
+	}
 }
 
 // Helper type for testing error transport.

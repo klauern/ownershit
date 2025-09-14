@@ -133,7 +133,6 @@ func sanitizeCSV(s string) string {
 // that includes totals and per-repo errors. Returns nil if all repositories were processed successfully.
 func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClient, writeHeader bool) error {
 	csvWriter := csv.NewWriter(output)
-	defer csvWriter.Flush()
 
 	// Write header if required
 	if writeHeader {
@@ -212,6 +211,12 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 		Int("successful", successCount).
 		Int("failed", errorCount).
 		Msg("CSV import completed")
+
+	// Flush and check for any buffered I/O errors
+	csvWriter.Flush()
+	if err := csvWriter.Error(); err != nil {
+		return fmt.Errorf("failed to flush CSV output: %w", err)
+	}
 
 	// Report errors if any occurred
 	if len(errors) > 0 {
