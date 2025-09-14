@@ -235,8 +235,6 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 }
 
 // convertBranchProtection converts GitHub branch protection to ownershit format.
-//
-//nolint:gocyclo // mapping nested GitHub structures into flat config.
 func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	if protection == nil {
 		// Return explicit false values for all boolean fields when no protection exists
@@ -249,16 +247,25 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	}
 
 	perms := &BranchPermissions{}
+	mapPRReviews(protection, perms)
+	mapStatusChecks(protection, perms)
+	mapAdminEnforcement(protection, perms)
+	mapRestrictions(protection, perms)
+	mapAdvancedProtection(protection, perms)
+	return perms
+}
 
-	// Pull request reviews
-	if protection.RequiredPullRequestReviews != nil {
-		trueVal := true
-		perms.RequirePullRequestReviews = &trueVal
-		perms.ApproverCount = &protection.RequiredPullRequestReviews.RequiredApprovingReviewCount
-		perms.RequireCodeOwners = &protection.RequiredPullRequestReviews.RequireCodeOwnerReviews
+func mapPRReviews(protection *github.Protection, perms *BranchPermissions) {
+	if protection.RequiredPullRequestReviews == nil {
+		return
 	}
+	trueVal := true
+	perms.RequirePullRequestReviews = &trueVal
+	perms.ApproverCount = &protection.RequiredPullRequestReviews.RequiredApprovingReviewCount
+	perms.RequireCodeOwners = &protection.RequiredPullRequestReviews.RequireCodeOwnerReviews
+}
 
-	// Status checks
+func mapStatusChecks(protection *github.Protection, perms *BranchPermissions) {
 	if protection.RequiredStatusChecks != nil {
 		trueVal := true
 		perms.RequireStatusChecks = &trueVal
@@ -267,66 +274,56 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 			perms.StatusChecks = make([]string, len(*protection.RequiredStatusChecks.Contexts))
 			copy(perms.StatusChecks, *protection.RequiredStatusChecks.Contexts)
 		}
-	} else {
-		// Explicitly set to false when status checks are disabled
-		falseVal := false
-		perms.RequireStatusChecks = &falseVal
-		perms.RequireUpToDateBranch = &falseVal
+		return
 	}
+	// Explicitly set to false when status checks are disabled
+	falseVal := false
+	perms.RequireStatusChecks = &falseVal
+	perms.RequireUpToDateBranch = &falseVal
+}
 
-	// Admin enforcement
+func mapAdminEnforcement(protection *github.Protection, perms *BranchPermissions) {
 	if protection.EnforceAdmins != nil {
 		perms.EnforceAdmins = &protection.EnforceAdmins.Enabled
 	}
+}
 
-	// Restrictions
-	if protection.Restrictions != nil {
-		trueVal := true
-		perms.RestrictPushes = &trueVal
-
-		// Extract push allowlist from restrictions
-		var allowlist []string
-
-		// Add team slugs to allowlist
-		for _, team := range protection.Restrictions.Teams {
-			if team.Slug != nil {
-				allowlist = append(allowlist, *team.Slug)
-			}
-		}
-
-		// Add user logins to allowlist
-		for _, user := range protection.Restrictions.Users {
-			if user.Login != nil {
-				allowlist = append(allowlist, *user.Login)
-			}
-		}
-
-		// Set the push allowlist
-		perms.PushAllowlist = allowlist
-	} else {
-		// Explicitly set to false when push restrictions are disabled
+func mapRestrictions(protection *github.Protection, perms *BranchPermissions) {
+	if protection.Restrictions == nil {
 		falseVal := false
 		perms.RestrictPushes = &falseVal
+		return
 	}
+	trueVal := true
+	perms.RestrictPushes = &trueVal
 
-	// Advanced settings - now available in github.Protection struct
+	var allowlist []string
+	for _, team := range protection.Restrictions.Teams {
+		if team.Slug != nil {
+			allowlist = append(allowlist, *team.Slug)
+		}
+	}
+	for _, user := range protection.Restrictions.Users {
+		if user.Login != nil {
+			allowlist = append(allowlist, *user.Login)
+		}
+	}
+	perms.PushAllowlist = allowlist
+}
+
+func mapAdvancedProtection(protection *github.Protection, perms *BranchPermissions) {
 	if protection.RequiredConversationResolution != nil {
 		perms.RequireConversationResolution = &protection.RequiredConversationResolution.Enabled
 	}
-
 	if protection.RequireLinearHistory != nil {
 		perms.RequireLinearHistory = &protection.RequireLinearHistory.Enabled
 	}
-
 	if protection.AllowForcePushes != nil {
 		perms.AllowForcePushes = &protection.AllowForcePushes.Enabled
 	}
-
 	if protection.AllowDeletions != nil {
 		perms.AllowDeletions = &protection.AllowDeletions.Enabled
 	}
-
-	return perms
 }
 
 // getRepositoryLabels retrieves all labels for the repository.
