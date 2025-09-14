@@ -76,4 +76,6 @@ jobs:
           go mod verify
 
       - name: Lint
-        run: task lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
