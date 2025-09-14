@@ -1,8 +1,128 @@
+version: "2"
+
 linters:
+  default: standard
   enable:
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - dupword
     - errcheck
+    - funlen
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - revive
+    - err113
+    - gofmt
+    - gofumpt
+    - goimports
+    - mnd
+    - gomodguard
+    - goprintffuncname
+    - gosec
     - gosimple
     - govet
     - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - nolintlint
+    - rowserrcheck
     - staticcheck
+    - stylecheck
+    - tagalign
+    - unconvert
+    - unparam
     - unused
+    - whitespace
+  settings:
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: "github.com/pkg/errors"
+              desc: Should be replaced by standard lib errors package
+    dupl:
+      threshold: 100
+    exhaustive:
+      default-signifies-exhaustive: false
+    funlen:
+      lines: 100
+      statements: 50
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      disabled-checks:
+        - dupImport
+        - hugeParam
+        - ifElseChain
+        - octalLiteral
+        - whyNoLint
+        - wrapperFunc
+    gocyclo:
+      min-complexity: 15
+    goimports:
+      local-prefixes: github.com/golangci/golangci-lint
+    mnd:
+      settings:
+        mnd:
+          checks:
+          - argument
+          - case
+          - condition
+          - return
+    govet:
+      enable:
+        - shadow
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+    nolintlint:
+      allow-unused: false
+      require-explanation: false
+      require-specific: false
+  exclusions:
+    paths:
+      - mocks
+    rules:
+      - path: _test\.go
+        linters:
+          - mnd
+          - dupl
+          - err113
+          - errcheck
+          - lll
+          - funlen
+          - gocyclo
+          - gofumpt
+          - godot
+      - path: cmd/
+        linters:
+          - mnd
+          - funlen
+          - gocyclo
+      - path: v4api/
+        linters:
+          - mnd
+      - path: github_v3\.go
+        linters:
+          - mnd
+      - path: github_v4\.go
+        linters:
+          - mnd
