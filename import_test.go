@@ -562,7 +562,7 @@ func TestImportRepositoryConfig(t *testing.T) {
 		Times(1)
 
 	// Execute the function
-	config, err := ImportRepositoryConfig("testowner", "testrepo", client)
+	config, err := ImportRepositoryConfig("testowner", "testrepo", client, true)
 
 	// Verify results
 	if err != nil {

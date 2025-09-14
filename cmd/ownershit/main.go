@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -24,6 +25,13 @@ var (
 	commit  = "none"
 	date    = "unknown"
 	builtBy = "unknown"
+)
+
+// Sentinel errors used for argument validation and CLI input checks.
+var (
+	ErrExpectedOneArgument     = errors.New("expected exactly one argument: owner/repo")
+	ErrInvalidRepoPathFormat   = errors.New("repository path must be in format owner/repo")
+	ErrNoRepositoriesSpecified = errors.New("no repositories specified. Use 'owner/repo' format or --batch-file")
 )
 
 // main is the entry point for the ownershit CLI application.
@@ -333,13 +341,13 @@ func rateLimitCommand(c *cli.Context) error {
 // fails, or if writing the output file fails.
 func importCommand(c *cli.Context) error {
 	if c.NArg() == 0 {
-		return fmt.Errorf("expected exactly one argument: owner/repo")
+		return fmt.Errorf("%w", ErrExpectedOneArgument)
 	}
 
 	repoPath := c.Args().Get(0)
 	parts := strings.Split(repoPath, "/")
 	if len(parts) != 2 {
-		return fmt.Errorf("repository path must be in format owner/repo, got: %s", repoPath)
+		return fmt.Errorf("%w: %s", ErrInvalidRepoPathFormat, repoPath)
 	}
 
 	owner := parts[0]
@@ -350,7 +358,8 @@ func importCommand(c *cli.Context) error {
 		Str("repo", repo).
 		Msg("importing repository configuration")
 
-	config, err := shit.ImportRepositoryConfig(owner, repo, githubClient)
+	// Strict error handling for team permissions during YAML import
+	config, err := shit.ImportRepositoryConfig(owner, repo, githubClient, false)
 	if err != nil {
 		return fmt.Errorf("failed to import repository configuration: %w", err)
 	}
@@ -377,14 +386,16 @@ func importCommand(c *cli.Context) error {
 	return nil
 }
 
-// importCSVCommand parses a list of repositories and writes their configuration as CSV to stdout or a file.
+// importCSVCommand parses repos and writes their configuration as CSV to stdout or file.
 //
-// It accepts repository arguments in `owner/repo` form and/or a batch file path (flag `--batch-file`), and requires at least one repository.
-// If `--output` is provided the command writes to that file; `--append` will open the file in append mode after validating header compatibility.
-// The CSV generation is delegated to shit.ProcessRepositoriesCSV; if that returns a *shit.BatchProcessingError the command logs per-item errors and
-// returns nil when at least one repository was processed successfully (partial success), otherwise an error is returned.
+// It accepts repositories in `owner/repo` form and/or a batch file path (`--batch-file`).
+// If `--output` is provided, the command writes to that file; `--append` opens the file in
+// append mode after validating header compatibility. The CSV generation is delegated to
+// shit.ProcessRepositoriesCSV; when it returns a *shit.BatchProcessingError the command logs
+// per-item errors and returns success if at least one repository processed successfully.
 //
-// Returns an error when repository parsing, output file opening, append-mode validation, or the CSV processing (with no successes) fails.
+// Returns an error on repository parsing, opening output, append-mode validation, or when
+// all repositories fail.
 func importCSVCommand(c *cli.Context) error {
 	// Parse repository list from args and/or batch file
 	repos, err := shit.ParseRepositoryList(c.Args().Slice(), c.String("batch-file"))
@@ -393,7 +404,7 @@ func importCSVCommand(c *cli.Context) error {
 	}
 
 	if len(repos) == 0 {
-		return fmt.Errorf("no repositories specified. Use 'owner/repo' format or --batch-file")
+		return fmt.Errorf("%w", ErrNoRepositoriesSpecified)
 	}
 
 	// Setup output destination
@@ -418,8 +429,8 @@ func importCSVCommand(c *cli.Context) error {
 			flag |= os.O_APPEND
 			// Validate header compatibility only when appending to an existing file
 			if fileExisted {
-				if err := shit.ValidateCSVAppendMode(outputPath); err != nil {
-					return fmt.Errorf("append mode validation failed: %w", err)
+				if vErr := shit.ValidateCSVAppendMode(outputPath); vErr != nil {
+					return fmt.Errorf("append mode validation failed: %w", vErr)
 				}
 			}
 		} else {

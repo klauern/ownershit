@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"github.com/shurcooL/githubv4"
 )
 
 type PermissionsLevel string
@@ -186,27 +187,48 @@ func ValidateBranchPermissions(perms *BranchPermissions) error {
 	if perms == nil {
 		return NewConfigValidationError("branch_permissions", nil, "branch permissions cannot be nil", nil)
 	}
-
-	// Validate approver count
-	if perms.ApproverCount != nil {
-		if *perms.ApproverCount < 0 {
-			return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
-				"approver count cannot be negative", nil)
-		}
-		if *perms.ApproverCount > MaxApproverCount {
-			return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
-				"approver count seems unreasonably high", nil)
-		}
+	if err := validateApproverCount(perms); err != nil {
+		return err
 	}
+	if err := validateStatusChecks(perms); err != nil {
+		return err
+	}
+	if err := validatePushAllowlist(perms); err != nil {
+		return err
+	}
+	if err := validateLogicalConsistency(perms); err != nil {
+		return err
+	}
+	if err := validateUpToDateRequirement(perms); err != nil {
+		return err
+	}
+	if err := validateConflicts(perms); err != nil {
+		return err
+	}
+	return nil
+}
 
-	// Validate status checks configuration
+func validateApproverCount(perms *BranchPermissions) error {
+	if perms.ApproverCount == nil {
+		return nil
+	}
+	if *perms.ApproverCount < 0 {
+		return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
+			"approver count cannot be negative", nil)
+	}
+	if *perms.ApproverCount > MaxApproverCount {
+		return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
+			"approver count seems unreasonably high", nil)
+	}
+	return nil
+}
+
+func validateStatusChecks(perms *BranchPermissions) error {
 	if perms.RequireStatusChecks != nil && *perms.RequireStatusChecks {
 		if len(perms.StatusChecks) == 0 {
 			return NewConfigValidationError("status_checks", perms.StatusChecks,
 				"RequireStatusChecks is enabled but no status checks specified", nil)
 		}
-
-		// Check for duplicates and validate individual status check names
 		seen := make(map[string]bool)
 		for i, check := range perms.StatusChecks {
 			if strings.TrimSpace(check) == "" {
@@ -219,61 +241,71 @@ func ValidateBranchPermissions(perms *BranchPermissions) error {
 			}
 			seen[check] = true
 		}
-	} else if len(perms.StatusChecks) > 0 {
+		return nil
+	}
+	if len(perms.StatusChecks) > 0 {
 		return NewConfigValidationError("status_checks", perms.StatusChecks,
 			"status checks specified but RequireStatusChecks is disabled", nil)
 	}
+	return nil
+}
 
-	// Validate push allowlist configuration
-	if perms.RestrictPushes != nil && *perms.RestrictPushes {
-		if len(perms.PushAllowlist) == 0 {
-			return NewConfigValidationError("push_allowlist", perms.PushAllowlist,
-				"RestrictPushes is enabled but no users/teams specified in PushAllowlist", nil)
-		}
-
-		// Check for duplicates and validate push allowlist entries
-		seen := make(map[string]bool)
-		for i, actor := range perms.PushAllowlist {
-			trimmed := strings.TrimSpace(actor)
-			if trimmed == "" {
-				return NewConfigValidationError(fmt.Sprintf("push_allowlist[%d]", i), actor,
-					"empty entry in PushAllowlist", nil)
-			}
-			if seen[actor] {
-				return NewConfigValidationError("push_allowlist", actor,
-					"duplicate entry in PushAllowlist", nil)
-			}
-			seen[actor] = true
-		}
+func validatePushAllowlist(perms *BranchPermissions) error {
+	if perms.RestrictPushes == nil || !*perms.RestrictPushes {
+		return nil
 	}
-
-	// Validate logical consistency
-	if perms.RequirePullRequestReviews != nil && !*perms.RequirePullRequestReviews {
-		if perms.ApproverCount != nil && *perms.ApproverCount > 0 {
-			return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
-				"cannot require approving reviews when require_pull_request_reviews is false", nil)
-		}
-		if perms.RequireCodeOwners != nil && *perms.RequireCodeOwners {
-			return NewConfigValidationError("require_code_owners", *perms.RequireCodeOwners,
-				"cannot require code owner reviews when require_pull_request_reviews is false", nil)
-		}
+	if len(perms.PushAllowlist) == 0 {
+		return NewConfigValidationError("push_allowlist", perms.PushAllowlist,
+			"RestrictPushes is enabled but no users/teams specified in PushAllowlist", nil)
 	}
-
-	// Validate up-to-date branch requirement
-	if perms.RequireUpToDateBranch != nil && *perms.RequireUpToDateBranch {
-		if perms.RequireStatusChecks == nil || !*perms.RequireStatusChecks {
-			return NewConfigValidationError("require_up_to_date_branch", *perms.RequireUpToDateBranch,
-				"RequireUpToDateBranch requires RequireStatusChecks to be enabled", nil)
+	seen := make(map[string]bool)
+	for i, actor := range perms.PushAllowlist {
+		trimmed := strings.TrimSpace(actor)
+		if trimmed == "" {
+			return NewConfigValidationError(fmt.Sprintf("push_allowlist[%d]", i), actor,
+				"empty entry in PushAllowlist", nil)
 		}
+		if seen[actor] {
+			return NewConfigValidationError("push_allowlist", actor,
+				"duplicate entry in PushAllowlist", nil)
+		}
+		seen[actor] = true
 	}
+	return nil
+}
 
-	// Validate conflicting settings
+func validateLogicalConsistency(perms *BranchPermissions) error {
+	if perms.RequirePullRequestReviews == nil || *perms.RequirePullRequestReviews {
+		return nil
+	}
+	if perms.ApproverCount != nil && *perms.ApproverCount > 0 {
+		return NewConfigValidationError("require_approving_count", *perms.ApproverCount,
+			"cannot require approving reviews when require_pull_request_reviews is false", nil)
+	}
+	if perms.RequireCodeOwners != nil && *perms.RequireCodeOwners {
+		return NewConfigValidationError("require_code_owners", *perms.RequireCodeOwners,
+			"cannot require code owner reviews when require_pull_request_reviews is false", nil)
+	}
+	return nil
+}
+
+func validateUpToDateRequirement(perms *BranchPermissions) error {
+	if perms.RequireUpToDateBranch == nil || !*perms.RequireUpToDateBranch {
+		return nil
+	}
+	if perms.RequireStatusChecks == nil || !*perms.RequireStatusChecks {
+		return NewConfigValidationError("require_up_to_date_branch", *perms.RequireUpToDateBranch,
+			"RequireUpToDateBranch requires RequireStatusChecks to be enabled", nil)
+	}
+	return nil
+}
+
+func validateConflicts(perms *BranchPermissions) error {
 	if perms.RequireLinearHistory != nil && *perms.RequireLinearHistory &&
 		perms.AllowForcePushes != nil && *perms.AllowForcePushes {
 		return NewConfigValidationError("allow_force_pushes", *perms.AllowForcePushes,
 			"RequireLinearHistory and AllowForcePushes cannot both be enabled", nil)
 	}
-
 	return nil
 }
 
@@ -414,6 +446,9 @@ func IsCurrentSchemaVersion(settings *PermissionsSettings) bool {
 // GitHubTokenEnv was removed for security reasons.
 // Use GetValidatedGitHubToken() for secure token handling instead.
 
+// MapPermissions applies the permissions settings to the target repositories.
+// It validates the configuration, adds team permissions, updates branch settings,
+// applies enhanced branch protection, and sets repository-level features.
 func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 	// Validate complete configuration
 	if err := ValidatePermissionsSettings(settings); err != nil {
@@ -422,99 +457,122 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 	}
 
 	for _, repo := range settings.Repositories {
-		if len(settings.TeamPermissions) > 0 {
-			for _, perm := range settings.TeamPermissions {
-				log.Info().
-					Str("repository", *repo.Name).
-					Msg("Adding Permissions to repository")
-				log.Debug().
-					Str("repository", *repo.Name).
-					Str("permissions-level", *perm.Level).
-					Str("permissions-team", *perm.Team).
-					Msg("permissions to add to repository")
-				err := client.AddPermissions(*settings.Organization, *repo.Name, perm)
-				if err != nil {
-					log.Err(err).
-						Str("repository", *repo.Name).
-						Str("permissions-level", *perm.Level).
-						Str("permissions-team", *perm.Team).
-						Str("operation", "addTeamPermissions").
-						Msg("setting team permissions")
-					// Continue processing other permissions even if one fails
-				}
-			}
+		applyTeamPermissions(settings, repo, client)
+		updateRepoBranchSettings(settings, repo, client)
+		repoID, ok := getRepositoryID(settings, repo, client)
+		if !ok {
+			continue
 		}
-		if err := client.UpdateBranchPermissions(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
+		applyEnhancedBranchProtection(settings, repo, repoID, client)
+		applyBranchProtectionFallback(settings, repo, client)
+		setRepositoryFeatures(repo, repoID, client)
+		setAdvancedRepoSettings(settings, repo, client)
+	}
+}
+
+func applyTeamPermissions(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+	if len(settings.TeamPermissions) == 0 {
+		return
+	}
+	for _, perm := range settings.TeamPermissions {
+		log.Info().Str("repository", *repo.Name).Msg("Adding Permissions to repository")
+		log.Debug().
+			Str("repository", *repo.Name).
+			Str("permissions-level", *perm.Level).
+			Str("permissions-team", *perm.Team).
+			Msg("permissions to add to repository")
+		if err := client.AddPermissions(*settings.Organization, *repo.Name, perm); err != nil {
 			log.Err(err).
 				Str("repository", *repo.Name).
-				Str("organization", *settings.Organization).
-				Msg("updating repository settings")
-		}
-
-		// Get repository ID once for both operations
-		repoID, err := client.GetRepository(repo.Name, settings.Organization)
-		if err != nil {
-			log.Err(err).
-				Str("repository", *repo.Name).
-				Msg("getting repository")
-		} else {
-			log.Debug().
-				Interface("repoID", repoID).
-				Msg("Repository ID")
-
-			// Apply enhanced branch protection rules via GraphQL
-			if err := client.SetEnhancedBranchProtection(repoID, "main", &settings.BranchPermissions); err != nil {
-				log.Err(err).
-					Str("repository", *repo.Name).
-					Str("organization", *settings.Organization).
-					Msg("setting enhanced branch protection")
-			}
-
-			// Apply advanced features via REST API fallback
-			if err := client.SetBranchProtectionFallback(*settings.Organization, *repo.Name, "main", &settings.BranchPermissions); err != nil {
-				log.Err(err).
-					Str("repository", *repo.Name).
-					Str("organization", *settings.Organization).
-					Msg("setting branch protection fallback via REST API")
-			}
-
-			// Set repository features (wiki, issues, projects, discussions, sponsorships)
-			err := client.SetRepository(&repoID, repo.Wiki, repo.Issues, repo.Projects, repo.HasDiscussionsEnabled, repo.HasSponsorshipsEnabled)
-			if err != nil {
-				logEvent := log.Err(err).Interface("repoID", repoID)
-				if repo.Wiki != nil {
-					logEvent = logEvent.Bool("wikiEnabled", *repo.Wiki)
-				}
-				if repo.Issues != nil {
-					logEvent = logEvent.Bool("issuesEnabled", *repo.Issues)
-				}
-				if repo.Projects != nil {
-					logEvent = logEvent.Bool("projectsEnabled", *repo.Projects)
-				}
-				if repo.HasDiscussionsEnabled != nil {
-					logEvent = logEvent.Bool("discussionsEnabled", *repo.HasDiscussionsEnabled)
-				}
-				if repo.HasSponsorshipsEnabled != nil {
-					logEvent = logEvent.Bool("sponsorshipsEnabled", *repo.HasSponsorshipsEnabled)
-				}
-				logEvent.Msg("setting repository fields")
-			}
-
-			// Set advanced repository settings (delete branch on merge) via REST API
-			if repo.DeleteBranchOnMerge != nil {
-				err := client.SetRepositoryAdvancedSettings(*settings.Organization, *repo.Name, repo.DeleteBranchOnMerge)
-				if err != nil {
-					log.Err(err).
-						Str("repository", *repo.Name).
-						Str("organization", *settings.Organization).
-						Bool("deleteBranchOnMerge", *repo.DeleteBranchOnMerge).
-						Msg("setting advanced repository settings")
-				}
-			}
+				Str("permissions-level", *perm.Level).
+				Str("permissions-team", *perm.Team).
+				Str("operation", "addTeamPermissions").
+				Msg("setting team permissions")
 		}
 	}
 }
 
+func updateRepoBranchSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+	if err := client.UpdateBranchPermissions(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
+		log.Err(err).
+			Str("repository", *repo.Name).
+			Str("organization", *settings.Organization).
+			Msg("updating repository settings")
+	}
+}
+
+func getRepositoryID(settings *PermissionsSettings, repo *Repository, client *GitHubClient) (githubv4.ID, bool) {
+	repoID, err := client.GetRepository(repo.Name, settings.Organization)
+	if err != nil {
+		log.Err(err).Str("repository", *repo.Name).Msg("getting repository")
+		return nil, false
+	}
+	log.Debug().Interface("repoID", repoID).Msg("Repository ID")
+	return repoID, true
+}
+
+func applyEnhancedBranchProtection(settings *PermissionsSettings, repo *Repository, repoID githubv4.ID, client *GitHubClient) {
+	if err := client.SetEnhancedBranchProtection(repoID, "main", &settings.BranchPermissions); err != nil {
+		log.Err(err).
+			Str("repository", *repo.Name).
+			Str("organization", *settings.Organization).
+			Msg("setting enhanced branch protection")
+	}
+}
+
+func applyBranchProtectionFallback(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+	if err := client.SetBranchProtectionFallback(*settings.Organization, *repo.Name, "main", &settings.BranchPermissions); err != nil {
+		log.Err(err).
+			Str("repository", *repo.Name).
+			Str("organization", *settings.Organization).
+			Msg("setting branch protection fallback via REST API")
+	}
+}
+
+func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, client *GitHubClient) {
+	if err := client.SetRepository(
+		repoID,
+		repo.Wiki,
+		repo.Issues,
+		repo.Projects,
+		repo.HasDiscussionsEnabled,
+		repo.HasSponsorshipsEnabled,
+	); err != nil {
+		logEvent := log.Err(err).Interface("repoID", repoID)
+		if repo.Wiki != nil {
+			logEvent = logEvent.Bool("wikiEnabled", *repo.Wiki)
+		}
+		if repo.Issues != nil {
+			logEvent = logEvent.Bool("issuesEnabled", *repo.Issues)
+		}
+		if repo.Projects != nil {
+			logEvent = logEvent.Bool("projectsEnabled", *repo.Projects)
+		}
+		if repo.HasDiscussionsEnabled != nil {
+			logEvent = logEvent.Bool("discussionsEnabled", *repo.HasDiscussionsEnabled)
+		}
+		if repo.HasSponsorshipsEnabled != nil {
+			logEvent = logEvent.Bool("sponsorshipsEnabled", *repo.HasSponsorshipsEnabled)
+		}
+		logEvent.Msg("setting repository fields")
+	}
+}
+
+func setAdvancedRepoSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+	if repo.DeleteBranchOnMerge == nil {
+		return
+	}
+	if err := client.SetRepositoryAdvancedSettings(*settings.Organization, *repo.Name, repo.DeleteBranchOnMerge); err != nil {
+		log.Err(err).
+			Str("repository", *repo.Name).
+			Str("organization", *settings.Organization).
+			Bool("deleteBranchOnMerge", *repo.DeleteBranchOnMerge).
+			Msg("setting advanced repository settings")
+	}
+}
+
+// UpdateBranchMergeStrategies updates merge strategy settings (merge, rebase, squash)
+// for all repositories in the provided configuration using the REST API.
 func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubClient) {
 	// Validate branch permissions configuration
 	if err := ValidateBranchPermissions(&settings.BranchPermissions); err != nil {
@@ -535,6 +593,8 @@ func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubCl
 	}
 }
 
+// SyncLabels synchronizes labels for each repository in the configuration,
+// creating, updating, or deleting labels to match the desired state.
 func SyncLabels(settings *PermissionsSettings, client *GitHubClient) {
 	for _, repo := range settings.Repositories {
 		log.Info().

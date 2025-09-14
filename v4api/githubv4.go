@@ -8,6 +8,8 @@ import (
 
 const V4ClientDefaultPageSize = 100
 
+// GetTeams returns all teams for the specified organization, handling pagination
+// under the hood and returning a flattened list of team edges.
 func (c *GitHubV4Client) GetTeams(organization string) (OrganizationTeams, error) {
 	orgTeams := []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge{}
 	initResp, err := GetTeams(c.Context, c.client, TeamOrder{
@@ -40,6 +42,8 @@ func (c *GitHubV4Client) GetTeams(organization string) (OrganizationTeams, error
 	return orgTeams, nil
 }
 
+// GetRateLimit retrieves the API rate limit status for the current token and
+// returns the response, logging details at debug level.
 func (c *GitHubV4Client) GetRateLimit() (RateLimit, error) {
 	resp, err := GetRateLimit(c.Context, c.client)
 	if err != nil {
@@ -49,6 +53,8 @@ func (c *GitHubV4Client) GetRateLimit() (RateLimit, error) {
 	return RateLimit(*resp), nil
 }
 
+// SyncLabels ensures the repository's labels match the provided desired set by
+// creating, updating, and deleting labels as needed using GraphQL mutations.
 func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
 	labelsMap := map[string]Label{}
 	labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, owner, "")

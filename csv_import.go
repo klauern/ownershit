@@ -3,6 +3,7 @@ package ownershit
 import (
 	"bufio"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -30,9 +31,11 @@ func getCSVHeaders() []string {
 
 // convertToCSVRow converts a PermissionsSettings for a single repository context into a CSV row.
 // The returned slice contains columns in the same order as getCSVHeaders().
-// If config is nil or contains no repository entries the function returns an empty row with the correct number of columns.
-// When config.Repositories is populated only the first repository entry is used; branch-related values are taken from config.BranchPermissions.
-// Pointer and slice fields are serialized using helper functions so missing values become empty strings.
+// If config is nil or contains no repository entries the function returns an
+// empty row with the correct number of columns. When config.Repositories is
+// populated only the first repository entry is used; branch-related values are
+// taken from config.BranchPermissions. Pointer and slice fields are serialized
+// using helper functions so missing values become empty strings.
 func convertToCSVRow(config *PermissionsSettings, owner, repo string) []string {
 	if config == nil || len(config.Repositories) == 0 {
 		// Return empty row with correct number of columns
@@ -153,11 +156,11 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 
 	for i, repo := range repos {
 		parts := strings.Split(repo, "/")
-		if len(parts) != 2 {
+		if len(parts) != ownerRepoParts {
 			errorCount++
 			repoErr := RepositoryError{
 				Repository: repo,
-				Error:      fmt.Errorf("invalid repository format, must be 'owner/repo'"),
+				Error:      fmt.Errorf("%w", ErrInvalidRepoFormat),
 			}
 			errors = append(errors, repoErr)
 			continue
@@ -231,11 +234,13 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 	return nil
 }
 
-// processRepositoryToCSV imports configuration for the given repository, converts it into a CSV row, and writes it using the provided csv.Writer.
+// processRepositoryToCSV imports configuration for the given repository, converts
+// it into a CSV row, and writes it using the provided csv.Writer.
 // It returns an error if importing the repository configuration fails or if writing the CSV row fails.
 func processRepositoryToCSV(owner, repo string, writer *csv.Writer, client *GitHubClient) error {
 	// Import repository configuration using existing function
-	config, err := ImportRepositoryConfig(owner, repo, client)
+	// For CSV export, relax team permission fetch errors to avoid aborting export on transient failures.
+	config, err := ImportRepositoryConfig(owner, repo, client, true)
 	if err != nil {
 		return fmt.Errorf("failed to import repository configuration for %s/%s: %w", owner, repo, err)
 	}
@@ -284,10 +289,12 @@ func ParseRepositoryList(args []string, batchFile string) ([]string, error) {
 // validateRepoFormat verifies that the given repository string is in the form "owner/repo".
 // It returns nil for a valid string and an error if the string does not contain exactly two
 // non-empty components separated by a single '/'.
+const ownerRepoParts = 2
+
 func validateRepoFormat(repo string) error {
 	parts := strings.Split(repo, "/")
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return fmt.Errorf("must be in format 'owner/repo'")
+	if len(parts) != ownerRepoParts || parts[0] == "" || parts[1] == "" {
+		return fmt.Errorf("%w", ErrInvalidRepoFormat)
 	}
 	return nil
 }
@@ -374,7 +381,7 @@ func ValidateCSVAppendMode(filename string) error {
 
 	expectedHeaders := getCSVHeaders()
 	if !sliceEqual(headers, expectedHeaders) {
-		return fmt.Errorf("existing CSV has incompatible headers")
+		return fmt.Errorf("%w", ErrIncompatibleCSVHeaders)
 	}
 
 	return nil
@@ -394,14 +401,14 @@ func sliceEqual(a, b []string) bool {
 	return true
 }
 
-// RepositoryError represents an error processing a specific repository
+// RepositoryError represents an error processing a specific repository.
 type RepositoryError struct {
 	Owner      string
 	Repository string
 	Error      error
 }
 
-// BatchProcessingError represents errors from batch processing operations
+// BatchProcessingError represents errors from batch processing operations.
 type BatchProcessingError struct {
 	TotalRepositories int
 	SuccessCount      int
@@ -414,7 +421,7 @@ func (e *BatchProcessingError) Error() string {
 		e.ErrorCount, e.TotalRepositories, e.SuccessCount, e.ErrorCount)
 }
 
-// GetDetailedErrors returns detailed error messages for each failed repository
+// GetDetailedErrors returns detailed error messages for each failed repository.
 func (e *BatchProcessingError) GetDetailedErrors() []string {
 	var details []string
 	for _, repoErr := range e.Errors {
@@ -428,3 +435,9 @@ func (e *BatchProcessingError) GetDetailedErrors() []string {
 	}
 	return details
 }
+
+// Package-level errors for consistent wrapping and lint compliance.
+var (
+	ErrInvalidRepoFormat      = errors.New("invalid repository format, must be 'owner/repo'")
+	ErrIncompatibleCSVHeaders = errors.New("existing CSV has incompatible headers")
+)

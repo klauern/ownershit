@@ -105,6 +105,10 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 	return false
 }
 
+// QueryArchivableRepos returns repositories for the given user that do not meet the
+// archiving criteria defined by maxForks, maxStars, maxDays, and maxWatchers. The
+// function paginates through all results via GraphQL and filters out repositories
+// that should be archived, returning only non-archivable repositories.
 func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
 	var query ArchivableRepositoriesQuery
 	variables := map[string]interface{}{
@@ -148,6 +152,8 @@ func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars,
 	return repos, nil
 }
 
+// MutateArchiveRepository archives the provided repository via the GitHub GraphQL
+// API. It returns an error if the mutation fails.
 func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 	mutation := &ArchiveRepositoryMutation{}
 	log.Debug().Interface("repo", repo).Interface("mutation", mutation).Msg("archiving the repository")
@@ -182,6 +188,8 @@ func (r ReposByName) Less(i, j int) bool {
 	return string(r.RepositoryInfos[i].Name) < string(r.RepositoryInfos[j].Name)
 }
 
+// SortedRepositoryInfo sorts the provided slice of RepositoryInfo by name and
+// returns the sorted slice.
 func SortedRepositoryInfo(repos []RepositoryInfo) []RepositoryInfo {
 	sort.Sort(ReposByName{repos})
 	return repos

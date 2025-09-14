@@ -349,17 +349,8 @@ func TestDualAPIFallback_ErrorScenarios(t *testing.T) {
 
 func TestDualAPIFallback_NilPermissions(t *testing.T) {
 	mock := setupMocks(t)
-
-	// Test shows that nil permissions cause a panic - this is expected behavior
-	// The function should validate input before processing
 	repoID := githubv4.ID("test-repo-id")
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("Expected panic with nil permissions, but got none")
-		}
-	}()
-
-	// This should panic
-	_ = mock.client.SetEnhancedBranchProtection(repoID, "main", nil)
+	if err := mock.client.SetEnhancedBranchProtection(repoID, "main", nil); err == nil {
+		t.Error("Expected error with nil permissions, but got none")
+	}
 }

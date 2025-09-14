@@ -16,7 +16,11 @@ import (
 // them into a PermissionsSettings where Organization is set to owner and Repositories contains a single Repository for repo.
 // If fetching team permissions fails the error is logged and an empty team permissions list is used; failures to fetch
 // repository details, branch protection rules, or labels are returned as errors.
-func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*PermissionsSettings, error) {
+// ImportRepositoryConfig extracts repository configuration from GitHub APIs.
+//
+// If relaxTeamErrors is true, failures when fetching team permissions are logged and
+// an empty permissions list is used. If false, such failures are returned as errors.
+func ImportRepositoryConfig(owner, repo string, client *GitHubClient, relaxTeamErrors bool) (*PermissionsSettings, error) {
 	log.Info().
 		Str("owner", owner).
 		Str("repo", repo).
@@ -31,12 +35,16 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 	// Get team permissions
 	teamPermissions, err := getTeamPermissions(client, owner, repo)
 	if err != nil {
-		log.Warn().
-			Str("owner", owner).
-			Str("repo", repo).
-			Err(err).
-			Msg("Failed to get team permissions, continuing with empty team permissions")
-		teamPermissions = []*Permissions{}
+		if relaxTeamErrors {
+			log.Warn().
+				Str("owner", owner).
+				Str("repo", repo).
+				Err(err).
+				Msg("Failed to get team permissions, continuing with empty team permissions")
+			teamPermissions = []*Permissions{}
+		} else {
+			return nil, fmt.Errorf("failed to get team permissions: %w", err)
+		}
 	}
 
 	// Get branch protection rules
@@ -177,6 +185,8 @@ func convertPermissionLevel(ghPermission *string) *string {
 }
 
 // getBranchProtectionRules retrieves branch protection configuration.
+//
+//nolint:unparam // keep error return for API symmetry and future use.
 func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*BranchPermissions, error) {
 	log.Debug().
 		Str("owner", owner).
@@ -225,6 +235,8 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 }
 
 // convertBranchProtection converts GitHub branch protection to ownershit format.
+//
+//nolint:gocyclo // mapping nested GitHub structures into flat config.
 func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	if protection == nil {
 		// Return explicit false values for all boolean fields when no protection exists

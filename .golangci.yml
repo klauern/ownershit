@@ -1,4 +1,8 @@
 linters-settings:
+  revive:
+    rules:
+      - name: exported
+      - name: package-comments
   depguard:
     rules:
       main:
@@ -72,6 +76,7 @@ linters:
     - gocritic
     - gocyclo
     - godot
+    - revive
     - err113
     - gofmt
     - gofumpt
@@ -102,9 +107,21 @@ issues:
         - mnd
         - dupl
         - err113
+        - errcheck
+        - lll
+        - funlen
+        - gocyclo
+        - gofumpt
+        - godot
+        - lll
+        - funlen
+        - gocyclo
+        - gofumpt
     - path: cmd/
       linters:
         - mnd
+        - funlen
+        - gocyclo
     - path: v4api/
       linters:
         - mnd

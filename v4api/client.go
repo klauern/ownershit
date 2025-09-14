@@ -108,6 +108,9 @@ func parseEnv() *retryParams {
 	return params
 }
 
+// NewGHv4Client constructs an authenticated GitHub GraphQL v4 client with
+// retry/backoff configuration derived from environment variables prefixed with
+// OWNERSHIT_. The GitHub token is validated before creating the client.
 func NewGHv4Client() (*GitHubV4Client, error) {
 	params := parseEnv()
 	// Note: stdlib log expects an io.Writer; keep default output. RetryableHTTP logging
