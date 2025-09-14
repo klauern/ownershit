@@ -110,9 +110,8 @@ func parseEnv() *retryParams {
 
 func NewGHv4Client() (*GitHubV4Client, error) {
 	params := parseEnv()
-	retryLogger := log.With().Str("component", "retryablehttp").Logger()
-	globalLog.SetOutput(retryLogger)
-
+	// Note: stdlib log expects an io.Writer; keep default output. RetryableHTTP logging
+	// is wired to the stdlib logger in buildClient().
 	key, err := ownershit.GetValidatedGitHubToken()
 	if err != nil {
 		return nil, fmt.Errorf("GitHub token validation failed: %w", err)
