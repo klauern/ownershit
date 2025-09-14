@@ -62,10 +62,10 @@ func TestE2E_RateLimit(t *testing.T) {
 	_ = setupE2ETest(t)
 
 	// Test using the V4 API directly
-    v4Client, err := v4api.NewGHv4Client()
-    if err != nil {
-        t.Fatalf("Failed to create v4 client: %v", err)
-    }
+	v4Client, err := v4api.NewGHv4Client()
+	if err != nil {
+		t.Fatalf("Failed to create v4 client: %v", err)
+	}
 
 	rateLimit, err := v4Client.GetRateLimit()
 	if err != nil {
@@ -90,10 +90,10 @@ func TestE2E_RateLimit(t *testing.T) {
 func TestE2E_GetTeams(t *testing.T) {
 	config := setupE2ETest(t)
 
-    v4Client, err := v4api.NewGHv4Client()
-    if err != nil {
-        t.Fatalf("Failed to create v4 client: %v", err)
-    }
+	v4Client, err := v4api.NewGHv4Client()
+	if err != nil {
+		t.Fatalf("Failed to create v4 client: %v", err)
+	}
 
 	teams, err := v4Client.GetTeams(config.Organization)
 	if err != nil {

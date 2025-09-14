@@ -195,11 +195,11 @@ func NewPermissionDeniedError(operation, repository, required, message string, e
 // attempting to create a rule that’s already present and should trigger a
 // fallback or update path rather than be treated as a hard error.
 type BranchProtectionRuleExistsError struct {
-    Pattern string
+	Pattern string
 }
 
 func (e *BranchProtectionRuleExistsError) Error() string {
-    return fmt.Sprintf("branch protection rule already exists for pattern %s", e.Pattern)
+	return fmt.Sprintf("branch protection rule already exists for pattern %s", e.Pattern)
 }
 
 // ConfigValidationError represents configuration validation errors.
