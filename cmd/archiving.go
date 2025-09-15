@@ -1,3 +1,4 @@
+// Package cmd provides command-line interface commands for the ownershit tool.
 package cmd
 
 import (
@@ -15,6 +16,7 @@ import (
 )
 
 var (
+	// ErrUsernameNotDefined is returned when no username is provided for a query.
 	ErrUsernameNotDefined = errors.New("username not defined for query")
 	username              string
 )
@@ -36,7 +38,7 @@ var archiveFlags = []cli.Flag{
 	},
 	&cli.IntFlag{
 		Name:        "forks",
-		Usage:       "maximum number of forks that a repo can have before it is considered archivalable",
+		Usage:       "maximum number of forks that a repo can have before it is considered archivable",
 		Destination: &forks,
 		Value:       0,
 	},
@@ -60,6 +62,7 @@ var archiveFlags = []cli.Flag{
 	},
 }
 
+// ArchiveSubcommands defines the available archive-related CLI commands.
 var ArchiveSubcommands = []*cli.Command{
 	{
 		Name:   "query",
@@ -75,8 +78,9 @@ var ArchiveSubcommands = []*cli.Command{
 	},
 }
 
+// userClientSetup validates the username parameter and sets up the GitHub client.
 func userClientSetup(c *cli.Context) error {
-	if username == "" {
+	if strings.TrimSpace(username) == "" {
 		return ErrUsernameNotDefined
 	}
 	secureClient, err := shit.NewSecureGitHubClient(context.Background())
@@ -90,6 +94,7 @@ func userClientSetup(c *cli.Context) error {
 	return nil
 }
 
+// queryCommand queries repositories that match the archiving criteria.
 func queryCommand(c *cli.Context) error {
 	log.
 		Info().
@@ -100,7 +105,7 @@ func queryCommand(c *cli.Context) error {
 			"days":     days,
 			"watchers": watchers,
 		}).
-		Msgf("querying with parms")
+		Msg("querying with parms")
 	repos, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
 		log.Err(err).
@@ -111,7 +116,7 @@ func queryCommand(c *cli.Context) error {
 	}
 	tableBuf := strings.Builder{}
 	table := tablewriter.NewWriter(&tableBuf)
-	table.Header("repository", "forks", "stars", "watchers", "last updated")
+	table.Header([]string{"repository", "forks", "stars", "watchers", "last updated"})
 
 	repos = shit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
@@ -119,17 +124,20 @@ func queryCommand(c *cli.Context) error {
 		repoStars := strconv.Itoa(int(repo.StargazerCount))
 		repoWatchers := strconv.Itoa(int(repo.Watchers.TotalCount))
 		lastUpdated := repo.UpdatedAt.Time
-		if err := table.Append(string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String()); err != nil {
-			return fmt.Errorf("failed to append row to table: %w", err)
+		if err := table.Append([]string{
+			string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String(),
+		}); err != nil {
+			log.Warn().Err(err).Msg("failed to append table row")
 		}
 	}
 	if err := table.Render(); err != nil {
-		return fmt.Errorf("failed to render table: %w", err)
+		log.Warn().Err(err).Msg("failed to render table")
 	}
 	fmt.Println(tableBuf.String())
 	return nil
 }
 
+// executeCommand executes the archiving process for repositories matching the criteria.
 func executeCommand(c *cli.Context) error {
 	log.
 		Info().
@@ -140,7 +148,7 @@ func executeCommand(c *cli.Context) error {
 			"days":     days,
 			"watchers": watchers,
 		}).
-		Msgf("executing Archive with parms")
+		Msg("executing Archive with parms")
 	issues, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
 		log.Err(err).
@@ -165,7 +173,12 @@ func executeCommand(c *cli.Context) error {
 	repoMapping := mapRepoNames(issues)
 
 	for _, r := range repoNames {
-		err = client.MutateArchiveRepository(repoMapping[r])
+		repo, ok := repoMapping[r]
+		if !ok {
+			log.Warn().Str("repo", r).Msg("selected repository not found in mapping; skipping")
+			continue
+		}
+		err = client.MutateArchiveRepository(repo)
 		if err != nil {
 			return fmt.Errorf("archiving %v: %w", r, err)
 		}
@@ -173,6 +186,7 @@ func executeCommand(c *cli.Context) error {
 	return nil
 }
 
+// mapRepoNames creates a map of repository names to RepositoryInfo for quick lookup.
 func mapRepoNames(r []shit.RepositoryInfo) map[string]shit.RepositoryInfo {
 	repos := make(map[string]shit.RepositoryInfo, len(r))
 	for _, v := range r {

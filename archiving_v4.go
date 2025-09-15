@@ -1,3 +1,4 @@
+// Package ownershit provides GitHub repository management and archiving functionality.
 package ownershit
 
 import (
@@ -11,7 +12,7 @@ import (
 
 /*
 query archivableRepositories {
-  search(query: $user, type: REPOSITORY, first: 10, after: $afeerthing) {
+  search(query: $user, type: REPOSITORY, first: 10, after: $repositoryCursor) {
     pageInfo {
       hasNextPage
       startCursor
@@ -24,12 +25,10 @@ query archivableRepositories {
         name
         isFork
         forkCount
-		isArchived
-		stargazersCount
-		updatedAt
-		watchers	{
-			totalCount
-		}
+        isArchived
+        stargazerCount
+        updatedAt
+        watchers { totalCount }
       }
     }
   }
@@ -79,8 +78,10 @@ type RepositoryInfo struct {
 }
 
 const (
+	// PerPage defines the default page size for GraphQL queries.
 	PerPage = 100
-	OneDay  = time.Hour * 24
+	// OneDay represents a 24-hour duration.
+	OneDay = time.Hour * 24
 )
 
 // IsArchivable queries a repository to determine if it meets the necessary requirements for being archived.  All
@@ -94,17 +95,26 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 		"lastUpdated": r.UpdatedAt,
 		"watchers":    r.Watchers.TotalCount,
 	})
-	if bool(r.IsArchived) ||
-		bool(r.IsFork) ||
-		(int(r.ForkCount) > maxForks) ||
-		(int(r.StargazerCount) > maxStars) ||
-		(r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(maxDays) * OneDay))) ||
-		(int(r.Watchers.TotalCount) > maxWatchers) {
-		return true
+	if bool(r.IsArchived) {
+		return false // Already archived, not archivable
 	}
-	return false
+	if bool(r.IsFork) ||
+		(int(r.ForkCount) >= maxForks) ||
+		(int(r.StargazerCount) >= maxStars) ||
+		(int(r.Watchers.TotalCount) >= maxWatchers) {
+		return false // Doesn't meet archiving criteria
+	}
+	staleBefore := time.Now().Add(-time.Duration(maxDays) * OneDay)
+	if r.UpdatedAt.After(staleBefore) {
+		return false // Recently updated; not stale enough
+	}
+	return true // Meets all criteria for archiving
 }
 
+// QueryArchivableRepos returns repositories for the given user that meet the
+// archiving criteria defined by maxForks, maxStars, maxDays, and maxWatchers. The
+// function paginates through all results via GraphQL and filters repositories
+// that meet the archiving criteria and should be archived.
 func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
 	var query ArchivableRepositoriesQuery
 	variables := map[string]interface{}{
@@ -137,24 +147,26 @@ func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars,
 		}
 		variables["repositoryCursor"] = githubv4.NewString(query.Search.PageInfo.EndCursor)
 	}
-	for i := 0; i < len(repos); i++ {
-		if repos[i].IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
-			log.Debug().Str("repository", string(repos[i].Name)).Msg("repository is archivable")
-			repos = removeElement(repos, i)
-			i--
-			continue
+	var candidates []RepositoryInfo
+	for _, repo := range repos {
+		if repo.IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
+			log.Debug().Str("repository", string(repo.Name)).Msg("repository is archivable")
+			candidates = append(candidates, repo)
 		}
 	}
-	return repos, nil
+	return candidates, nil
 }
 
+// MutateArchiveRepository archives the provided repository via the GitHub GraphQL
+// API. It returns an error if the mutation fails.
 func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 	mutation := &ArchiveRepositoryMutation{}
 	log.Debug().Interface("repo", repo).Interface("mutation", mutation).Msg("archiving the repository")
 	input := githubv4.ArchiveRepositoryInput{
 		RepositoryID: repo.ID,
 	}
-	err := c.Graph.Mutate(c.Context, &mutation, input, nil)
+	vars := map[string]interface{}{"input": input}
+	err := c.Graph.Mutate(c.Context, mutation, vars, nil)
 	if err != nil {
 		log.Err(err).
 			Interface("repository", repo).
@@ -166,23 +178,28 @@ func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 	return nil
 }
 
-func removeElement(slice []RepositoryInfo, s int) []RepositoryInfo {
-	return append(slice[:s], slice[s+1:]...)
-}
-
-// Everything behind this is related to sorting a list of RepositoryInfo.
+// RepositoryInfos represents a slice of RepositoryInfo that can be sorted.
 type (
 	RepositoryInfos []RepositoryInfo
-	ReposByName     struct{ RepositoryInfos }
+	// ReposByName allows sorting repositories by name.
+	ReposByName struct{ RepositoryInfos }
 )
 
-func (r RepositoryInfos) Len() int      { return len(r) }
+// Len returns the number of repositories in the slice.
+func (r RepositoryInfos) Len() int { return len(r) }
+
+// Swap exchanges the repositories at indices i and j.
 func (r RepositoryInfos) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+
+// Less compares repositories by name for sorting.
 func (r ReposByName) Less(i, j int) bool {
 	return string(r.RepositoryInfos[i].Name) < string(r.RepositoryInfos[j].Name)
 }
 
+// SortedRepositoryInfo returns a sorted copy of the provided RepositoryInfo
+// slice without mutating the original.
 func SortedRepositoryInfo(repos []RepositoryInfo) []RepositoryInfo {
-	sort.Sort(ReposByName{repos})
-	return repos
+	cp := append([]RepositoryInfo(nil), repos...)
+	sort.Sort(ReposByName{cp})
+	return cp
 }

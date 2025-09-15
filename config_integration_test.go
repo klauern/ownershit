@@ -342,10 +342,7 @@ func TestBranchPermissions_MergeStrategiesIntegration(t *testing.T) {
 			}
 
 			// Then check for conflicts between branch protection and merge strategies
-			hasConflict := false
-			if tt.perms != nil && tt.perms.RequireLinearHistory != nil && *tt.perms.RequireLinearHistory && tt.mergeCommit {
-				hasConflict = true
-			}
+			hasConflict := tt.perms != nil && tt.perms.RequireLinearHistory != nil && *tt.perms.RequireLinearHistory && tt.mergeCommit
 
 			if hasConflict != tt.expectConflict {
 				t.Errorf("Expected conflict = %v, but got = %v", tt.expectConflict, hasConflict)

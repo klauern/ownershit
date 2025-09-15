@@ -149,3 +149,7 @@ fabric.properties
 repositories.yaml
 dist/
 .aider*
+
+/ownershit
+/ownershit.exe
+!/ownershit/

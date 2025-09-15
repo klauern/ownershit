@@ -10,8 +10,17 @@ import (
 )
 
 // ImportRepositoryConfig extracts repository configuration from GitHub APIs
-// and returns it in the PermissionsSettings format used by ownershit.
-func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*PermissionsSettings, error) {
+// ImportRepositoryConfig fetches configuration for the given GitHub repository and returns it as a PermissionsSettings.
+//
+// It retrieves repository metadata, branch protection rules, team permissions, and labels from GitHub and assembles
+// them into a PermissionsSettings where Organization is set to owner and Repositories contains a single Repository for repo.
+// If fetching team permissions fails the error is logged and an empty team permissions list is used; failures to fetch
+// repository details, branch protection rules, or labels are returned as errors.
+// ImportRepositoryConfig extracts repository configuration from GitHub APIs.
+//
+// If relaxTeamErrors is true, failures when fetching team permissions are logged and
+// an empty permissions list is used. If false, such failures are returned as errors.
+func ImportRepositoryConfig(owner, repo string, client *GitHubClient, relaxTeamErrors bool) (*PermissionsSettings, error) {
 	log.Info().
 		Str("owner", owner).
 		Str("repo", repo).
@@ -26,7 +35,16 @@ func ImportRepositoryConfig(owner, repo string, client *GitHubClient) (*Permissi
 	// Get team permissions
 	teamPermissions, err := getTeamPermissions(client, owner, repo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get team permissions: %w", err)
+		if relaxTeamErrors {
+			log.Warn().
+				Str("owner", owner).
+				Str("repo", repo).
+				Err(err).
+				Msg("Failed to get team permissions, continuing with empty team permissions")
+			teamPermissions = []*Permissions{}
+		} else {
+			return nil, fmt.Errorf("failed to get team permissions: %w", err)
+		}
 	}
 
 	// Get branch protection rules
@@ -167,6 +185,8 @@ func convertPermissionLevel(ghPermission *string) *string {
 }
 
 // getBranchProtectionRules retrieves branch protection configuration.
+//
+//nolint:unparam // keep error return for API symmetry and future use.
 func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*BranchPermissions, error) {
 	log.Debug().
 		Str("owner", owner).
@@ -198,6 +218,7 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 	branchPerms := convertBranchProtection(protection)
 
 	// Get merge settings from repository details
+	// TODO: accept repoInfo or merge flags as params to avoid a second API call
 	repoInfo, _, err := client.Repositories.Get(client.Context, owner, repo)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get repository merge settings")
@@ -227,16 +248,25 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 	}
 
 	perms := &BranchPermissions{}
+	mapPRReviews(protection, perms)
+	mapStatusChecks(protection, perms)
+	mapAdminEnforcement(protection, perms)
+	mapRestrictions(protection, perms)
+	mapAdvancedProtection(protection, perms)
+	return perms
+}
 
-	// Pull request reviews
-	if protection.RequiredPullRequestReviews != nil {
-		trueVal := true
-		perms.RequirePullRequestReviews = &trueVal
-		perms.ApproverCount = &protection.RequiredPullRequestReviews.RequiredApprovingReviewCount
-		perms.RequireCodeOwners = &protection.RequiredPullRequestReviews.RequireCodeOwnerReviews
+func mapPRReviews(protection *github.Protection, perms *BranchPermissions) {
+	if protection.RequiredPullRequestReviews == nil {
+		return
 	}
+	trueVal := true
+	perms.RequirePullRequestReviews = &trueVal
+	perms.ApproverCount = &protection.RequiredPullRequestReviews.RequiredApprovingReviewCount
+	perms.RequireCodeOwners = &protection.RequiredPullRequestReviews.RequireCodeOwnerReviews
+}
 
-	// Status checks
+func mapStatusChecks(protection *github.Protection, perms *BranchPermissions) {
 	if protection.RequiredStatusChecks != nil {
 		trueVal := true
 		perms.RequireStatusChecks = &trueVal
@@ -245,66 +275,56 @@ func convertBranchProtection(protection *github.Protection) *BranchPermissions {
 			perms.StatusChecks = make([]string, len(*protection.RequiredStatusChecks.Contexts))
 			copy(perms.StatusChecks, *protection.RequiredStatusChecks.Contexts)
 		}
-	} else {
-		// Explicitly set to false when status checks are disabled
-		falseVal := false
-		perms.RequireStatusChecks = &falseVal
-		perms.RequireUpToDateBranch = &falseVal
+		return
 	}
+	// Explicitly set to false when status checks are disabled
+	falseVal := false
+	perms.RequireStatusChecks = &falseVal
+	perms.RequireUpToDateBranch = &falseVal
+}
 
-	// Admin enforcement
+func mapAdminEnforcement(protection *github.Protection, perms *BranchPermissions) {
 	if protection.EnforceAdmins != nil {
 		perms.EnforceAdmins = &protection.EnforceAdmins.Enabled
 	}
+}
 
-	// Restrictions
-	if protection.Restrictions != nil {
-		trueVal := true
-		perms.RestrictPushes = &trueVal
-
-		// Extract push allowlist from restrictions
-		var allowlist []string
-
-		// Add team slugs to allowlist
-		for _, team := range protection.Restrictions.Teams {
-			if team.Slug != nil {
-				allowlist = append(allowlist, *team.Slug)
-			}
-		}
-
-		// Add user logins to allowlist
-		for _, user := range protection.Restrictions.Users {
-			if user.Login != nil {
-				allowlist = append(allowlist, *user.Login)
-			}
-		}
-
-		// Set the push allowlist
-		perms.PushAllowlist = allowlist
-	} else {
-		// Explicitly set to false when push restrictions are disabled
+func mapRestrictions(protection *github.Protection, perms *BranchPermissions) {
+	if protection.Restrictions == nil {
 		falseVal := false
 		perms.RestrictPushes = &falseVal
+		return
 	}
+	trueVal := true
+	perms.RestrictPushes = &trueVal
 
-	// Advanced settings - now available in github.Protection struct
+	var allowlist []string
+	for _, team := range protection.Restrictions.Teams {
+		if team.Slug != nil {
+			allowlist = append(allowlist, *team.Slug)
+		}
+	}
+	for _, user := range protection.Restrictions.Users {
+		if user.Login != nil {
+			allowlist = append(allowlist, *user.Login)
+		}
+	}
+	perms.PushAllowlist = allowlist
+}
+
+func mapAdvancedProtection(protection *github.Protection, perms *BranchPermissions) {
 	if protection.RequiredConversationResolution != nil {
 		perms.RequireConversationResolution = &protection.RequiredConversationResolution.Enabled
 	}
-
 	if protection.RequireLinearHistory != nil {
 		perms.RequireLinearHistory = &protection.RequireLinearHistory.Enabled
 	}
-
 	if protection.AllowForcePushes != nil {
 		perms.AllowForcePushes = &protection.AllowForcePushes.Enabled
 	}
-
 	if protection.AllowDeletions != nil {
 		perms.AllowDeletions = &protection.AllowDeletions.Enabled
 	}
-
-	return perms
 }
 
 // getRepositoryLabels retrieves all labels for the repository.
@@ -326,6 +346,11 @@ func getRepositoryLabels(client *GitHubClient, owner, repo string) ([]RepoLabel,
 
 		// Convert GitHub labels to RepoLabel format
 		for _, label := range labels {
+			// Guard against unexpected nil pointers from API to avoid panics.
+			if label.Name == nil || label.Color == nil {
+				log.Warn().Interface("label", label).Msg("skipping label with missing name or color")
+				continue
+			}
 			repoLabel := RepoLabel{
 				Name:  *label.Name,
 				Color: *label.Color,

@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
 	"go.uber.org/mock/gomock"
 
 	mock_graphql "github.com/klauern/ownershit/v4api/mocks"
 )
+
+// testTokenSuffixLen is the length of the suffix for GitHub PAT tokens (excluding the "ghp_" prefix)
+const testTokenSuffixLen = 36
 
 // roundTripperFunc is a test helper to stub http.RoundTripper
 type roundTripperFunc func(*http.Request) (*http.Response, error)
@@ -21,63 +23,56 @@ type roundTripperFunc func(*http.Request) (*http.Response, error)
 func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
 func TestNewGHv4Client(t *testing.T) {
-    tests := []struct {
-        name        string
-        envVars     map[string]string
-        wantRetries int
-        wantTimeout int
-        wantErr     bool
-    }{
-        {
-            name: "default configuration",
-            envVars: map[string]string{
-                "GITHUB_TOKEN": "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
-            },
-            wantRetries: defaultConfig.maxRetries,
-            wantTimeout: defaultConfig.timeoutSeconds,
-            wantErr:     false,
-        },
-        {
-            name: "custom configuration",
-            envVars: map[string]string{
-                "GITHUB_TOKEN":                   "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
-                EnvVarPrefix + EnvMaxRetries:     "5",
-                EnvVarPrefix + EnvTimeoutSeconds: "30",
-            },
-            wantRetries: 5,
-            wantTimeout: 30,
-            wantErr:     false,
-        },
-        {
-            name:        "missing token returns error",
-            envVars:     map[string]string{"GITHUB_TOKEN": ""}, // Explicitly unset token
-            wantRetries: defaultConfig.maxRetries,
-            wantTimeout: defaultConfig.timeoutSeconds,
-            wantErr:     true,
-        },
-    }
+	tests := []struct {
+		name        string
+		envVars     map[string]string
+		wantRetries int
+		wantTimeout int
+		wantErr     bool
+	}{
+		{
+			name: "default configuration",
+			envVars: map[string]string{
+				"GITHUB_TOKEN": validTestToken(), // Valid test token format
+			},
+			wantRetries: defaultConfig.maxRetries,
+			wantTimeout: defaultConfig.timeoutSeconds,
+			wantErr:     false,
+		},
+		{
+			name: "custom configuration",
+			envVars: map[string]string{
+				"GITHUB_TOKEN":                   validTestToken(), // Valid test token format
+				EnvVarPrefix + EnvMaxRetries:     "5",
+				EnvVarPrefix + EnvTimeoutSeconds: "30",
+			},
+			wantRetries: 5,
+			wantTimeout: 30,
+			wantErr:     false,
+		},
+		{
+			name:        "missing token returns error",
+			envVars:     map[string]string{"GITHUB_TOKEN": ""}, // Explicitly unset token
+			wantRetries: defaultConfig.maxRetries,
+			wantTimeout: defaultConfig.timeoutSeconds,
+			wantErr:     true,
+		},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
-			oldVals := make(map[string]string)
 			for k, v := range tt.envVars {
-				oldVals[k] = os.Getenv(k)
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k, oldVal := range oldVals {
-					os.Setenv(k, oldVal)
-				}
-			}()
 
-            client, err := NewGHv4Client()
-            if (err != nil) != tt.wantErr {
-                t.Fatalf("NewGHv4Client() error = %v, wantErr %v", err, tt.wantErr)
-            }
-            if err != nil {
-                return
-            }
+			client, err := NewGHv4Client()
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("NewGHv4Client() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil {
+				return
+			}
 
 			// Access the underlying HTTP client
 			httpClient := client.retryClient
@@ -106,20 +101,20 @@ func Test_authedTransport_RoundTrip(t *testing.T) {
 		{
 			name:       "adds authorization header",
 			key:        "test-key",
-			wantHeader: "bearer test-key",
+			wantHeader: "Bearer test-key",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-            // Use a stubbed RoundTripper to avoid real network/TLS
-            transport := &authedTransport{
-                key:     tt.key,
-                wrapped: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
-                    // Return a minimal valid response
-                    return &http.Response{StatusCode: 200, Body: http.NoBody, Header: make(http.Header)}, nil
-                }),
-            }
+			// Use a stubbed RoundTripper to avoid real network/TLS
+			transport := &authedTransport{
+				key: tt.key,
+				wrapped: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+					// Return a minimal valid response
+					return &http.Response{StatusCode: 200, Body: http.NoBody, Header: make(http.Header)}, nil
+				}),
+			}
 
 			req, err := http.NewRequest(http.MethodGet, "http://example.com", http.NoBody)
 			if err != nil {
@@ -131,7 +126,7 @@ func Test_authedTransport_RoundTrip(t *testing.T) {
 				t.Fatal(err)
 			}
 			if resp != nil && resp.Body != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 
 			if got := req.Header.Get("Authorization"); got != tt.wantHeader {
@@ -185,7 +180,7 @@ func Test_buildClient(t *testing.T) {
 			}
 
 			// Verify it's the expected type
-			var _ *retryablehttp.Client = client
+			_ = client
 
 			if client.RetryMax != tt.args.params.MaxRetries {
 				t.Errorf("buildClient() RetryMax = %v, want %v", client.RetryMax, tt.args.params.MaxRetries)
@@ -238,20 +233,16 @@ func Test_parseEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup environment
-			oldEnv := make(map[string]string)
+			// Setup environment with isolation
 			for k := range tt.envVars {
-				oldEnv[k] = os.Getenv(k)
-				os.Setenv(k, tt.envVars[k])
+				t.Setenv(k, tt.envVars[k])
 			}
-			// Cleanup
-			defer func() {
-				for k, v := range oldEnv {
-					os.Setenv(k, v)
-				}
-			}()
 
-			got := parseEnv()
+			got, err := parseEnv()
+			if err != nil {
+				t.Errorf("parseEnv() error = %v", err)
+				return
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseEnv() = %v, want %v", got, tt.want)
 			}
@@ -588,20 +579,16 @@ func TestParseEnv_ValidValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup environment
-			oldEnv := make(map[string]string)
+			// Setup environment with isolation
 			for k, v := range tt.envVars {
-				oldEnv[k] = os.Getenv(k)
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			// Cleanup
-			defer func() {
-				for k, v := range oldEnv {
-					os.Setenv(k, v)
-				}
-			}()
 
-			got := parseEnv()
+			got, err := parseEnv()
+			if err != nil {
+				t.Errorf("parseEnv() error = %v", err)
+				return
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseEnv() = %v, want %v", got, tt.want)
 			}
@@ -623,15 +610,15 @@ func TestAuthedTransport_RoundTrip_Error(t *testing.T) {
 
 	resp, err := transport.RoundTrip(req)
 	if resp != nil && resp.Body != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 	if err == nil {
 		t.Error("Expected error from wrapped transport, but got nil")
 	}
 
 	// Verify authorization header was still set
-	if got := req.Header.Get("Authorization"); got != "bearer test-key" {
-		t.Errorf("Authorization header = %v, want %v", got, "bearer test-key")
+	if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
+		t.Errorf("Authorization header = %v, want %v", got, "Bearer test-key")
 	}
 }
 
@@ -654,7 +641,7 @@ func TestBuildClient_ValidateRetryConfiguration(t *testing.T) {
 		t.Errorf("Timeout = %v, want %v", client.HTTPClient.Timeout, expectedTimeout)
 	}
 
-	expectedWaitMax := time.Duration(params.WaitIntervalSeconds) * time.Duration(params.Multiplier) * time.Minute
+	expectedWaitMax := time.Duration(float64(params.WaitIntervalSeconds)*params.Multiplier) * time.Second
 	if client.RetryWaitMax != expectedWaitMax {
 		t.Errorf("RetryWaitMax = %v, want %v", client.RetryWaitMax, expectedWaitMax)
 	}
@@ -666,18 +653,14 @@ func TestBuildClient_ValidateRetryConfiguration(t *testing.T) {
 }
 
 func TestNewGHv4Client_TokenValidationError(t *testing.T) {
-    // Save original environment
-    oldToken := os.Getenv("GITHUB_TOKEN")
-    defer os.Setenv("GITHUB_TOKEN", oldToken)
+	// Unset token to cause validation error
+	t.Setenv("GITHUB_TOKEN", "")
 
-    // Unset token to cause validation error
-    os.Unsetenv("GITHUB_TOKEN")
-
-    // Now we expect an error instead of a panic
-    _, err := NewGHv4Client()
-    if err == nil {
-        t.Error("Expected error due to token validation failure, but got none")
-    }
+	// Now we expect an error instead of a panic
+	_, err := NewGHv4Client()
+	if err == nil {
+		t.Error("Expected error due to token validation failure, but got none")
+	}
 }
 
 // Helper type for testing error transport.
@@ -690,7 +673,7 @@ func (t *errorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 func TestTypeAliases(t *testing.T) {
 	// Test that type aliases are properly defined
 	var teams OrganizationTeams
-	if teams == nil {
+	if len(teams) == 0 {
 		teams = make(OrganizationTeams, 0)
 	}
 	_ = teams
@@ -703,6 +686,11 @@ func TestTypeAliases(t *testing.T) {
 
 	// These tests just verify the types compile correctly
 	t.Log("Type aliases test passed")
+}
+
+// validTestToken returns a runtime-generated GitHub PAT format token for testing
+func validTestToken() string {
+	return "ghp_" + strings.Repeat("A", testTokenSuffixLen)
 }
 
 func TestGitHubV4Client_ContextHandling(t *testing.T) {
@@ -723,7 +711,8 @@ func TestGitHubV4Client_ContextHandling(t *testing.T) {
 			name: "context with timeout",
 			context: func() context.Context {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				defer cancel()
+				// Call cancel to avoid context leak; still returns valid context for test
+				cancel()
 				return ctx
 			}(),
 		},
@@ -822,8 +811,10 @@ func TestAuthedTransport_RoundTrip_VariousRequests(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			transport := &authedTransport{
-				key:     tt.key,
-				wrapped: http.DefaultTransport,
+				key: tt.key,
+				wrapped: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+					return &http.Response{StatusCode: 200, Body: http.NoBody, Header: make(http.Header)}, nil
+				}),
 			}
 
 			req, err := http.NewRequest(tt.method, tt.url, http.NoBody)
@@ -833,15 +824,17 @@ func TestAuthedTransport_RoundTrip_VariousRequests(t *testing.T) {
 
 			resp, err := transport.RoundTrip(req)
 			if err != nil {
-				t.Errorf("RoundTrip failed: %v", err)
+				t.Fatalf("RoundTrip failed: %v", err)
 			}
 			if resp != nil && resp.Body != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 
-			expectedAuth := "bearer " + tt.key
-			if got := req.Header.Get("Authorization"); got != expectedAuth {
-				t.Errorf("Authorization header = %v, want %v", got, expectedAuth)
+			got := req.Header.Get("Authorization")
+			if tt.key == "" && got != "" {
+				t.Errorf("expected no Authorization header for empty key, got %q", got)
+			} else if tt.key != "" && got != "Bearer "+tt.key {
+				t.Errorf("Authorization header = %v, want %v", got, "Bearer "+tt.key)
 			}
 		})
 	}

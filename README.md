@@ -65,6 +65,8 @@ task install
 | `sync` | Synchronize all repository settings | `ownershit sync --config repositories.yaml` |
 | `branches` | Update branch merge strategies | `ownershit branches` |
 | `label` | Sync default labels across repositories | `ownershit label` |
+| `import` | Import repository configuration as YAML | `ownershit import owner/repo --output config.yaml` |
+| `permissions` | Show required GitHub token permissions | `ownershit permissions` |
 | `ratelimit` | Check GitHub API rate limits | `ownershit ratelimit` |
 
 ### Archive Commands
@@ -73,6 +75,12 @@ task install
 |---------|-------------|---------|
 | `archive query` | Find repositories eligible for archiving | `ownershit archive query --username myuser --days 365` |
 | `archive execute` | Archive selected repositories interactively | `ownershit archive execute --username myuser --stars 0` |
+
+### Import/Export Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `import-csv` | Import multiple repositories and export as CSV | `ownershit import-csv owner/repo1 owner/repo2 --output repos.csv` |
 
 ### Global Flags
 
@@ -325,6 +333,29 @@ ownershit branches --config repositories.yaml
 ```bash
 # Update labels on all configured repositories
 ownershit label --config repositories.yaml
+```
+
+### Import Repository Configuration
+
+```bash
+# Import single repository configuration as YAML
+ownershit import myorg/myrepo --output repo-config.yaml
+
+# Import repository to stdout and preview settings
+ownershit import myorg/myrepo
+```
+
+### Bulk Export Repository Data as CSV
+
+```bash
+# Export multiple repositories to CSV file
+ownershit import-csv myorg/repo1 myorg/repo2 myorg/repo3 --output repositories.csv
+
+# Export from batch file with repository list
+ownershit import-csv --batch-file repo-list.txt --output export.csv
+
+# Append to existing CSV file
+ownershit import-csv myorg/new-repo --output existing-data.csv --append
 ```
 
 ## Troubleshooting
