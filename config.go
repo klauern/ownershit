@@ -270,14 +270,14 @@ func validatePushAllowlist(perms *BranchPermissions) error {
 	for i, actor := range perms.PushAllowlist {
 		trimmed := strings.TrimSpace(actor)
 		if trimmed == "" {
-			return NewConfigValidationError(fmt.Sprintf("push_allowlist[%d]", i), actor,
+			return NewConfigValidationError(fmt.Sprintf("push_allowlist[%d]", i), trimmed,
 				"empty entry in PushAllowlist", nil)
 		}
-		if seen[actor] {
-			return NewConfigValidationError("push_allowlist", actor,
+		if seen[trimmed] {
+			return NewConfigValidationError("push_allowlist", trimmed,
 				"duplicate entry in PushAllowlist", nil)
 		}
-		seen[actor] = true
+		seen[trimmed] = true
 	}
 	return nil
 }
@@ -514,7 +514,7 @@ func getRepositoryID(settings *PermissionsSettings, repo *Repository, client *Gi
 	repoID, err := client.GetRepository(repo.Name, settings.Organization)
 	if err != nil {
 		log.Err(err).Str("repository", *repo.Name).Msg("getting repository")
-		return nil, false
+		return githubv4.ID(""), false
 	}
 	log.Debug().Interface("repoID", repoID).Msg("Repository ID")
 	return repoID, true

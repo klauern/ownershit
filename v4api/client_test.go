@@ -63,16 +63,9 @@ func TestNewGHv4Client(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
-			oldVals := make(map[string]string)
 			for k, v := range tt.envVars {
-				oldVals[k] = os.Getenv(k)
-				_ = os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k, oldVal := range oldVals {
-					_ = os.Setenv(k, oldVal)
-				}
-			}()
 
 			client, err := NewGHv4Client()
 			if (err != nil) != tt.wantErr {

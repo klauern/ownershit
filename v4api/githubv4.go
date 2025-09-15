@@ -10,7 +10,7 @@ import (
 type LabelOperationError struct {
 	Operation string // "create", "update", or "delete"
 	LabelName string
-	Error     error
+	Err       error
 }
 
 // MultiLabelError represents multiple errors from label operations.
@@ -24,18 +24,18 @@ func (e *MultiLabelError) Error() string {
 	}
 	if len(e.Errors) == 1 {
 		err := e.Errors[0]
-		return fmt.Sprintf("label operation failed: %s", err.Error.Error())
+		return fmt.Sprintf("label operation failed: %s", err.Err.Error())
 	}
 	// For multiple errors, include count and first error's message for quicker debugging
 	firstErr := e.Errors[0]
-	return fmt.Sprintf("multiple label operations failed (%d errors): first error: %s", len(e.Errors), firstErr.Error.Error())
+	return fmt.Sprintf("multiple label operations failed (%d errors): first error: %s", len(e.Errors), firstErr.Err.Error())
 }
 
 // GetDetailedErrors returns detailed error messages for each failed operation.
 func (e *MultiLabelError) GetDetailedErrors() []string {
 	var details []string
 	for _, err := range e.Errors {
-		details = append(details, fmt.Sprintf("%s label '%s': %v", err.Operation, err.LabelName, err.Error))
+		details = append(details, fmt.Sprintf("%s label '%s': %v", err.Operation, err.LabelName, err.Err))
 	}
 	return details
 }
@@ -161,7 +161,7 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 			errors = append(errors, LabelOperationError{
 				Operation: "create",
 				LabelName: label.Name,
-				Error:     err,
+				Err:       err,
 			})
 		}
 	}
@@ -180,7 +180,7 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 			errors = append(errors, LabelOperationError{
 				Operation: "update",
 				LabelName: label.Name,
-				Error:     err,
+				Err:       err,
 			})
 		}
 	}
@@ -196,7 +196,7 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 			errors = append(errors, LabelOperationError{
 				Operation: "delete",
 				LabelName: label.Name,
-				Error:     err,
+				Err:       err,
 			})
 		}
 	}

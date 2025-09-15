@@ -97,15 +97,17 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 		"lastUpdated": r.UpdatedAt,
 		"watchers":    r.Watchers.TotalCount,
 	})
-	if bool(r.IsArchived) ||
-		bool(r.IsFork) ||
-		(int(r.ForkCount) > maxForks) ||
-		(int(r.StargazerCount) > maxStars) ||
-		(r.UpdatedAt.After(time.Now().Add(-time.Duration(maxDays) * OneDay))) ||
-		(int(r.Watchers.TotalCount) > maxWatchers) {
-		return true
+	if bool(r.IsArchived) {
+		return false // Already archived, not archivable
 	}
-	return false
+	if bool(r.IsFork) ||
+		(int(r.ForkCount) >= maxForks) ||
+		(int(r.StargazerCount) >= maxStars) ||
+		(r.UpdatedAt.After(time.Now().Add(-time.Duration(maxDays) * OneDay))) ||
+		(int(r.Watchers.TotalCount) >= maxWatchers) {
+		return false // Doesn't meet archiving criteria
+	}
+	return true // Meets all criteria for archiving
 }
 
 // QueryArchivableRepos returns repositories for the given user that meet the
@@ -146,7 +148,7 @@ func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars,
 	}
 	var candidates []RepositoryInfo
 	for _, repo := range repos {
-		if !repo.IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
+		if repo.IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
 			log.Debug().Str("repository", string(repo.Name)).Msg("repository is archivable")
 			candidates = append(candidates, repo)
 		}

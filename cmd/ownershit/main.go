@@ -379,9 +379,11 @@ func importCSVCommand(c *cli.Context) error {
 	var output *os.File
 	var shouldClose bool
 	fileExisted := false
+	fileHasContent := false
 	if outputPath != "" {
-		if _, statErr := os.Stat(outputPath); statErr == nil {
+		if stat, statErr := os.Stat(outputPath); statErr == nil {
 			fileExisted = true
+			fileHasContent = stat.Size() > 0
 		} else if !os.IsNotExist(statErr) {
 			return fmt.Errorf("failed to stat output file: %w", statErr)
 		}
@@ -423,7 +425,7 @@ func importCSVCommand(c *cli.Context) error {
 		}
 	} else {
 		// file output
-		if appendMode && fileExisted {
+		if appendMode && fileHasContent {
 			writeHeader = false
 		}
 	}
