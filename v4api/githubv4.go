@@ -101,7 +101,8 @@ func (c *GitHubV4Client) fetchExistingLabels(repo, owner string) (existingLabels
 		if repoID == "" {
 			repoID = labelResp.Repository.Id
 		}
-		for _, label := range labelResp.Repository.Labels.Edges {
+		for i := range labelResp.Repository.Labels.Edges {
+			label := labelResp.Repository.Labels.Edges[i]
 			existingLabels[label.Node.Name] = Label(label.Node)
 		}
 		if !labelResp.Repository.Labels.PageInfo.HasNextPage {

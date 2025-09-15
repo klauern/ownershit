@@ -78,6 +78,7 @@ var ArchiveSubcommands = []*cli.Command{
 	},
 }
 
+// userClientSetup validates the username parameter and sets up the GitHub client.
 func userClientSetup(c *cli.Context) error {
 	if strings.TrimSpace(username) == "" {
 		return ErrUsernameNotDefined
@@ -93,6 +94,7 @@ func userClientSetup(c *cli.Context) error {
 	return nil
 }
 
+// queryCommand queries repositories that match the archiving criteria.
 func queryCommand(c *cli.Context) error {
 	log.
 		Info().
@@ -114,7 +116,7 @@ func queryCommand(c *cli.Context) error {
 	}
 	tableBuf := strings.Builder{}
 	table := tablewriter.NewWriter(&tableBuf)
-	table.SetHeader([]string{"repository", "forks", "stars", "watchers", "last updated"})
+	table.Header([]string{"repository", "forks", "stars", "watchers", "last updated"})
 
 	repos = shit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
@@ -122,13 +124,20 @@ func queryCommand(c *cli.Context) error {
 		repoStars := strconv.Itoa(int(repo.StargazerCount))
 		repoWatchers := strconv.Itoa(int(repo.Watchers.TotalCount))
 		lastUpdated := repo.UpdatedAt.Time
-		table.Append([]string{string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String()})
+		if err := table.Append([]string{
+			string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String(),
+		}); err != nil {
+			log.Warn().Err(err).Msg("failed to append table row")
+		}
 	}
-	table.Render()
+	if err := table.Render(); err != nil {
+		log.Warn().Err(err).Msg("failed to render table")
+	}
 	fmt.Println(tableBuf.String())
 	return nil
 }
 
+// executeCommand executes the archiving process for repositories matching the criteria.
 func executeCommand(c *cli.Context) error {
 	log.
 		Info().
@@ -177,6 +186,7 @@ func executeCommand(c *cli.Context) error {
 	return nil
 }
 
+// mapRepoNames creates a map of repository names to RepositoryInfo for quick lookup.
 func mapRepoNames(r []shit.RepositoryInfo) map[string]shit.RepositoryInfo {
 	repos := make(map[string]shit.RepositoryInfo, len(r))
 	for _, v := range r {

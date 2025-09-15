@@ -353,13 +353,18 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 			log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
 		}
 	}
-	var edits []RepoLabel
+	var edits []struct {
+		label   RepoLabel
+		oldName string
+	}
 	var creates []RepoLabel
 	for _, v := range labels {
 		label := findLabel(v, ghLabels)
 		if label != nil {
-			v.oldLabel = *label.Name
-			edits = append(edits, v)
+			edits = append(edits, struct {
+				label   RepoLabel
+				oldName string
+			}{v, *label.Name})
 		} else {
 			creates = append(creates, v)
 		}
@@ -384,14 +389,14 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 	}
 
 	for _, edit := range edits {
-		log.Debug().Msgf("Editing existing label %v", edit.Name)
-		_, resp, err := c.Issues.EditLabel(c.Context, org, repo, edit.oldLabel, &github.Label{
-			Name:        github.String(fmt.Sprintf("%v %v", edit.Emoji, edit.Name)),
-			Color:       &edit.Color,
-			Description: &edit.Description,
+		log.Debug().Msgf("Editing existing label %v", edit.label.Name)
+		_, resp, err := c.Issues.EditLabel(c.Context, org, repo, edit.oldName, &github.Label{
+			Name:        github.String(fmt.Sprintf("%v %v", edit.label.Emoji, edit.label.Name)),
+			Color:       &edit.label.Color,
+			Description: &edit.label.Description,
 		})
 		if err != nil {
-			return NewGitHubAPIError(0, "edit label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to edit label %s", edit.Name), err)
+			return NewGitHubAPIError(0, "edit label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to edit label %s", edit.label.Name), err)
 		}
 		if resp != nil && resp.Response != nil && log.Debug().Enabled() {
 			dumpedResp, _ := httputil.DumpResponse(resp.Response, false)

@@ -365,13 +365,16 @@ func TestQueryArchivableRepos(t *testing.T) {
 		func(c context.Context, y *ArchivableRepositoriesQuery, v map[string]interface{}) {
 			y.Search.Repos = []struct {
 				Repository RepositoryInfo `graphql:"... on Repository"`
-			}{{Repository: RepositoryInfo{IsArchived: true}}}
+			}{{Repository: RepositoryInfo{IsArchived: githubv4.Boolean(true)}}}
 			y.Search.RepositoryCount = 1
 			y.Search.PageInfo = pageInfo{HasNextPage: true, EndCursor: githubv4.String("dummycursor")}
 		})
 	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(
 		func(c context.Context, y *ArchivableRepositoriesQuery, v map[string]interface{}) {
-			y.Search.Repos = nil
+			y.Search.Repos = []struct {
+				Repository RepositoryInfo `graphql:"... on Repository"`
+			}{}
+			y.Search.RepositoryCount = 0
 			y.Search.PageInfo = pageInfo{}
 		})
 	info, err := mocks.client.QueryArchivableRepos("klauern", 1, 1, 1, 1)

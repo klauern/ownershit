@@ -186,6 +186,7 @@ func main() {
 	}
 }
 
+// configureClient sets up the GitHub client and configuration for CLI commands.
 func configureClient(c *cli.Context) error {
 	err := readConfig(c)
 	if err != nil {
@@ -206,6 +207,7 @@ func configureClient(c *cli.Context) error {
 	return nil
 }
 
+// configureImportClient sets up the GitHub client specifically for import operations.
 func configureImportClient(c *cli.Context) error {
 	if c.Bool("debug") {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -222,6 +224,7 @@ func configureImportClient(c *cli.Context) error {
 	return nil
 }
 
+// readConfig reads and validates the configuration file specified in the CLI context.
 func readConfig(c *cli.Context) error {
 	configPath := c.String("config")
 	file, err := os.ReadFile(configPath) // #nosec G304 - config path validated by CLI
@@ -265,24 +268,28 @@ func readConfig(c *cli.Context) error {
 	return nil
 }
 
+// syncCommand synchronizes repository settings based on the configuration file.
 func syncCommand(c *cli.Context) error {
 	log.Info().Msg("mapping all permissions for repositories")
 	shit.MapPermissions(settings, githubClient)
 	return nil
 }
 
+// branchCommand updates branch merge strategies for repositories.
 func branchCommand(c *cli.Context) error {
 	log.Info().Msg("performing branch updates on repositories")
 	shit.UpdateBranchMergeStrategies(settings, githubClient)
 	return nil
 }
 
+// labelCommand synchronizes labels across repositories.
 func labelCommand(c *cli.Context) error {
 	log.Info().Msg("synchronizing labels on repositories")
 	shit.SyncLabels(settings, githubClient)
 	return nil
 }
 
+// rateLimitCommand displays GitHub API rate limit information.
 func rateLimitCommand(c *cli.Context) error {
 	log.Info().Msg("getting ratelimit information")
 	githubClient.GetRateLimit()
@@ -290,8 +297,7 @@ func rateLimitCommand(c *cli.Context) error {
 }
 
 // importCommand imports a repository's ownershit configuration from GitHub and writes it as YAML.
-//
-// importCommand expects a single CLI argument in the form `owner/repo`. It fetches the repository
+// It expects a single CLI argument in the form `owner/repo`. It fetches the repository
 // configuration via the GitHub client, marshals it to YAML, and either prints the YAML to stdout
 // or writes it to the path specified by the `--output` flag (file created with mode 0600).
 // It returns an error if the argument is missing or malformed, if the import or YAML marshaling
@@ -588,6 +594,7 @@ default_labels:
 `
 }
 
+// permissionsCommand displays the required GitHub token permissions.
 func permissionsCommand(c *cli.Context) error {
 	fmt.Println("GitHub Token Permissions Required for ownershit")
 	fmt.Println("=" + strings.Repeat("=", 48))

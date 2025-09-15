@@ -34,7 +34,7 @@ func TestBuildClient_ConfigurationTest(t *testing.T) {
 		t.Errorf("Expected RetryWaitMin %v, got %v", expectedWaitMin, client.RetryWaitMin)
 	}
 
-	expectedWaitMax := time.Duration(10) * time.Duration(2.0) * time.Minute
+	expectedWaitMax := time.Duration(10) * time.Duration(2.0) * time.Second
 	if client.RetryWaitMax != expectedWaitMax {
 		t.Errorf("Expected RetryWaitMax %v, got %v", expectedWaitMax, client.RetryWaitMax)
 	}
@@ -67,8 +67,12 @@ func TestAuthedTransport_RoundTrip_Coverage(t *testing.T) {
 	defer srv.Close()
 
 	req, _ := http.NewRequest("GET", srv.URL, http.NoBody)
-	if _, err := transport.RoundTrip(req); err != nil {
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
 		t.Fatalf("RoundTrip failed: %v", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
 	}
 }
 

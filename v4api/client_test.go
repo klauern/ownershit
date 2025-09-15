@@ -109,7 +109,7 @@ func Test_authedTransport_RoundTrip(t *testing.T) {
 		{
 			name:       "adds authorization header",
 			key:        "test-key",
-			wantHeader: "bearer test-key",
+			wantHeader: "Bearer test-key",
 		},
 	}
 
@@ -254,7 +254,11 @@ func Test_parseEnv(t *testing.T) {
 				}
 			}()
 
-			got := parseEnv()
+			got, err := parseEnv()
+			if err != nil {
+				t.Errorf("parseEnv() error = %v", err)
+				return
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseEnv() = %v, want %v", got, tt.want)
 			}
@@ -604,7 +608,11 @@ func TestParseEnv_ValidValues(t *testing.T) {
 				}
 			}()
 
-			got := parseEnv()
+			got, err := parseEnv()
+			if err != nil {
+				t.Errorf("parseEnv() error = %v", err)
+				return
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("parseEnv() = %v, want %v", got, tt.want)
 			}
@@ -633,8 +641,8 @@ func TestAuthedTransport_RoundTrip_Error(t *testing.T) {
 	}
 
 	// Verify authorization header was still set
-	if got := req.Header.Get("Authorization"); got != "bearer test-key" {
-		t.Errorf("Authorization header = %v, want %v", got, "bearer test-key")
+	if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
+		t.Errorf("Authorization header = %v, want %v", got, "Bearer test-key")
 	}
 }
 
@@ -657,7 +665,7 @@ func TestBuildClient_ValidateRetryConfiguration(t *testing.T) {
 		t.Errorf("Timeout = %v, want %v", client.HTTPClient.Timeout, expectedTimeout)
 	}
 
-	expectedWaitMax := time.Duration(params.WaitIntervalSeconds) * time.Duration(params.Multiplier) * time.Minute
+	expectedWaitMax := time.Duration(float64(params.WaitIntervalSeconds)*params.Multiplier) * time.Second
 	if client.RetryWaitMax != expectedWaitMax {
 		t.Errorf("RetryWaitMax = %v, want %v", client.RetryWaitMax, expectedWaitMax)
 	}
@@ -847,7 +855,7 @@ func TestAuthedTransport_RoundTrip_VariousRequests(t *testing.T) {
 				_ = resp.Body.Close()
 			}
 
-			expectedAuth := "bearer " + tt.key
+			expectedAuth := "Bearer " + tt.key
 			if got := req.Header.Get("Authorization"); got != expectedAuth {
 				t.Errorf("Authorization header = %v, want %v", got, expectedAuth)
 			}

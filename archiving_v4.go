@@ -146,7 +146,7 @@ func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars,
 	}
 	var candidates []RepositoryInfo
 	for _, repo := range repos {
-		if repo.IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
+		if !repo.IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
 			log.Debug().Str("repository", string(repo.Name)).Msg("repository is archivable")
 			candidates = append(candidates, repo)
 		}

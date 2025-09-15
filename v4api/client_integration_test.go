@@ -421,7 +421,7 @@ func TestGitHubV4Client_SyncLabels_ComplexScenarios(t *testing.T) {
 				mockClient.EXPECT().MakeRequest(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("update failed")).Times(1).After(first)
 			},
 			expectError:   true,
-			errorContains: "can't update label",
+			errorContains: "label operation failed: update failed",
 		},
 		{
 			name: "error during label creation",
@@ -453,7 +453,7 @@ func TestGitHubV4Client_SyncLabels_ComplexScenarios(t *testing.T) {
 				mockClient.EXPECT().MakeRequest(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("create failed")).Times(1).After(first)
 			},
 			expectError:   true,
-			errorContains: "can't create label",
+			errorContains: "label operation failed: create failed",
 		},
 		{
 			name:   "error during label deletion",
@@ -496,7 +496,7 @@ func TestGitHubV4Client_SyncLabels_ComplexScenarios(t *testing.T) {
 				mockClient.EXPECT().MakeRequest(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("delete failed")).Times(1).After(first)
 			},
 			expectError:   true,
-			errorContains: "can't delete label",
+			errorContains: "label operation failed: delete failed",
 		},
 	}
 
