@@ -20,7 +20,7 @@ func getCSVHeaders() []string {
 	return []string{
 		"owner", "repo", "organization", "wiki_enabled", "issues_enabled",
 		"projects_enabled", "private", "archived", "template", "default_branch",
-		"delete_branch_on_merge", "discussions_enabled", "require_pull_request_reviews",
+		"delete_branch_on_merge", "discussions_enabled", "sponsorships_enabled", "require_pull_request_reviews",
 		"require_approving_count", "require_code_owners", "allow_merge_commit",
 		"allow_squash_merge", "allow_rebase_merge", "require_status_checks",
 		"require_up_to_date_branch", "enforce_admins", "restrict_pushes",
@@ -38,8 +38,10 @@ func getCSVHeaders() []string {
 // using helper functions so missing values become empty strings.
 func convertToCSVRow(config *PermissionsSettings, owner, repo string) []string {
 	if config == nil || len(config.Repositories) == 0 {
-		// Return empty row with correct number of columns
-		return make([]string, len(getCSVHeaders()))
+		row := make([]string, len(getCSVHeaders()))
+		row[0] = sanitizeCSV(owner) // owner
+		row[1] = sanitizeCSV(repo)  // repo
+		return row
 	}
 
 	repoConfig := config.Repositories[0] // Single repository context
@@ -58,6 +60,7 @@ func convertToCSVRow(config *PermissionsSettings, owner, repo string) []string {
 		safeStringValue(repoConfig.DefaultBranch),                // default_branch
 		safeBoolValue(repoConfig.DeleteBranchOnMerge),            // delete_branch_on_merge
 		safeBoolValue(repoConfig.HasDiscussionsEnabled),          // discussions_enabled
+		safeBoolValue(repoConfig.HasSponsorshipsEnabled),         // sponsorships_enabled
 		safeBoolValue(branchPerms.RequirePullRequestReviews),     // require_pull_request_reviews
 		safeIntValue(branchPerms.ApproverCount),                  // require_approving_count
 		safeBoolValue(branchPerms.RequireCodeOwners),             // require_code_owners
@@ -152,7 +155,7 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 
 	log.Info().
 		Int("totalRepositories", len(repos)).
-		Msg("Starting CSV import for repositories")
+		Msg("Starting CSV export for repositories")
 
 	for i, repo := range repos {
 		parts := strings.Split(repo, "/")
@@ -204,7 +207,7 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 				Int("total", len(repos)).
 				Int("success", successCount).
 				Int("errors", errorCount).
-				Msg("Batch processing progress")
+				Msg("CSV export progress")
 		}
 	}
 
@@ -213,7 +216,7 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 		Int("totalProcessed", len(repos)).
 		Int("successful", successCount).
 		Int("failed", errorCount).
-		Msg("CSV import completed")
+		Msg("CSV export completed")
 
 	// Flush and check for any buffered I/O errors
 	csvWriter.Flush()
@@ -267,6 +270,7 @@ func ParseRepositoryList(args []string, batchFile string) ([]string, error) {
 
 	// Add command line arguments
 	for _, arg := range args {
+		arg = strings.TrimSpace(arg)
 		if err := validateRepoFormat(arg); err != nil {
 			return nil, fmt.Errorf("invalid repository format '%s': %w", arg, err)
 		}
@@ -389,7 +393,7 @@ func ValidateCSVAppendMode(filename string) error {
 
 	expectedHeaders := getCSVHeaders()
 	if !sliceEqual(headers, expectedHeaders) {
-		return fmt.Errorf("%w", ErrIncompatibleCSVHeaders)
+		return fmt.Errorf("%w.\nexpected: %q\ngot:      %q", ErrIncompatibleCSVHeaders, expectedHeaders, headers)
 	}
 
 	return nil
@@ -425,7 +429,7 @@ type BatchProcessingError struct {
 }
 
 func (e *BatchProcessingError) Error() string {
-	return fmt.Sprintf("batch processing completed with %d/%d failures: %d successful, %d failed",
+	return fmt.Sprintf("batch processing completed: %d of %d failed (%d successful, %d failed)",
 		e.ErrorCount, e.TotalRepositories, e.SuccessCount, e.ErrorCount)
 }
 

@@ -345,6 +345,11 @@ func getRepositoryLabels(client *GitHubClient, owner, repo string) ([]RepoLabel,
 
 		// Convert GitHub labels to RepoLabel format
 		for _, label := range labels {
+			// Guard against unexpected nil pointers from API to avoid panics.
+			if label.Name == nil || label.Color == nil {
+				log.Warn().Interface("label", label).Msg("skipping label with missing name or color")
+				continue
+			}
 			repoLabel := RepoLabel{
 				Name:  *label.Name,
 				Color: *label.Color,

@@ -340,8 +340,8 @@ func rateLimitCommand(c *cli.Context) error {
 // It returns an error if the argument is missing or malformed, if the import or YAML marshaling
 // fails, or if writing the output file fails.
 func importCommand(c *cli.Context) error {
-	if c.NArg() == 0 {
-		return fmt.Errorf("%w", ErrExpectedOneArgument)
+	if c.NArg() != 1 {
+		return fmt.Errorf("%w (got %d arguments)", ErrExpectedOneArgument, c.NArg())
 	}
 
 	repoPath := c.Args().Get(0)

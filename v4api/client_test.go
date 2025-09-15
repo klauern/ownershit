@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func TestNewGHv4Client(t *testing.T) {
 		{
 			name: "default configuration",
 			envVars: map[string]string{
-				"GITHUB_TOKEN": "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
+				"GITHUB_TOKEN": validTestToken(), // Valid test token format
 			},
 			wantRetries: defaultConfig.maxRetries,
 			wantTimeout: defaultConfig.timeoutSeconds,
@@ -39,7 +40,7 @@ func TestNewGHv4Client(t *testing.T) {
 		{
 			name: "custom configuration",
 			envVars: map[string]string{
-				"GITHUB_TOKEN":                   "ghp_abcd1234567890ABCD1234567890abcd1234", // Valid test token format
+				"GITHUB_TOKEN":                   validTestToken(), // Valid test token format
 				EnvVarPrefix + EnvMaxRetries:     "5",
 				EnvVarPrefix + EnvTimeoutSeconds: "30",
 			},
@@ -702,6 +703,11 @@ func TestTypeAliases(t *testing.T) {
 
 	// These tests just verify the types compile correctly
 	t.Log("Type aliases test passed")
+}
+
+// validTestToken returns a runtime-generated GitHub PAT format token for testing
+func validTestToken() string {
+	return "ghp_" + strings.Repeat("A", 36)
 }
 
 func TestGitHubV4Client_ContextHandling(t *testing.T) {

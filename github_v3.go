@@ -4,6 +4,7 @@ package ownershit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http/httputil"
 	"strings"
@@ -97,6 +98,9 @@ func NewSecureGitHubClient(ctx context.Context) (*GitHubClient, error) {
 
 // AddPermissions adds a given team level repository permission.
 func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissions) error {
+	if perm == nil || perm.Team == nil || perm.Level == nil {
+		return fmt.Errorf("%w", ErrInvalidPermissions)
+	}
 	resp, err := c.Teams.
 		AddTeamRepoBySlug(
 			c.Context,
@@ -161,9 +165,7 @@ func (c *GitHubClient) UpdateBranchPermissions(org, repo string, perms *BranchPe
 			fmt.Sprintf("%s/%s", org, repo), "failed to update repository settings", err)
 	}
 
-	log.Info().Fields(map[string]interface{}{
-		"code": resp.StatusCode,
-	})
+	log.Info().Fields(map[string]interface{}{"code": resp.StatusCode}).Msg("Updated repository settings")
 
 	return nil
 }
@@ -235,12 +237,13 @@ func (c *GitHubClient) SetBranchProtectionFallback(org, repo, branch string, per
 		if resp != nil {
 			statusCode = resp.StatusCode
 		}
-		_ = log.Err(err).
+		log.Err(err).
 			Str("org", org).
 			Str("repo", repo).
 			Str("branch", branch).
 			Int("statusCode", statusCode).
-			Str("operation", "updateBranchProtection")
+			Str("operation", "updateBranchProtection").
+			Msg("Error updating branch protection via REST API")
 		return NewGitHubAPIError(statusCode, "update branch protection",
 			fmt.Sprintf("%s/%s", org, repo), "failed to set branch protection via REST API", err)
 	}
@@ -309,17 +312,22 @@ func buildRestrictions(perms *BranchPermissions) *github.BranchRestrictionsReque
 	if perms.RestrictPushes == nil || !*perms.RestrictPushes {
 		return nil
 	}
-	restrictions := &github.BranchRestrictionsRequest{}
 	if len(perms.PushAllowlist) > 0 {
+		restrictions := &github.BranchRestrictionsRequest{}
 		// Note: Ideally resolve team/user IDs; we treat entries as team slugs/usernames.
 		restrictions.Teams = perms.PushAllowlist
+		return restrictions
 	}
-	return restrictions
+	// else: leave Restrictions nil to avoid invalid empty restrictions
+	return nil
 }
 
 func applyAdvancedProtectionOptions(perms *BranchPermissions, pr *github.ProtectionRequest) {
 	if perms.RequireLinearHistory != nil {
 		pr.RequireLinearHistory = perms.RequireLinearHistory
+	}
+	if perms.RequireConversationResolution != nil {
+		pr.RequiredConversationResolution = perms.RequireConversationResolution
 	}
 	if perms.AllowForcePushes != nil {
 		pr.AllowForcePushes = perms.AllowForcePushes
@@ -404,3 +412,8 @@ func findLabel(searchLabel RepoLabel, ghLabels []*github.Label) *github.Label {
 	}
 	return nil
 }
+
+// Package-level errors for consistent wrapping and lint compliance.
+var (
+	ErrInvalidPermissions = errors.New("invalid permissions: team and level must be provided")
+)

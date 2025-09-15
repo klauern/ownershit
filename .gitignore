@@ -150,4 +150,6 @@ repositories.yaml
 dist/
 .aider*
 
-ownershit
+/ownershit
+/ownershit.exe
+!/ownershit/

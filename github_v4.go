@@ -57,7 +57,6 @@ func (c *GitHubClient) SetRepository(id githubv4.ID, wiki, issues, project, disc
 		inputRepo.HasSponsorshipsEnabled = githubv4.NewBoolean(githubv4.Boolean(*sponsorships))
 	}
 	log.Debug().
-		Interface("mutation", mutation).
 		Interface("input", inputRepo).
 		Interface("repositoryID", id).
 		Msg("GitHubClient.SetRepository()")
