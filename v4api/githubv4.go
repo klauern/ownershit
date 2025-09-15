@@ -6,6 +6,40 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// LabelOperationError represents an error from a single label operation
+type LabelOperationError struct {
+	Operation string // "create", "update", or "delete"
+	LabelName string
+	Error     error
+}
+
+// MultiLabelError represents multiple errors from label operations
+type MultiLabelError struct {
+	Errors []LabelOperationError
+}
+
+func (e *MultiLabelError) Error() string {
+	if len(e.Errors) == 0 {
+		return "no errors"
+	}
+	if len(e.Errors) == 1 {
+		err := e.Errors[0]
+		return fmt.Sprintf("label operation failed: %s", err.Error.Error())
+	}
+	// For multiple errors, include count and first error's message for quicker debugging
+	firstErr := e.Errors[0]
+	return fmt.Sprintf("multiple label operations failed (%d errors): first error: %s", len(e.Errors), firstErr.Error.Error())
+}
+
+// GetDetailedErrors returns detailed error messages for each failed operation
+func (e *MultiLabelError) GetDetailedErrors() []string {
+	var details []string
+	for _, err := range e.Errors {
+		details = append(details, fmt.Sprintf("%s label '%s': %v", err.Operation, err.LabelName, err.Error))
+	}
+	return details
+}
+
 // V4ClientDefaultPageSize defines the default page size for GraphQL queries.
 const V4ClientDefaultPageSize = 100
 
@@ -77,47 +111,91 @@ func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
 		}
 		cursor = labelResp.Repository.Labels.PageInfo.EndCursor
 	}
-	for i := 0; i < len(labels); i++ {
-		label := labels[i]
-		// create some kind of type to track which are new, missing, or updated
-		l, ok := labelsMap[label.Name]
-		if ok {
-			// Label name exists, so we need to update it
-			log.Debug().Interface("label", label).Msg("label exists")
-			_, err := UpdateLabel(c.Context, c.client, UpdateLabelInput{
-				Name:        label.Name,
-				Color:       label.Color,
-				Description: label.Description,
-				Id:          l.Id,
-			})
-			if err != nil {
-				return fmt.Errorf("can't update label: %w", err)
+	// Compute diff: determine what needs to be created, updated, or deleted
+	var toCreate, toUpdate, toDelete []Label
+
+	// Process desired labels to determine creates and updates
+	for i := range labels {
+		desiredLabel := &labels[i]
+		if existingLabel, exists := labelsMap[desiredLabel.Name]; exists {
+			// Check if update is needed by comparing fields
+			if existingLabel.Color != desiredLabel.Color ||
+				existingLabel.Description != desiredLabel.Description {
+				// Propagate the ID from the existing label to the desired label
+				desiredLabel.Id = existingLabel.Id
+				toUpdate = append(toUpdate, *desiredLabel)
 			}
-			delete(labelsMap, label.Name)
+			// Remove from map so remaining items are deletions
+			delete(labelsMap, desiredLabel.Name)
 		} else {
-			// Label name doesn't exist, so we need to create it
-			log.Debug().Interface("label", label).Msg("label does not exist")
-			_, err := CreateLabel(c.Context, c.client, CreateLabelInput{
-				Name:         label.Name,
-				Color:        label.Color,
-				Description:  label.Description,
-				RepositoryId: repoID,
-			})
-			if err != nil {
-				return fmt.Errorf("can't create label: %w", err)
-			}
-			delete(labelsMap, label.Name)
+			// Label doesn't exist, needs to be created
+			toCreate = append(toCreate, *desiredLabel)
 		}
 	}
-	// now we have a map of labels that we need to delete
-	for name := range labelsMap {
-		label := labelsMap[name]
+
+	// Remaining items in labelsMap are deletions
+	for _, label := range labelsMap {
+		toDelete = append(toDelete, label)
+	}
+
+	// Execute creates
+	var errors []LabelOperationError
+	for i := range toCreate {
+		label := &toCreate[i]
+		log.Debug().Interface("label", label).Msg("creating label")
+		_, err := CreateLabel(c.Context, c.client, CreateLabelInput{
+			Name:         label.Name,
+			Color:        label.Color,
+			Description:  label.Description,
+			RepositoryId: repoID,
+		})
+		if err != nil {
+			errors = append(errors, LabelOperationError{
+				Operation: "create",
+				LabelName: label.Name,
+				Error:     err,
+			})
+		}
+	}
+
+	// Execute updates
+	for i := range toUpdate {
+		label := &toUpdate[i]
+		log.Debug().Interface("label", label).Msg("updating label")
+		_, err := UpdateLabel(c.Context, c.client, UpdateLabelInput{
+			Name:        label.Name,
+			Color:       label.Color,
+			Description: label.Description,
+			Id:          label.Id,
+		})
+		if err != nil {
+			errors = append(errors, LabelOperationError{
+				Operation: "update",
+				LabelName: label.Name,
+				Error:     err,
+			})
+		}
+	}
+
+	// Execute deletions
+	for i := range toDelete {
+		label := &toDelete[i]
+		log.Debug().Interface("label", label).Msg("deleting label")
 		_, err := DeleteLabel(c.Context, c.client, DeleteLabelInput{
 			Id: label.Id,
 		})
 		if err != nil {
-			return fmt.Errorf("can't delete label: %w", err)
+			errors = append(errors, LabelOperationError{
+				Operation: "delete",
+				LabelName: label.Name,
+				Error:     err,
+			})
 		}
+	}
+
+	// Return aggregated error if any operations failed
+	if len(errors) > 0 {
+		return &MultiLabelError{Errors: errors}
 	}
 	return nil
 }

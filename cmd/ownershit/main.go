@@ -66,13 +66,6 @@ func main() {
 						Value: "repositories.yaml",
 						Usage: "configuration of repository updates to perform",
 					},
-					&cli.BoolFlag{
-						Name:    "debug",
-						Aliases: []string{"d"},
-						EnvVars: []string{"OWNERSHIT_DEBUG"},
-						Usage:   "set output to debug logging",
-						Value:   false,
-					},
 				},
 			},
 			{
@@ -86,13 +79,6 @@ func main() {
 						Name:  "config",
 						Value: "repositories.yaml",
 						Usage: "configuration of repository updates to perform",
-					},
-					&cli.BoolFlag{
-						Name:    "debug",
-						Aliases: []string{"d"},
-						EnvVars: []string{"OWNERSHIT_DEBUG"},
-						Usage:   "set output to debug logging",
-						Value:   false,
 					},
 				},
 			},
@@ -113,13 +99,6 @@ func main() {
 						Value: "repositories.yaml",
 						Usage: "configuration of repository updates to perform",
 					},
-					&cli.BoolFlag{
-						Name:    "debug",
-						Aliases: []string{"d"},
-						EnvVars: []string{"OWNERSHIT_DEBUG"},
-						Usage:   "set output to debug logging",
-						Value:   false,
-					},
 				},
 			},
 			{
@@ -127,15 +106,7 @@ func main() {
 				Usage:  "get ratelimit information for the GitHub GraphQL v4 API",
 				Before: configureClient,
 				Action: rateLimitCommand,
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:    "debug",
-						Aliases: []string{"d"},
-						EnvVars: []string{"OWNERSHIT_DEBUG"},
-						Usage:   "set output to debug logging",
-						Value:   false,
-					},
-				},
+				Flags:  []cli.Flag{},
 			},
 			{
 				Name:      "import",
@@ -148,13 +119,6 @@ func main() {
 						Name:    "output",
 						Aliases: []string{"o"},
 						Usage:   "output file path (default: stdout)",
-					},
-					&cli.BoolFlag{
-						Name:    "debug",
-						Aliases: []string{"d"},
-						EnvVars: []string{"OWNERSHIT_DEBUG"},
-						Usage:   "set output to debug logging",
-						Value:   false,
 					},
 				},
 			},
@@ -179,13 +143,6 @@ func main() {
 						Name:    "batch-file",
 						Aliases: []string{"f"},
 						Usage:   "read repository list from file (one owner/repo per line)",
-					},
-					&cli.BoolFlag{
-						Name:    "debug",
-						Aliases: []string{"d"},
-						EnvVars: []string{"OWNERSHIT_DEBUG"},
-						Usage:   "enable debug logging",
-						Value:   false,
 					},
 				},
 			},
@@ -447,13 +404,7 @@ func importCSVCommand(c *cli.Context) error {
 		output = os.Stdout
 	}
 
-	if shouldClose {
-		defer func() {
-			if closeErr := output.Close(); closeErr != nil {
-				log.Error().Err(closeErr).Msg("failed to close output file")
-			}
-		}()
-	}
+	var closeErr error
 
 	// Determine whether to write the CSV header
 	writeHeader := true
@@ -471,6 +422,14 @@ func importCSVCommand(c *cli.Context) error {
 
 	// Process repositories and generate CSV
 	err = shit.ProcessRepositoriesCSV(repos, output, githubClient, writeHeader)
+
+	// Close output immediately if needed
+	if shouldClose {
+		if closeErr = output.Close(); closeErr != nil {
+			log.Error().Err(closeErr).Msg("failed to close output file")
+		}
+	}
+
 	if err != nil {
 		// Check if it's a batch processing error with partial success
 		if batchErr, ok := err.(*shit.BatchProcessingError); ok {
@@ -486,8 +445,15 @@ func importCSVCommand(c *cli.Context) error {
 
 			// Return success if we had any successful imports
 			if batchErr.SuccessCount > 0 {
+				// Check for close error after successful processing
+				if closeErr != nil {
+					return fmt.Errorf("CSV import succeeded but failed to close output: %w", closeErr)
+				}
 				return nil
 			}
+		}
+		if closeErr != nil {
+			return fmt.Errorf("CSV import failed: %w (also failed to close output: %w)", err, closeErr)
 		}
 		return fmt.Errorf("CSV import failed: %w", err)
 	}
@@ -499,6 +465,10 @@ func importCSVCommand(c *cli.Context) error {
 			Msg("CSV export completed successfully")
 	}
 
+	// Check for close error after successful processing
+	if closeErr != nil {
+		return fmt.Errorf("CSV export succeeded but failed to close output: %w", closeErr)
+	}
 	return nil
 }
 

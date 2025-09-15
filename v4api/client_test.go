@@ -15,6 +15,9 @@ import (
 	mock_graphql "github.com/klauern/ownershit/v4api/mocks"
 )
 
+// testTokenSuffixLen is the length of the suffix for GitHub PAT tokens (excluding the "ghp_" prefix)
+const testTokenSuffixLen = 36
+
 // roundTripperFunc is a test helper to stub http.RoundTripper
 type roundTripperFunc func(*http.Request) (*http.Response, error)
 
@@ -690,7 +693,7 @@ func (t *errorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 func TestTypeAliases(t *testing.T) {
 	// Test that type aliases are properly defined
 	var teams OrganizationTeams
-	if teams == nil {
+	if len(teams) == 0 {
 		teams = make(OrganizationTeams, 0)
 	}
 	_ = teams
@@ -707,7 +710,7 @@ func TestTypeAliases(t *testing.T) {
 
 // validTestToken returns a runtime-generated GitHub PAT format token for testing
 func validTestToken() string {
-	return "ghp_" + strings.Repeat("A", 36)
+	return "ghp_" + strings.Repeat("A", testTokenSuffixLen)
 }
 
 func TestGitHubV4Client_ContextHandling(t *testing.T) {
