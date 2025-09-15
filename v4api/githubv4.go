@@ -6,14 +6,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// LabelOperationError represents an error from a single label operation
+// LabelOperationError represents an error from a single label operation.
 type LabelOperationError struct {
 	Operation string // "create", "update", or "delete"
 	LabelName string
 	Error     error
 }
 
-// MultiLabelError represents multiple errors from label operations
+// MultiLabelError represents multiple errors from label operations.
 type MultiLabelError struct {
 	Errors []LabelOperationError
 }
@@ -31,7 +31,7 @@ func (e *MultiLabelError) Error() string {
 	return fmt.Sprintf("multiple label operations failed (%d errors): first error: %s", len(e.Errors), firstErr.Error.Error())
 }
 
-// GetDetailedErrors returns detailed error messages for each failed operation
+// GetDetailedErrors returns detailed error messages for each failed operation.
 func (e *MultiLabelError) GetDetailedErrors() []string {
 	var details []string
 	for _, err := range e.Errors {
@@ -88,36 +88,38 @@ func (c *GitHubV4Client) GetRateLimit() (RateLimit, error) {
 	return RateLimit(*resp), nil
 }
 
-// SyncLabels ensures the repository's labels match the provided desired set by
-// creating, updating, and deleting labels as needed using GraphQL mutations.
-func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
-	labelsMap := map[string]Label{}
+// fetchExistingLabels retrieves all existing labels from the repository.
+func (c *GitHubV4Client) fetchExistingLabels(repo, owner string) (existingLabels map[string]Label, repoID string, err error) {
+	existingLabels = map[string]Label{}
 	cursor := ""
-	var repoID string
+
 	for {
 		labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, owner, cursor)
 		if err != nil {
-			return fmt.Errorf("can't get labels: %w", err)
+			return nil, "", fmt.Errorf("can't get labels: %w", err)
 		}
 		if repoID == "" {
 			repoID = labelResp.Repository.Id
 		}
 		for i := 0; i < len(labelResp.Repository.Labels.Edges); i++ {
 			label := labelResp.Repository.Labels.Edges[i]
-			labelsMap[label.Node.Name] = Label(label.Node)
+			existingLabels[label.Node.Name] = Label(label.Node)
 		}
 		if !labelResp.Repository.Labels.PageInfo.HasNextPage {
 			break
 		}
 		cursor = labelResp.Repository.Labels.PageInfo.EndCursor
 	}
-	// Compute diff: determine what needs to be created, updated, or deleted
-	var toCreate, toUpdate, toDelete []Label
 
+	return existingLabels, repoID, nil
+}
+
+// computeLabelDiff determines what labels need to be created, updated, or deleted.
+func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (toCreate, toUpdate, toDelete []Label) {
 	// Process desired labels to determine creates and updates
-	for i := range labels {
-		desiredLabel := &labels[i]
-		if existingLabel, exists := labelsMap[desiredLabel.Name]; exists {
+	for i := range desiredLabels {
+		desiredLabel := &desiredLabels[i]
+		if existingLabel, exists := existingLabels[desiredLabel.Name]; exists {
 			// Check if update is needed by comparing fields
 			if existingLabel.Color != desiredLabel.Color ||
 				existingLabel.Description != desiredLabel.Description {
@@ -126,20 +128,26 @@ func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
 				toUpdate = append(toUpdate, *desiredLabel)
 			}
 			// Remove from map so remaining items are deletions
-			delete(labelsMap, desiredLabel.Name)
+			delete(existingLabels, desiredLabel.Name)
 		} else {
 			// Label doesn't exist, needs to be created
 			toCreate = append(toCreate, *desiredLabel)
 		}
 	}
 
-	// Remaining items in labelsMap are deletions
-	for _, label := range labelsMap {
-		toDelete = append(toDelete, label)
+	// Remaining items in existingLabels are deletions
+	for name := range existingLabels {
+		toDelete = append(toDelete, existingLabels[name])
 	}
 
-	// Execute creates
+	return toCreate, toUpdate, toDelete
+}
+
+// executeLabelOperations performs create, update, and delete operations on labels.
+func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdate, toDelete []Label) []LabelOperationError {
 	var errors []LabelOperationError
+
+	// Execute creates
 	for i := range toCreate {
 		label := &toCreate[i]
 		log.Debug().Interface("label", label).Msg("creating label")
@@ -192,6 +200,24 @@ func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
 			})
 		}
 	}
+
+	return errors
+}
+
+// SyncLabels ensures the repository's labels match the provided desired set by
+// creating, updating, and deleting labels as needed using GraphQL mutations.
+func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
+	// Fetch existing labels
+	existingLabels, repoID, err := c.fetchExistingLabels(repo, owner)
+	if err != nil {
+		return err
+	}
+
+	// Compute diff: determine what needs to be created, updated, or deleted
+	toCreate, toUpdate, toDelete := computeLabelDiff(labels, existingLabels)
+
+	// Execute operations
+	errors := c.executeLabelOperations(repoID, toCreate, toUpdate, toDelete)
 
 	// Return aggregated error if any operations failed
 	if len(errors) > 0 {
