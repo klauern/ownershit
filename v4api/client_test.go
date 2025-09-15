@@ -670,12 +670,8 @@ func TestBuildClient_ValidateRetryConfiguration(t *testing.T) {
 }
 
 func TestNewGHv4Client_TokenValidationError(t *testing.T) {
-	// Save original environment
-	oldToken := os.Getenv("GITHUB_TOKEN")
-	defer os.Setenv("GITHUB_TOKEN", oldToken)
-
 	// Unset token to cause validation error
-	os.Unsetenv("GITHUB_TOKEN")
+	t.Setenv("GITHUB_TOKEN", "")
 
 	// Now we expect an error instead of a panic
 	_, err := NewGHv4Client()
