@@ -268,19 +268,12 @@ func TestBranchProtection_EdgeCases(t *testing.T) {
 			t.Logf("Test case: %s", tt.description)
 			perms, repoID, pattern := tt.setup()
 
-			// Handle panic case for nil permissions
-			if perms == nil && tt.wantErr {
-				defer func() {
-					if r := recover(); r == nil {
-						t.Error("Expected panic for nil permissions, but got none")
-					}
-				}()
-			} else if perms != nil {
+			if perms != nil {
 				mock.graphMock.EXPECT().Mutate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			}
 
 			err := mock.client.SetEnhancedBranchProtection(repoID, pattern, perms)
-			if perms != nil && (err != nil) != tt.wantErr {
+			if (err != nil) != tt.wantErr {
 				t.Errorf("GitHubClient.SetEnhancedBranchProtection() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

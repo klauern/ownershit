@@ -385,9 +385,9 @@ func TestGetValidatedGitHubToken(t *testing.T) {
 	original := os.Getenv("GITHUB_TOKEN")
 	defer func() {
 		if original == "" {
-			os.Unsetenv("GITHUB_TOKEN")
+			_ = os.Unsetenv("GITHUB_TOKEN")
 		} else {
-			os.Setenv("GITHUB_TOKEN", original)
+			_ = os.Setenv("GITHUB_TOKEN", original)
 		}
 	}()
 
@@ -431,9 +431,9 @@ func TestGetValidatedGitHubToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.unsetEnv {
-				os.Unsetenv("GITHUB_TOKEN")
+				_ = os.Unsetenv("GITHUB_TOKEN")
 			} else {
-				os.Setenv("GITHUB_TOKEN", tt.envValue)
+				_ = os.Setenv("GITHUB_TOKEN", tt.envValue)
 			}
 
 			token, err := GetValidatedGitHubToken()

@@ -2,6 +2,7 @@ package v4api
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -33,7 +34,7 @@ func TestBuildClient_ConfigurationTest(t *testing.T) {
 		t.Errorf("Expected RetryWaitMin %v, got %v", expectedWaitMin, client.RetryWaitMin)
 	}
 
-	expectedWaitMax := time.Duration(10) * time.Duration(2.0) * time.Minute
+	expectedWaitMax := time.Duration(10) * time.Duration(2.0) * time.Second
 	if client.RetryWaitMax != expectedWaitMax {
 		t.Errorf("Expected RetryWaitMax %v, got %v", expectedWaitMax, client.RetryWaitMax)
 	}
@@ -57,19 +58,21 @@ func TestAuthedTransport_RoundTrip_Coverage(t *testing.T) {
 		wrapped: http.DefaultTransport,
 	}
 
-	req, _ := http.NewRequest("GET", "https://example.com", http.NoBody)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
+			t.Errorf("Expected Authorization 'Bearer test-token', got '%s'", got)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
-	// Test header setting
+	req, _ := http.NewRequest("GET", srv.URL, http.NoBody)
 	resp, err := transport.RoundTrip(req)
 	if err != nil {
-		t.Errorf("RoundTrip failed: %v", err)
+		t.Fatalf("RoundTrip failed: %v", err)
 	}
-	if resp != nil && resp.Body != nil {
-		resp.Body.Close()
-	}
-
-	if auth := req.Header.Get("Authorization"); auth != "bearer test-token" {
-		t.Errorf("Expected Authorization 'bearer test-token', got '%s'", auth)
+	if err := resp.Body.Close(); err != nil {
+		t.Logf("Failed to close response body: %v", err)
 	}
 }
 
@@ -88,7 +91,7 @@ func TestParseEnv_CoverageTest(t *testing.T) {
 			if v == "" {
 				os.Unsetenv(k)
 			} else {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 		}
 	}()
@@ -98,7 +101,10 @@ func TestParseEnv_CoverageTest(t *testing.T) {
 		os.Unsetenv(k)
 	}
 
-	params := parseEnv()
+	params, err := parseEnv()
+	if err != nil {
+		t.Fatalf("parseEnv failed: %v", err)
+	}
 	if params.TimeoutSeconds != defaultConfig.timeoutSeconds {
 		t.Errorf("Expected default timeout %d, got %d", defaultConfig.timeoutSeconds, params.TimeoutSeconds)
 	}
@@ -113,12 +119,15 @@ func TestParseEnv_CoverageTest(t *testing.T) {
 	}
 
 	// Test with environment variables set
-	os.Setenv(EnvVarPrefix+EnvTimeoutSeconds, "60")
-	os.Setenv(EnvVarPrefix+EnvMaxRetries, "10")
-	os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "30")
-	os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "3.0")
+	_ = os.Setenv(EnvVarPrefix+EnvTimeoutSeconds, "60")
+	_ = os.Setenv(EnvVarPrefix+EnvMaxRetries, "10")
+	_ = os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "30")
+	_ = os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "3.0")
 
-	params = parseEnv()
+	params, err = parseEnv()
+	if err != nil {
+		t.Fatalf("parseEnv failed: %v", err)
+	}
 	if params.TimeoutSeconds != 60 {
 		t.Errorf("Expected timeout 60, got %d", params.TimeoutSeconds)
 	}
@@ -190,18 +199,21 @@ func TestParseEnv_ErrorPaths(t *testing.T) {
 			if v == "" {
 				os.Unsetenv(k)
 			} else {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 		}
 	}()
 
 	// Test empty string values (should use defaults)
-	os.Setenv(EnvVarPrefix+EnvTimeoutSeconds, "")
-	os.Setenv(EnvVarPrefix+EnvMaxRetries, "")
-	os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "")
-	os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "")
+	_ = os.Setenv(EnvVarPrefix+EnvTimeoutSeconds, "")
+	_ = os.Setenv(EnvVarPrefix+EnvMaxRetries, "")
+	_ = os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "")
+	_ = os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "")
 
-	params := parseEnv()
+	params, err := parseEnv()
+	if err != nil {
+		t.Fatalf("parseEnv failed: %v", err)
+	}
 	if params.TimeoutSeconds != defaultConfig.timeoutSeconds {
 		t.Errorf("Expected default timeout with empty string, got %d", params.TimeoutSeconds)
 	}

@@ -1,3 +1,4 @@
+// Package main contains integration tests for the ownershit application.
 package main
 
 import (
@@ -20,17 +21,11 @@ const (
 )
 
 func TestAppCommandExecution(t *testing.T) {
-	// Save original environment and globals
-	originalToken := os.Getenv("GITHUB_TOKEN")
+	// Save original globals
 	originalSettings := settings
 	originalClient := githubClient
 
 	defer func() {
-		if originalToken != "" {
-			os.Setenv("GITHUB_TOKEN", originalToken)
-		} else {
-			os.Unsetenv("GITHUB_TOKEN")
-		}
 		settings = originalSettings
 		githubClient = originalClient
 	}()
@@ -115,9 +110,9 @@ default_labels:
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				os.Setenv("GITHUB_TOKEN", tt.token)
+				t.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
-				os.Unsetenv("GITHUB_TOKEN")
+				t.Setenv("GITHUB_TOKEN", "")
 			}
 
 			// Create temporary config file
@@ -308,7 +303,7 @@ func TestCompleteInitWorkflow(t *testing.T) {
 	}
 
 	// Verify file contents
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) // #nosec G304 - test file in temp directory
 	if err != nil {
 		t.Fatalf("failed to read created config file: %v", err)
 	}
@@ -336,7 +331,7 @@ func TestCompleteInitWorkflow(t *testing.T) {
 	}
 
 	// Verify content is unchanged
-	newContent, err := os.ReadFile(configPath)
+	newContent, err := os.ReadFile(configPath) // #nosec G304 - test file in temp directory
 	if err != nil {
 		t.Fatalf("failed to read config file after second init: %v", err)
 	}
@@ -396,11 +391,10 @@ func TestErrorHandlingWorkflows(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				os.Setenv("GITHUB_TOKEN", tt.token)
+				t.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
-				os.Unsetenv("GITHUB_TOKEN")
+				t.Setenv("GITHUB_TOKEN", "")
 			}
-			defer os.Unsetenv("GITHUB_TOKEN")
 
 			// Setup config file
 			configPath := "non_existent.yaml"

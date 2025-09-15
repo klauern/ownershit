@@ -4,6 +4,7 @@ package ownershit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http/httputil"
 	"strings"
@@ -97,33 +98,36 @@ func NewSecureGitHubClient(ctx context.Context) (*GitHubClient, error) {
 
 // AddPermissions adds a given team level repository permission.
 func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissions) error {
-    resp, err := c.Teams.
-        AddTeamRepoBySlug(
-            c.Context,
-            organization,
-            *perm.Team,
-            organization,
-            repo,
-            &github.TeamAddTeamRepoOptions{Permission: *perm.Level})
-    if err != nil {
-        logEvent := log.Err(err).
-            Str("team", *perm.Team).
-            Str("repo", repo)
-        if resp != nil {
-            logEvent = logEvent.Str("response-status", resp.Status)
-            if log.Debug().Enabled() {
-                dumped, _ := httputil.DumpResponse(resp.Response, true)
-                if len(dumped) > 0 {
-                    log.Debug().Msg("response body follows")
-                    log.Debug().Str("response-body", string(dumped))
-                }
-            }
-        }
-        logEvent.Msg("error adding team as collaborator to repo")
-        return fmt.Errorf("adding team as collaborator to repo: %w", err)
-    }
-    log.Info().Int("status-code", resp.StatusCode).Msg("Successfully set repo")
-    return nil
+	if perm == nil || perm.Team == nil || perm.Level == nil {
+		return fmt.Errorf("%w", ErrInvalidPermissions)
+	}
+	resp, err := c.Teams.
+		AddTeamRepoBySlug(
+			c.Context,
+			organization,
+			*perm.Team,
+			organization,
+			repo,
+			&github.TeamAddTeamRepoOptions{Permission: *perm.Level})
+	if err != nil {
+		logEvent := log.Err(err).
+			Str("team", *perm.Team).
+			Str("repo", repo)
+		if resp != nil {
+			logEvent = logEvent.Str("response-status", resp.Status)
+			if resp.Response != nil && log.Debug().Enabled() {
+				dumped, _ := httputil.DumpResponse(resp.Response, false)
+				if len(dumped) > 0 {
+					log.Debug().Msg("response body follows")
+					log.Debug().Str("response-body", string(dumped))
+				}
+			}
+		}
+		logEvent.Msg("error adding team as collaborator to repo")
+		return fmt.Errorf("adding team as collaborator to repo: %w", err)
+	}
+	log.Info().Int("status-code", resp.StatusCode).Msg("Successfully set repo")
+	return nil
 }
 
 // UpdateBranchPermissions changes the settings for branch permissions from `perms`.
@@ -138,32 +142,30 @@ func (c *GitHubClient) UpdateBranchPermissions(org, repo string, perms *BranchPe
 	if perms.AllowSquashMerge != nil {
 		r.AllowSquashMerge = perms.AllowSquashMerge
 	}
-    _, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
-    if err != nil {
-        statusCode := 0
-        if resp != nil {
-            statusCode = resp.StatusCode
-        }
-        logEvent := log.Err(err).
-            Str("org", org).
-            Str("repo", repo).
-            Int("statusCode", statusCode).
-            Str("operation", "updateRepositorySettings")
-        if resp != nil && log.Debug().Enabled() {
-            dumped, _ := httputil.DumpResponse(resp.Response, true)
-            if len(dumped) > 0 {
-                log.Debug().Msg("response body follows")
-                log.Debug().Str("response-body", string(dumped))
-            }
-        }
-        logEvent.Msg("Error updating repository settings")
-        return NewGitHubAPIError(statusCode, "update repository settings",
-            fmt.Sprintf("%s/%s", org, repo), "failed to update repository settings", err)
-    }
+	_, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
+	if err != nil {
+		statusCode := 0
+		if resp != nil {
+			statusCode = resp.StatusCode
+		}
+		logEvent := log.Err(err).
+			Str("org", org).
+			Str("repo", repo).
+			Int("statusCode", statusCode).
+			Str("operation", "updateRepositorySettings")
+		if resp != nil && resp.Response != nil && log.Debug().Enabled() {
+			dumped, _ := httputil.DumpResponse(resp.Response, true)
+			if len(dumped) > 0 {
+				log.Debug().Msg("response body follows")
+				log.Debug().Str("response-body", string(dumped))
+			}
+		}
+		logEvent.Msg("Error updating repository settings")
+		return NewGitHubAPIError(statusCode, "update repository settings",
+			fmt.Sprintf("%s/%s", org, repo), "failed to update repository settings", err)
+	}
 
-	log.Info().Fields(map[string]interface{}{
-		"code": resp.StatusCode,
-	})
+	log.Info().Fields(map[string]interface{}{"code": resp.StatusCode}).Msg("Updated repository settings")
 
 	return nil
 }
@@ -178,29 +180,29 @@ func (c *GitHubClient) SetRepositoryAdvancedSettings(org, repo string, deleteBra
 		DeleteBranchOnMerge: deleteBranchOnMerge,
 	}
 
-    _, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
-    if err != nil {
-        statusCode := 0
-        if resp != nil {
-            statusCode = resp.StatusCode
-        }
-        logEvent := log.Err(err).
-            Str("org", org).
-            Str("repo", repo).
-            Int("statusCode", statusCode).
-            Bool("deleteBranchOnMerge", *deleteBranchOnMerge).
-            Str("operation", "setRepositoryAdvancedSettings")
-        if resp != nil && log.Debug().Enabled() {
-            dumped, _ := httputil.DumpResponse(resp.Response, true)
-            if len(dumped) > 0 {
-                log.Debug().Msg("response body follows")
-                log.Debug().Str("response-body", string(dumped))
-            }
-        }
-        logEvent.Msg("Error setting advanced repository settings")
-        return NewGitHubAPIError(statusCode, "set advanced repository settings",
-            fmt.Sprintf("%s/%s", org, repo), "failed to set advanced repository settings", err)
-    }
+	_, resp, err := c.Repositories.Edit(c.Context, org, repo, r)
+	if err != nil {
+		statusCode := 0
+		if resp != nil {
+			statusCode = resp.StatusCode
+		}
+		logEvent := log.Err(err).
+			Str("org", org).
+			Str("repo", repo).
+			Int("statusCode", statusCode).
+			Bool("deleteBranchOnMerge", *deleteBranchOnMerge).
+			Str("operation", "setRepositoryAdvancedSettings")
+		if resp != nil && resp.Response != nil && log.Debug().Enabled() {
+			dumped, _ := httputil.DumpResponse(resp.Response, true)
+			if len(dumped) > 0 {
+				log.Debug().Msg("response body follows")
+				log.Debug().Str("response-body", string(dumped))
+			}
+		}
+		logEvent.Msg("Error setting advanced repository settings")
+		return NewGitHubAPIError(statusCode, "set advanced repository settings",
+			fmt.Sprintf("%s/%s", org, repo), "failed to set advanced repository settings", err)
+	}
 
 	log.Info().
 		Str("org", org).
@@ -219,74 +221,7 @@ func (c *GitHubClient) SetBranchProtectionFallback(org, repo, branch string, per
 		return nil
 	}
 
-	// Build protection request for REST API
-	protection := &github.ProtectionRequest{}
-
-	// Required pull request reviews
-	if perms.RequirePullRequestReviews != nil && *perms.RequirePullRequestReviews {
-		reviews := &github.PullRequestReviewsEnforcementRequest{
-			RequiredApprovingReviewCount: 1, // Default
-		}
-
-		if perms.ApproverCount != nil {
-			reviews.RequiredApprovingReviewCount = *perms.ApproverCount
-		}
-
-		if perms.RequireCodeOwners != nil {
-			reviews.RequireCodeOwnerReviews = *perms.RequireCodeOwners
-		}
-
-		protection.RequiredPullRequestReviews = reviews
-	}
-
-	// Required status checks
-	if perms.RequireStatusChecks != nil && *perms.RequireStatusChecks {
-		statusChecks := &github.RequiredStatusChecks{
-			Strict: false, // Default
-		}
-
-		if perms.RequireUpToDateBranch != nil {
-			statusChecks.Strict = *perms.RequireUpToDateBranch
-		}
-
-		if len(perms.StatusChecks) > 0 {
-			statusChecks.Contexts = &perms.StatusChecks
-		}
-
-		protection.RequiredStatusChecks = statusChecks
-	}
-
-	// Enforce admins
-	if perms.EnforceAdmins != nil {
-		protection.EnforceAdmins = *perms.EnforceAdmins
-	}
-
-	// Restrict pushes
-	if perms.RestrictPushes != nil && *perms.RestrictPushes {
-		restrictions := &github.BranchRestrictionsRequest{}
-
-		// Add users/teams from allowlist
-		if len(perms.PushAllowlist) > 0 {
-			// Note: In a real implementation, you'd need to resolve team names to IDs
-			// For now, assume they are team slugs
-			restrictions.Teams = perms.PushAllowlist
-		}
-
-		protection.Restrictions = restrictions
-	}
-
-	// Advanced options only available in REST API
-	if perms.RequireLinearHistory != nil {
-		protection.RequireLinearHistory = perms.RequireLinearHistory
-	}
-
-	if perms.AllowForcePushes != nil {
-		protection.AllowForcePushes = perms.AllowForcePushes
-	}
-
-	if perms.AllowDeletions != nil {
-		protection.AllowDeletions = perms.AllowDeletions
-	}
+	protection := buildProtectionRequest(perms)
 
 	log.Debug().
 		Interface("protection", protection).
@@ -296,21 +231,22 @@ func (c *GitHubClient) SetBranchProtectionFallback(org, repo, branch string, per
 		Msg("Setting branch protection via REST API")
 
 	// Apply protection via REST API
-    _, resp, err := c.v3.Repositories.UpdateBranchProtection(c.Context, org, repo, branch, protection)
-    if err != nil {
-        statusCode := 0
-        if resp != nil {
-            statusCode = resp.StatusCode
-        }
-        _ = log.Err(err).
-            Str("org", org).
-            Str("repo", repo).
-            Str("branch", branch).
-            Int("statusCode", statusCode).
-            Str("operation", "updateBranchProtection")
-        return NewGitHubAPIError(statusCode, "update branch protection",
-            fmt.Sprintf("%s/%s", org, repo), "failed to set branch protection via REST API", err)
-    }
+	_, resp, err := c.v3.Repositories.UpdateBranchProtection(c.Context, org, repo, branch, protection)
+	if err != nil {
+		statusCode := 0
+		if resp != nil {
+			statusCode = resp.StatusCode
+		}
+		log.Err(err).
+			Str("org", org).
+			Str("repo", repo).
+			Str("branch", branch).
+			Int("statusCode", statusCode).
+			Str("operation", "updateBranchProtection").
+			Msg("Error updating branch protection via REST API")
+		return NewGitHubAPIError(statusCode, "update branch protection",
+			fmt.Sprintf("%s/%s", org, repo), "failed to set branch protection via REST API", err)
+	}
 
 	log.Info().
 		Str("org", org).
@@ -322,7 +258,88 @@ func (c *GitHubClient) SetBranchProtectionFallback(org, repo, branch string, per
 	return nil
 }
 
+// buildProtectionRequest constructs a github.ProtectionRequest based on the given permissions.
+func buildProtectionRequest(perms *BranchPermissions) *github.ProtectionRequest {
+	pr := &github.ProtectionRequest{}
+
+	if r := buildPullRequestReviews(perms); r != nil {
+		pr.RequiredPullRequestReviews = r
+	}
+	if rs := buildRequiredStatusChecks(perms); rs != nil {
+		pr.RequiredStatusChecks = rs
+	}
+	if perms.EnforceAdmins != nil {
+		pr.EnforceAdmins = *perms.EnforceAdmins
+	}
+	if rest := buildRestrictions(perms); rest != nil {
+		pr.Restrictions = rest
+	}
+	applyAdvancedProtectionOptions(perms, pr)
+	return pr
+}
+
+func buildPullRequestReviews(perms *BranchPermissions) *github.PullRequestReviewsEnforcementRequest {
+	if perms.RequirePullRequestReviews == nil || !*perms.RequirePullRequestReviews {
+		return nil
+	}
+	reviews := &github.PullRequestReviewsEnforcementRequest{
+		RequiredApprovingReviewCount: 1, // Default
+	}
+	if perms.ApproverCount != nil {
+		reviews.RequiredApprovingReviewCount = *perms.ApproverCount
+	}
+	if perms.RequireCodeOwners != nil {
+		reviews.RequireCodeOwnerReviews = *perms.RequireCodeOwners
+	}
+	return reviews
+}
+
+func buildRequiredStatusChecks(perms *BranchPermissions) *github.RequiredStatusChecks {
+	if perms.RequireStatusChecks == nil || !*perms.RequireStatusChecks {
+		return nil
+	}
+	statusChecks := &github.RequiredStatusChecks{Strict: false}
+	if perms.RequireUpToDateBranch != nil {
+		statusChecks.Strict = *perms.RequireUpToDateBranch
+	}
+	if len(perms.StatusChecks) > 0 {
+		statusChecks.Contexts = &perms.StatusChecks
+	}
+	return statusChecks
+}
+
+func buildRestrictions(perms *BranchPermissions) *github.BranchRestrictionsRequest {
+	if perms.RestrictPushes == nil || !*perms.RestrictPushes {
+		return nil
+	}
+	if len(perms.PushAllowlist) > 0 {
+		restrictions := &github.BranchRestrictionsRequest{}
+		// Note: Ideally resolve team/user IDs; we treat entries as team slugs/usernames.
+		restrictions.Teams = perms.PushAllowlist
+		return restrictions
+	}
+	// else: leave Restrictions nil to avoid invalid empty restrictions
+	return nil
+}
+
+func applyAdvancedProtectionOptions(perms *BranchPermissions, pr *github.ProtectionRequest) {
+	if perms.RequireLinearHistory != nil {
+		pr.RequireLinearHistory = perms.RequireLinearHistory
+	}
+	if perms.RequireConversationResolution != nil {
+		pr.RequiredConversationResolution = perms.RequireConversationResolution
+	}
+	if perms.AllowForcePushes != nil {
+		pr.AllowForcePushes = perms.AllowForcePushes
+	}
+	if perms.AllowDeletions != nil {
+		pr.AllowDeletions = perms.AllowDeletions
+	}
+}
+
 // SyncLabels updates the list of labels that can be used on issues within a repository.
+//
+//nolint:gocyclo // multi-step label sync handles create/edit/delete flows.
 func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 	ghLabels, resp, err := c.Issues.ListLabels(c.Context, org, repo, &github.ListOptions{
 		PerPage: 100,
@@ -330,15 +347,24 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 	if err != nil {
 		return fmt.Errorf("listing labels for %v/%v: %w", org, repo, err)
 	}
-	dumpedResp, _ := httputil.DumpResponse(resp.Response, true)
-	log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
-	var edits []RepoLabel
+	if resp != nil && resp.Response != nil && log.Debug().Enabled() {
+		dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
+		if len(dumpedResp) > 0 {
+			log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+		}
+	}
+	var edits []struct {
+		label   RepoLabel
+		oldName string
+	}
 	var creates []RepoLabel
 	for _, v := range labels {
 		label := findLabel(v, ghLabels)
 		if label != nil {
-			v.oldLabel = *label.Name
-			edits = append(edits, v)
+			edits = append(edits, struct {
+				label   RepoLabel
+				oldName string
+			}{v, *label.Name})
 		} else {
 			creates = append(creates, v)
 		}
@@ -354,22 +380,30 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 		if err != nil {
 			return NewGitHubAPIError(0, "create label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to create label %s", create.Name), err)
 		}
-		dumpedResp, _ := httputil.DumpResponse(resp.Response, true)
-		log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+		if resp != nil && resp.Response != nil && log.Debug().Enabled() {
+			dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
+			if len(dumpedResp) > 0 {
+				log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+			}
+		}
 	}
 
 	for _, edit := range edits {
-		log.Debug().Msgf("Editing existing label %v", edit.Name)
-		_, resp, err := c.Issues.EditLabel(c.Context, org, repo, edit.oldLabel, &github.Label{
-			Name:        github.String(fmt.Sprintf("%v %v", edit.Emoji, edit.Name)),
-			Color:       &edit.Color,
-			Description: &edit.Description,
+		log.Debug().Msgf("Editing existing label %v", edit.label.Name)
+		_, resp, err := c.Issues.EditLabel(c.Context, org, repo, edit.oldName, &github.Label{
+			Name:        github.String(fmt.Sprintf("%v %v", edit.label.Emoji, edit.label.Name)),
+			Color:       &edit.label.Color,
+			Description: &edit.label.Description,
 		})
 		if err != nil {
-			return NewGitHubAPIError(0, "edit label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to edit label %s", edit.Name), err)
+			return NewGitHubAPIError(0, "edit label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to edit label %s", edit.label.Name), err)
 		}
-		dumpedResp, _ := httputil.DumpResponse(resp.Response, true)
-		log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+		if resp != nil && resp.Response != nil && log.Debug().Enabled() {
+			dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
+			if len(dumpedResp) > 0 {
+				log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+			}
+		}
 	}
 
 	return nil
@@ -383,3 +417,8 @@ func findLabel(searchLabel RepoLabel, ghLabels []*github.Label) *github.Label {
 	}
 	return nil
 }
+
+// Package-level errors for consistent wrapping and lint compliance.
+var (
+	ErrInvalidPermissions = errors.New("invalid permissions: team and level must be provided")
+)

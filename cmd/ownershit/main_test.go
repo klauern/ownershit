@@ -85,16 +85,6 @@ repositories:
 }
 
 func TestConfigureClient(t *testing.T) {
-	// Save original environment
-	originalToken := os.Getenv("GITHUB_TOKEN")
-	defer func() {
-		if originalToken != "" {
-			os.Setenv("GITHUB_TOKEN", originalToken)
-		} else {
-			os.Unsetenv("GITHUB_TOKEN")
-		}
-	}()
-
 	tests := []struct {
 		name       string
 		setupToken bool
@@ -133,9 +123,9 @@ func TestConfigureClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				os.Setenv("GITHUB_TOKEN", tt.token)
+				t.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
-				os.Unsetenv("GITHUB_TOKEN")
+				t.Setenv("GITHUB_TOKEN", "")
 			}
 
 			// Create temporary config file if needed
@@ -434,7 +424,7 @@ func TestInitCommand(t *testing.T) {
 
 			// If file should exist and was created, verify content structure
 			if tt.expectedFile && !tt.fileExists && !tt.wantErr {
-				content, readErr := os.ReadFile(configPath)
+				content, readErr := os.ReadFile(configPath) // #nosec G304 - test file in temp directory
 				if readErr != nil {
 					t.Errorf("failed to read created config file: %v", readErr)
 				} else {

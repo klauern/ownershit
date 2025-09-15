@@ -324,7 +324,7 @@ func TestGetRepositoryDetails(t *testing.T) {
 				HasWiki:       github.Bool(true),
 				HasIssues:     github.Bool(true),
 				HasProjects:   github.Bool(false),
-				DefaultBranch: github.String("main"),
+				DefaultBranch: github.String(testMainBranch),
 				Private:       github.Bool(false),
 				Archived:      github.Bool(false),
 				IsTemplate:    github.Bool(true),
@@ -335,7 +335,7 @@ func TestGetRepositoryDetails(t *testing.T) {
 				Wiki:          github.Bool(true),
 				Issues:        github.Bool(true),
 				Projects:      github.Bool(false),
-				DefaultBranch: github.String("main"),
+				DefaultBranch: github.String(testMainBranch),
 				Private:       github.Bool(false),
 				Archived:      github.Bool(false),
 				Template:      github.Bool(true),
@@ -520,7 +520,7 @@ func TestImportRepositoryConfig(t *testing.T) {
 		HasWiki:          github.Bool(true),
 		HasIssues:        github.Bool(true),
 		HasProjects:      github.Bool(false),
-		DefaultBranch:    github.String("main"),
+		DefaultBranch:    github.String(testMainBranch),
 		Private:          github.Bool(false),
 		Archived:         github.Bool(false),
 		IsTemplate:       github.Bool(true),
@@ -546,7 +546,7 @@ func TestImportRepositoryConfig(t *testing.T) {
 
 	// For getBranchProtectionRules (trying main and master branches)
 	mockRepo.EXPECT().
-		GetBranchProtection(gomock.Any(), "testowner", "testrepo", "main").
+		GetBranchProtection(gomock.Any(), "testowner", "testrepo", testMainBranch).
 		Return(nil, nil, fmt.Errorf("no protection found")).
 		Times(1)
 
@@ -562,8 +562,7 @@ func TestImportRepositoryConfig(t *testing.T) {
 		Times(1)
 
 	// Execute the function
-	config, err := ImportRepositoryConfig("testowner", "testrepo", client)
-
+	config, err := ImportRepositoryConfig("testowner", "testrepo", client, true)
 	// Verify results
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -580,7 +579,7 @@ func TestImportRepositoryConfig(t *testing.T) {
 	repo := config.Repositories[0]
 
 	// Check all new fields are properly set
-	if repo.DefaultBranch == nil || *repo.DefaultBranch != "main" {
+	if repo.DefaultBranch == nil || *repo.DefaultBranch != testMainBranch {
 		t.Errorf("expected DefaultBranch to be 'main', got %v", getStringPointerValue(repo.DefaultBranch))
 	}
 
@@ -602,5 +601,27 @@ func TestImportRepositoryConfig(t *testing.T) {
 
 	if repo.Homepage == nil || *repo.Homepage != "https://example.com" {
 		t.Errorf("expected Homepage to be 'https://example.com', got %v", getStringPointerValue(repo.Homepage))
+	}
+}
+
+func TestImportRepositoryConfig_TeamPermissionsStrictError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockRepositoriesService(ctrl)
+	mockIssues := mocks.NewMockIssuesService(ctrl)
+
+	client := &GitHubClient{Repositories: mockRepo, Issues: mockIssues, Context: context.Background()}
+
+	// Repo details ok
+	mockRepo.EXPECT().Get(gomock.Any(), "o", "r").Return(&github.Repository{}, nil, nil)
+	// Team permissions fail
+	mockRepo.EXPECT().ListTeams(gomock.Any(), "o", "r", nil).Return(nil, nil, fmt.Errorf("boom"))
+
+	// Branch protection and labels calls should not happen because function returns early due to team permissions error
+
+	_, err := ImportRepositoryConfig("o", "r", client, false)
+	if err == nil {
+		t.Fatal("expected error when relaxTeamErrors=false and ListTeams fails")
 	}
 }

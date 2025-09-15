@@ -19,51 +19,6 @@ var (
 
 const oneDay = time.Hour * 24
 
-func Test_removeElement(t *testing.T) {
-	type args struct {
-		slice []RepositoryInfo
-		s     int
-	}
-	tests := []struct {
-		name string
-		args args
-		want []RepositoryInfo
-	}{
-		{
-			name: "remove second element",
-			args: args{
-				slice: []RepositoryInfo{
-					{
-						ID: githubv4.String("0"),
-					},
-					{
-						ID: githubv4.String("1"),
-					},
-					{
-						ID: githubv4.String("2"),
-					},
-				},
-				s: 1,
-			},
-			want: []RepositoryInfo{
-				{
-					ID: githubv4.String("0"),
-				},
-				{
-					ID: githubv4.String("2"),
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := removeElement(tt.args.slice, tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("removeElement() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestRepositoryInfos_Len(t *testing.T) {
 	tests := []struct {
 		name string
@@ -228,8 +183,12 @@ func TestSortedRepositoryInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			original := append([]RepositoryInfo(nil), tt.args.repos...)
 			if got := SortedRepositoryInfo(tt.args.repos); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SortedRepositoryInfo() = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(tt.args.repos, original) {
+				t.Errorf("SortedRepositoryInfo() mutated input slice = %v, want %v", tt.args.repos, original)
 			}
 		})
 	}
@@ -269,19 +228,19 @@ func getArchivableTestCases() []struct {
 			name:   "with stars",
 			args:   archivableTestArgs{},
 			fields: archivableTestFields{StargazerCount: githubv4.Int(1)},
-			want:   true,
+			want:   false,
 		},
 		{
 			name:   "with forks",
 			args:   archivableTestArgs{},
 			fields: archivableTestFields{ForkCount: githubv4.Int(1)},
-			want:   true,
+			want:   false,
 		},
 		{
 			name:   "with days",
 			args:   archivableTestArgs{maxDays: 1},
 			fields: archivableTestFields{UpdatedAt: githubv4.DateTime{Time: time.Now()}},
-			want:   true,
+			want:   false,
 		},
 		{
 			name:   "not with stars",
@@ -297,27 +256,27 @@ func getArchivableTestCases() []struct {
 		},
 		{
 			name:   "not with days",
-			args:   archivableTestArgs{maxDays: 1},
+			args:   archivableTestArgs{maxDays: 1, forks: 10, stars: 10, watchers: 10},
 			fields: archivableTestFields{UpdatedAt: githubv4.DateTime{Time: time.Now().Add(-oneDay)}},
-			want:   false,
+			want:   true,
 		},
 		{
 			name:   "already archived",
 			args:   archivableTestArgs{},
 			fields: archivableTestFields{IsArchived: githubv4.Boolean(true)},
-			want:   true,
+			want:   false,
 		},
 		{
 			name:   "is forked",
 			args:   archivableTestArgs{},
 			fields: archivableTestFields{IsFork: githubv4.Boolean(true)},
-			want:   true,
+			want:   false,
 		},
 		{
 			name:   "has watchers",
 			args:   archivableTestArgs{},
 			fields: archivableTestFields{Watchers: struct{ TotalCount githubv4.Int }{githubv4.Int(1)}},
-			want:   true,
+			want:   false,
 		},
 		{
 			name:   "not with watchers",
@@ -333,7 +292,6 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := createRepositoryInfo(tt.fields)
-			fmt.Println(tt.fields.UpdatedAt.Date())
 			if got := r.IsArchivable(tt.args.forks, tt.args.stars, tt.args.maxDays, tt.args.watchers); got != tt.want {
 				t.Errorf("RepositoryInfo.IsArchivable() = %v, want %v", got, tt.want)
 			}
@@ -365,13 +323,16 @@ func TestQueryArchivableRepos(t *testing.T) {
 		func(c context.Context, y *ArchivableRepositoriesQuery, v map[string]interface{}) {
 			y.Search.Repos = []struct {
 				Repository RepositoryInfo `graphql:"... on Repository"`
-			}{{Repository: RepositoryInfo{IsArchived: true}}}
+			}{{Repository: RepositoryInfo{IsArchived: githubv4.Boolean(true)}}}
 			y.Search.RepositoryCount = 1
 			y.Search.PageInfo = pageInfo{HasNextPage: true, EndCursor: githubv4.String("dummycursor")}
 		})
 	mocks.graphMock.EXPECT().Query(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Do(
 		func(c context.Context, y *ArchivableRepositoriesQuery, v map[string]interface{}) {
-			y.Search.Repos = nil
+			y.Search.Repos = []struct {
+				Repository RepositoryInfo `graphql:"... on Repository"`
+			}{}
+			y.Search.RepositoryCount = 0
 			y.Search.PageInfo = pageInfo{}
 		})
 	info, err := mocks.client.QueryArchivableRepos("klauern", 1, 1, 1, 1)
