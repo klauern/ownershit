@@ -72,13 +72,11 @@ linters:
     gocyclo:
       min-complexity: 15
     mnd:
-      settings:
-        mnd:
-          checks:
-          - argument
-          - case
-          - condition
-          - return
+      checks:
+        - argument
+        - case
+        - condition
+        - return
     govet:
       enable:
         - shadow
