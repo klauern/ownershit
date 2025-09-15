@@ -123,9 +123,13 @@ func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (t
 			// Check if update is needed by comparing fields
 			if existingLabel.Color != desiredLabel.Color ||
 				existingLabel.Description != desiredLabel.Description {
-				// Propagate the ID from the existing label to the desired label
-				desiredLabel.Id = existingLabel.Id
-				toUpdate = append(toUpdate, *desiredLabel)
+				// Build update without mutating the input.
+				toUpdate = append(toUpdate, Label{
+					Id:          existingLabel.Id,
+					Name:        desiredLabel.Name,
+					Color:       desiredLabel.Color,
+					Description: desiredLabel.Description,
+				})
 			}
 			// Remove from map so remaining items are deletions
 			delete(existingLabels, desiredLabel.Name)
