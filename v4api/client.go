@@ -152,6 +152,7 @@ func NewGHv4Client() (*GitHubV4Client, error) {
 		baseClient:  client.StandardClient(),
 		retryClient: client,
 		client:      graphqlClient,
+		Context:     context.Background(),
 	}, nil
 }
 

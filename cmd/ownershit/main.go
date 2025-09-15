@@ -46,16 +46,16 @@ func main() {
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	app := &cli.App{
+		Before: func(c *cli.Context) error {
+			if c.Bool("debug") {
+				zerolog.SetGlobalLevel(zerolog.DebugLevel)
+			}
+			return nil
+		},
 		Commands: []*cli.Command{
 			{
-				Name:  "init",
-				Usage: "Create a stub configuration file to get started",
-				Before: func(c *cli.Context) error {
-					if c.Bool("debug") {
-						zerolog.SetGlobalLevel(zerolog.DebugLevel)
-					}
-					return nil
-				},
+				Name:   "init",
+				Usage:  "Create a stub configuration file to get started",
 				Action: initCommand,
 			},
 			{
@@ -314,12 +314,12 @@ func importCommand(c *cli.Context) error {
 	}
 
 	repoPath := c.Args().Get(0)
-	parts := strings.Split(repoPath, "/")
-	if len(parts) != 2 {
+	owner, repo, ok := strings.Cut(repoPath, "/")
+	if !ok {
 		return fmt.Errorf("%w: %s", ErrInvalidRepoPathFormat, repoPath)
 	}
-	owner := strings.TrimSpace(parts[0])
-	repo := strings.TrimSpace(parts[1])
+	owner = strings.TrimSpace(owner)
+	repo = strings.TrimSpace(repo)
 	if owner == "" || repo == "" {
 		return fmt.Errorf("%w: %s", ErrInvalidRepoPathFormat, repoPath)
 	}
@@ -343,6 +343,12 @@ func importCommand(c *cli.Context) error {
 	outputPath := c.String("output")
 	log.Debug().Str("outputPath", outputPath).Msg("checking output path")
 	if outputPath != "" {
+		// Ensure directory exists for output file
+		if dir := filepath.Dir(outputPath); dir != "." {
+			if mkErr := os.MkdirAll(dir, 0o700); mkErr != nil {
+				return fmt.Errorf("failed to create output directory %q: %w", dir, mkErr)
+			}
+		}
 		log.Debug().Str("file", outputPath).Msg("writing to file")
 		err = os.WriteFile(outputPath, yamlData, 0o600)
 		if err != nil {
@@ -351,7 +357,7 @@ func importCommand(c *cli.Context) error {
 		log.Info().Str("file", outputPath).Msg("configuration exported")
 	} else {
 		log.Debug().Msg("writing to stdout")
-		if _, werr := os.Stdout.Write(yamlData); werr != nil {
+		if _, werr := fmt.Fprintln(os.Stdout, string(yamlData)); werr != nil {
 			return fmt.Errorf("failed to write YAML to stdout: %w", werr)
 		}
 	}
@@ -386,11 +392,9 @@ func importCSVCommand(c *cli.Context) error {
 
 	var output *os.File
 	var shouldClose bool
-	fileExisted := false
 	fileHasContent := false
 	if outputPath != "" {
 		if stat, statErr := os.Stat(outputPath); statErr == nil {
-			fileExisted = true
 			fileHasContent = stat.Size() > 0
 		} else if !os.IsNotExist(statErr) {
 			return fmt.Errorf("failed to stat output file: %w", statErr)
@@ -403,7 +407,7 @@ func importCSVCommand(c *cli.Context) error {
 		if appendMode {
 			flag |= os.O_APPEND
 			// Validate header compatibility only when appending to a non-empty file
-			if fileExisted && fileHasContent {
+			if fileHasContent {
 				if vErr := shit.ValidateCSVAppendMode(outputPath); vErr != nil {
 					return fmt.Errorf("append mode validation failed: %w", vErr)
 				}
@@ -454,7 +458,8 @@ func importCSVCommand(c *cli.Context) error {
 			log.Warn().
 				Int("successful", batchErr.SuccessCount).
 				Int("failed", batchErr.ErrorCount).
-				Msg("CSV import completed with some failures")
+				Str("file", outputPath).
+				Msg("CSV export completed with some failures")
 
 			// Log detailed errors with structured fields
 			for _, repoErr := range batchErr.Errors {
@@ -468,19 +473,19 @@ func importCSVCommand(c *cli.Context) error {
 				evt.Err(repoErr.Error).Msg("failed to process repository")
 			}
 
-			// Return success if we had any successful imports
+			// Return success if we had any successful exports
 			if batchErr.SuccessCount > 0 {
 				// Check for close error after successful processing
 				if closeErr != nil {
-					return fmt.Errorf("CSV import succeeded but failed to close output: %w", closeErr)
+					return fmt.Errorf("CSV export succeeded but failed to close output: %w", closeErr)
 				}
 				return nil
 			}
 		}
 		if closeErr != nil {
-			return fmt.Errorf("CSV import failed: %w (also failed to close output: %w)", err, closeErr)
+			return fmt.Errorf("CSV export failed: %w (also failed to close output: %w)", err, closeErr)
 		}
-		return fmt.Errorf("CSV import failed: %w", err)
+		return fmt.Errorf("CSV export failed: %w", err)
 	}
 
 	if outputPath != "" {

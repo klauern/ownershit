@@ -177,10 +177,6 @@ func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 	return nil
 }
 
-func removeElement(slice []RepositoryInfo, s int) []RepositoryInfo {
-	return append(slice[:s], slice[s+1:]...)
-}
-
 // RepositoryInfos represents a slice of RepositoryInfo that can be sorted.
 type (
 	RepositoryInfos []RepositoryInfo
@@ -199,9 +195,10 @@ func (r ReposByName) Less(i, j int) bool {
 	return string(r.RepositoryInfos[i].Name) < string(r.RepositoryInfos[j].Name)
 }
 
-// SortedRepositoryInfo sorts the provided slice of RepositoryInfo by name and
-// returns the sorted slice.
+// SortedRepositoryInfo returns a sorted copy of the provided RepositoryInfo
+// slice without mutating the original.
 func SortedRepositoryInfo(repos []RepositoryInfo) []RepositoryInfo {
-	sort.Sort(ReposByName{repos})
-	return repos
+	cp := append([]RepositoryInfo(nil), repos...)
+	sort.Sort(ReposByName{cp})
+	return cp
 }

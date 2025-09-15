@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 )
@@ -47,6 +48,26 @@ func (e *MultiLabelError) GetDetailedErrors() []string {
 	return details
 }
 
+// Unwrap returns the underlying error(s) for compatibility with errors.Is/As.
+func (e *MultiLabelError) Unwrap() error {
+	if len(e.Errors) == 0 {
+		return nil
+	}
+	if len(e.Errors) == 1 {
+		return e.Errors[0].Err
+	}
+	errs := make([]error, 0, len(e.Errors))
+	for _, le := range e.Errors {
+		if le.Err != nil {
+			errs = append(errs, le.Err)
+		}
+	}
+	if len(errs) == 0 {
+		return nil
+	}
+	return errors.Join(errs...)
+}
+
 // V4ClientDefaultPageSize defines the default page size for GraphQL queries.
 const V4ClientDefaultPageSize = 100
 
@@ -82,7 +103,7 @@ func (c *GitHubV4Client) GetTeams(organization string) (OrganizationTeams, error
 		orgTeams = append(orgTeams, resp.Organization.Teams.Edges...)
 	}
 
-	log.Debug().Interface("teams", orgTeams).Msg("teams")
+	log.Debug().Int("count", len(orgTeams)).Msg("teams fetched")
 
 	return orgTeams, nil
 }
@@ -116,7 +137,8 @@ func (c *GitHubV4Client) fetchExistingLabels(repo, owner string) (existingLabels
 		}
 		for i := range labelResp.Repository.Labels.Edges {
 			label := labelResp.Repository.Labels.Edges[i]
-			existingLabels[label.Node.Name] = Label(label.Node)
+			key := strings.ToLower(label.Node.Name)
+			existingLabels[key] = Label(label.Node)
 		}
 		if !labelResp.Repository.Labels.PageInfo.HasNextPage {
 			break
@@ -132,10 +154,12 @@ func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (t
 	// Process desired labels to determine creates and updates
 	for i := range desiredLabels {
 		desiredLabel := &desiredLabels[i]
-		if existingLabel, exists := existingLabels[desiredLabel.Name]; exists {
+		key := strings.ToLower(desiredLabel.Name)
+		if existingLabel, exists := existingLabels[key]; exists {
 			// Check if update is needed by comparing fields
 			if existingLabel.Color != desiredLabel.Color ||
-				existingLabel.Description != desiredLabel.Description {
+				existingLabel.Description != desiredLabel.Description ||
+				existingLabel.Name != desiredLabel.Name {
 				// Build update without mutating the input.
 				toUpdate = append(toUpdate, Label{
 					Id:          existingLabel.Id,
@@ -145,7 +169,7 @@ func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (t
 				})
 			}
 			// Remove from map so remaining items are deletions
-			delete(existingLabels, desiredLabel.Name)
+			delete(existingLabels, key)
 		} else {
 			// Label doesn't exist, needs to be created; avoid copying extra fields
 			toCreate = append(toCreate, Label{
@@ -178,10 +202,11 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 		label := &toCreate[i]
 		log.Debug().Interface("label", label).Msg("creating label")
 		_, err := CreateLabel(c.Context, c.client, CreateLabelInput{
-			Name:         label.Name,
-			Color:        label.Color,
-			Description:  label.Description,
-			RepositoryId: repoID,
+			ClientMutationId: "create-label-" + label.Name,
+			Name:             label.Name,
+			Color:            label.Color,
+			Description:      label.Description,
+			RepositoryId:     repoID,
 		})
 		if err != nil {
 			opErrors = append(opErrors, LabelOperationError{
@@ -197,10 +222,11 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 		label := &toUpdate[i]
 		log.Debug().Interface("label", label).Msg("updating label")
 		_, err := UpdateLabel(c.Context, c.client, UpdateLabelInput{
-			Name:        label.Name,
-			Color:       label.Color,
-			Description: label.Description,
-			Id:          label.Id,
+			ClientMutationId: "update-label-" + label.Id,
+			Name:             label.Name,
+			Color:            label.Color,
+			Description:      label.Description,
+			Id:               label.Id,
 		})
 		if err != nil {
 			opErrors = append(opErrors, LabelOperationError{
@@ -215,7 +241,8 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 	for _, id := range toDeleteIDs {
 		log.Debug().Str("label_id", id).Msg("deleting label")
 		_, err := DeleteLabel(c.Context, c.client, DeleteLabelInput{
-			Id: id,
+			ClientMutationId: "delete-label-" + id,
+			Id:               id,
 		})
 		if err != nil {
 			opErrors = append(opErrors, LabelOperationError{

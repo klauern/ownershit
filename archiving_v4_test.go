@@ -19,51 +19,6 @@ var (
 
 const oneDay = time.Hour * 24
 
-func Test_removeElement(t *testing.T) {
-	type args struct {
-		slice []RepositoryInfo
-		s     int
-	}
-	tests := []struct {
-		name string
-		args args
-		want []RepositoryInfo
-	}{
-		{
-			name: "remove second element",
-			args: args{
-				slice: []RepositoryInfo{
-					{
-						ID: githubv4.String("0"),
-					},
-					{
-						ID: githubv4.String("1"),
-					},
-					{
-						ID: githubv4.String("2"),
-					},
-				},
-				s: 1,
-			},
-			want: []RepositoryInfo{
-				{
-					ID: githubv4.String("0"),
-				},
-				{
-					ID: githubv4.String("2"),
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := removeElement(tt.args.slice, tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("removeElement() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestRepositoryInfos_Len(t *testing.T) {
 	tests := []struct {
 		name string
@@ -228,8 +183,12 @@ func TestSortedRepositoryInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			original := append([]RepositoryInfo(nil), tt.args.repos...)
 			if got := SortedRepositoryInfo(tt.args.repos); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SortedRepositoryInfo() = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(tt.args.repos, original) {
+				t.Errorf("SortedRepositoryInfo() mutated input slice = %v, want %v", tt.args.repos, original)
 			}
 		})
 	}
