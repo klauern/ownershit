@@ -1,9 +1,16 @@
 package v4api
 
 import (
+	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/rs/zerolog/log"
+)
+
+var (
+	// ErrMissingRepositoryID indicates the repository ID was absent in a GraphQL response.
+	ErrMissingRepositoryID = errors.New("missing repository ID in response")
 )
 
 // LabelOperationError represents an error from a single label operation.
@@ -24,11 +31,11 @@ func (e *MultiLabelError) Error() string {
 	}
 	if len(e.Errors) == 1 {
 		err := e.Errors[0]
-		return fmt.Sprintf("label operation failed: %s", err.Err.Error())
+		return fmt.Sprintf("label operation failed: %v", err.Err)
 	}
 	// For multiple errors, include count and first error's message for quicker debugging
 	firstErr := e.Errors[0]
-	return fmt.Sprintf("multiple label operations failed (%d errors): first error: %s", len(e.Errors), firstErr.Err.Error())
+	return fmt.Sprintf("multiple label operations failed (%d errors): first error: %v", len(e.Errors), firstErr.Err)
 }
 
 // GetDetailedErrors returns detailed error messages for each failed operation.
@@ -54,7 +61,10 @@ func (c *GitHubV4Client) GetTeams(organization string) (OrganizationTeams, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get teams (initial request): %w", err)
 	}
-	log.Debug().Interface("teams", initResp).Msg("initial teams")
+	log.Debug().
+		Int("edges", len(initResp.Organization.Teams.Edges)).
+		Interface("pageInfo", initResp.Organization.Teams.PageInfo).
+		Msg("initial teams page")
 	orgTeams = append(orgTeams, initResp.Organization.Teams.Edges...)
 	hasNextPage := initResp.Organization.Teams.PageInfo.HasNextPage
 	cursor := initResp.Organization.Teams.PageInfo.EndCursor
@@ -99,6 +109,9 @@ func (c *GitHubV4Client) fetchExistingLabels(repo, owner string) (existingLabels
 			return nil, "", fmt.Errorf("can't get labels for %s/%s: %w", owner, repo, err)
 		}
 		if repoID == "" {
+			if labelResp.Repository.Id == "" {
+				return nil, "", fmt.Errorf("%w for %s/%s", ErrMissingRepositoryID, owner, repo)
+			}
 			repoID = labelResp.Repository.Id
 		}
 		for i := range labelResp.Repository.Labels.Edges {
@@ -134,13 +147,22 @@ func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (t
 			// Remove from map so remaining items are deletions
 			delete(existingLabels, desiredLabel.Name)
 		} else {
-			// Label doesn't exist, needs to be created
-			toCreate = append(toCreate, *desiredLabel)
+			// Label doesn't exist, needs to be created; avoid copying extra fields
+			toCreate = append(toCreate, Label{
+				Name:        desiredLabel.Name,
+				Color:       desiredLabel.Color,
+				Description: desiredLabel.Description,
+			})
 		}
 	}
 
-	// Remaining items in existingLabels are deletions
+	// Remaining items in existingLabels are deletions; collect deterministically
+	names := make([]string, 0, len(existingLabels))
 	for name := range existingLabels {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
 		toDeleteIDs = append(toDeleteIDs, existingLabels[name].Id)
 	}
 
@@ -149,7 +171,7 @@ func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (t
 
 // executeLabelOperations performs create, update, and delete operations on labels.
 func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdate []Label, toDeleteIDs []string) []LabelOperationError {
-	var errors []LabelOperationError
+	var opErrors []LabelOperationError
 
 	// Execute creates
 	for i := range toCreate {
@@ -162,7 +184,7 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 			RepositoryId: repoID,
 		})
 		if err != nil {
-			errors = append(errors, LabelOperationError{
+			opErrors = append(opErrors, LabelOperationError{
 				Operation: "create",
 				LabelName: label.Name,
 				Err:       err,
@@ -181,7 +203,7 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 			Id:          label.Id,
 		})
 		if err != nil {
-			errors = append(errors, LabelOperationError{
+			opErrors = append(opErrors, LabelOperationError{
 				Operation: "update",
 				LabelName: label.Name,
 				Err:       err,
@@ -196,15 +218,15 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 			Id: id,
 		})
 		if err != nil {
-			errors = append(errors, LabelOperationError{
+			opErrors = append(opErrors, LabelOperationError{
 				Operation: "delete",
-				LabelName: id,
+				LabelName: fmt.Sprintf("id=%s", id),
 				Err:       err,
 			})
 		}
 	}
 
-	return errors
+	return opErrors
 }
 
 // SyncLabels ensures the repository's labels match the provided desired set by
@@ -219,12 +241,19 @@ func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
 	// Compute diff: determine what needs to be created, updated, or deleted
 	toCreate, toUpdate, toDeleteIDs := computeLabelDiff(labels, existingLabels)
 
-	// Execute operations
-	errors := c.executeLabelOperations(repoID, toCreate, toUpdate, toDeleteIDs)
+	// Plan summary for visibility
+	log.Debug().
+		Int("create", len(toCreate)).
+		Int("update", len(toUpdate)).
+		Int("delete", len(toDeleteIDs)).
+		Msg("label sync plan")
+
+		// Execute operations
+	opErrors := c.executeLabelOperations(repoID, toCreate, toUpdate, toDeleteIDs)
 
 	// Return aggregated error if any operations failed
-	if len(errors) > 0 {
-		return &MultiLabelError{Errors: errors}
+	if len(opErrors) > 0 {
+		return &MultiLabelError{Errors: opErrors}
 	}
 	return nil
 }

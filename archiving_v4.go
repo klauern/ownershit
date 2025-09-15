@@ -12,7 +12,7 @@ import (
 
 /*
 query archivableRepositories {
-  search(query: $user, type: REPOSITORY, first: 10, after: $afeerthing) {
+  search(query: $user, type: REPOSITORY, first: 10, after: $repositoryCursor) {
     pageInfo {
       hasNextPage
       startCursor
@@ -25,12 +25,10 @@ query archivableRepositories {
         name
         isFork
         forkCount
-		isArchived
-		stargazersCount
-		updatedAt
-		watchers	{
-			totalCount
-		}
+        isArchived
+        stargazerCount
+        updatedAt
+        watchers { totalCount }
       }
     }
   }
@@ -107,9 +105,9 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 		return false // Doesn't meet archiving criteria
 	}
 	staleBefore := time.Now().Add(-time.Duration(maxDays) * OneDay)
-    if r.UpdatedAt.After(staleBefore) {
-        return false // Recently updated; not stale enough
-    }
+	if r.UpdatedAt.After(staleBefore) {
+		return false // Recently updated; not stale enough
+	}
 	return true // Meets all criteria for archiving
 }
 

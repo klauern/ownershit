@@ -81,7 +81,9 @@ type (
 )
 
 func (t *authedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("Authorization", "Bearer "+t.key)
+	if t.key != "" {
+		req.Header.Set("Authorization", "Bearer "+t.key)
+	}
 	return t.wrapped.RoundTrip(req)
 }
 

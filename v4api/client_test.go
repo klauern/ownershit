@@ -1,13 +1,13 @@
 package v4api
 
 import (
-    "context"
-    "errors"
-    "net/http"
-    "reflect"
-    "strings"
-    "testing"
-    "time"
+	"context"
+	"errors"
+	"net/http"
+	"reflect"
+	"strings"
+	"testing"
+	"time"
 
 	"go.uber.org/mock/gomock"
 
@@ -711,7 +711,8 @@ func TestGitHubV4Client_ContextHandling(t *testing.T) {
 			name: "context with timeout",
 			context: func() context.Context {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-				defer cancel()
+				// Call cancel to avoid context leak; still returns valid context for test
+				cancel()
 				return ctx
 			}(),
 		},
@@ -829,9 +830,11 @@ func TestAuthedTransport_RoundTrip_VariousRequests(t *testing.T) {
 				_ = resp.Body.Close()
 			}
 
-			expectedAuth := "Bearer " + tt.key
-			if got := req.Header.Get("Authorization"); got != expectedAuth {
-				t.Errorf("Authorization header = %v, want %v", got, expectedAuth)
+			got := req.Header.Get("Authorization")
+			if tt.key == "" && got != "" {
+				t.Errorf("expected no Authorization header for empty key, got %q", got)
+			} else if tt.key != "" && got != "Bearer "+tt.key {
+				t.Errorf("Authorization header = %v, want %v", got, "Bearer "+tt.key)
 			}
 		})
 	}

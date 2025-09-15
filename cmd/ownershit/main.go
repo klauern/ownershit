@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	shit "github.com/klauern/ownershit"
@@ -33,6 +34,7 @@ var (
 	ErrExpectedOneArgument     = errors.New("expected exactly one argument: owner/repo")
 	ErrInvalidRepoPathFormat   = errors.New("repository path must be in format owner/repo")
 	ErrNoRepositoriesSpecified = errors.New("no repositories specified. Use 'owner/repo' format or --batch-file")
+	ErrConfigPathIsDirectory   = errors.New("configuration path is a directory")
 )
 
 // main is the entry point for the ownershit CLI application.
@@ -105,9 +107,8 @@ func main() {
 			{
 				Name:   "ratelimit",
 				Usage:  "get ratelimit information for the GitHub GraphQL v4 API",
-				Before: configureClient,
+				Before: configureImportClient,
 				Action: rateLimitCommand,
-				Flags:  []cli.Flag{},
 			},
 			{
 				Name:      "import",
@@ -189,31 +190,20 @@ func main() {
 
 // configureClient sets up the GitHub client and configuration for CLI commands.
 func configureClient(c *cli.Context) error {
-	err := readConfig(c)
-	if err != nil {
+	if err := readConfig(c); err != nil {
 		return fmt.Errorf("reading config file: %w", err)
 	}
-	if c.Bool("debug") {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
-
-	client, err := shit.NewSecureGitHubClient(c.Context)
-	if err != nil {
-		log.Err(err).
-			Str("operation", "initializeGitHubClient").
-			Msg("GitHub client initialization failed")
-		return fmt.Errorf("failed to initialize GitHub client: %w", err)
-	}
-	githubClient = client
-	return nil
+	return newGitHubClient(c)
 }
 
 // configureImportClient sets up the GitHub client specifically for import operations.
-func configureImportClient(c *cli.Context) error {
+func configureImportClient(c *cli.Context) error { return newGitHubClient(c) }
+
+// newGitHubClient sets debug level and initializes githubClient; shared by configure* helpers.
+func newGitHubClient(c *cli.Context) error {
 	if c.Bool("debug") {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
-
 	client, err := shit.NewSecureGitHubClient(c.Context)
 	if err != nil {
 		log.Err(err).
@@ -235,10 +225,10 @@ func readConfig(c *cli.Context) error {
 				Str("configPath", configPath).
 				Str("operation", "readConfigFile").
 				Msg("config file not found")
-			fmt.Printf("❌ Configuration file '%s' not found.\n\n", configPath)
-			fmt.Printf("To get started, run:\n")
-			fmt.Printf("  ownershit init\n\n")
-			fmt.Printf("This will create a stub configuration file with examples and comments.\n")
+			fmt.Fprintf(os.Stderr, "❌ Configuration file '%s' not found.\n\n", configPath)
+			fmt.Fprintln(os.Stderr, "To get started, run:")
+			fmt.Fprintln(os.Stderr, "  ownershit init")
+			fmt.Fprintln(os.Stderr, "This will create a stub configuration file with examples and comments.")
 			return shit.NewConfigFileError(configPath, "read", "configuration file not found - run 'ownershit init' to create one", err)
 		}
 		log.Err(err).
@@ -361,7 +351,9 @@ func importCommand(c *cli.Context) error {
 		log.Info().Str("file", outputPath).Msg("configuration exported")
 	} else {
 		log.Debug().Msg("writing to stdout")
-		fmt.Print(string(yamlData))
+		if _, werr := os.Stdout.Write(yamlData); werr != nil {
+			return fmt.Errorf("failed to write YAML to stdout: %w", werr)
+		}
 	}
 
 	return nil
@@ -410,8 +402,8 @@ func importCSVCommand(c *cli.Context) error {
 		flag := os.O_CREATE | os.O_WRONLY
 		if appendMode {
 			flag |= os.O_APPEND
-			// Validate header compatibility only when appending to an existing file
-			if fileExisted {
+			// Validate header compatibility only when appending to a non-empty file
+			if fileExisted && fileHasContent {
 				if vErr := shit.ValidateCSVAppendMode(outputPath); vErr != nil {
 					return fmt.Errorf("append mode validation failed: %w", vErr)
 				}
@@ -464,21 +456,16 @@ func importCSVCommand(c *cli.Context) error {
 				Int("failed", batchErr.ErrorCount).
 				Msg("CSV import completed with some failures")
 
-			// Log detailed errors without relying on a helper method
+			// Log detailed errors with structured fields
 			for _, repoErr := range batchErr.Errors {
-				msg := ""
-				if repoErr.Owner != "" && repoErr.Repository != "" {
-					msg = fmt.Sprintf("%s/%s: %v", repoErr.Owner, repoErr.Repository, repoErr.Error)
-				} else if repoErr.Repository != "" {
-					msg = fmt.Sprintf("%s: %v", repoErr.Repository, repoErr.Error)
-				} else if repoErr.Owner != "" {
-					msg = fmt.Sprintf("%s: %v", repoErr.Owner, repoErr.Error)
-				} else if repoErr.Error != nil {
-					msg = repoErr.Error.Error()
+				evt := log.Error()
+				if repoErr.Owner != "" {
+					evt = evt.Str("owner", repoErr.Owner)
 				}
-				if msg != "" {
-					log.Error().Msg(msg)
+				if repoErr.Repository != "" {
+					evt = evt.Str("repo", repoErr.Repository)
 				}
+				evt.Err(repoErr.Error).Msg("failed to process repository")
 			}
 
 			// Return success if we had any successful imports
@@ -517,8 +504,19 @@ func importCSVCommand(c *cli.Context) error {
 func initCommand(c *cli.Context) error {
 	configPath := c.String("config")
 
-	// Check if config file already exists
-	if _, err := os.Stat(configPath); err == nil {
+	// Ensure parent directory exists
+	dir := filepath.Dir(configPath)
+	if dir != "." {
+		if mkErr := os.MkdirAll(dir, 0o700); mkErr != nil {
+			return fmt.Errorf("failed to create config directory %q: %w", dir, mkErr)
+		}
+	}
+
+	// Check if config file already exists or path is a directory
+	if fi, err := os.Stat(configPath); err == nil {
+		if fi.IsDir() {
+			return fmt.Errorf("%w: %s", ErrConfigPathIsDirectory, configPath)
+		}
 		log.Warn().Str("configPath", configPath).Msg("configuration file already exists")
 		fmt.Printf("Configuration file '%s' already exists.\n", configPath)
 		fmt.Printf("Remove it first if you want to create a new one.\n")
