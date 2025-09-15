@@ -18,7 +18,7 @@ const (
 	// Admin permission level provides full administrative access.
 	Admin PermissionsLevel = "admin"
 	// Read permission level provides pull access.
-	Read  PermissionsLevel = "pull"
+	Read PermissionsLevel = "pull"
 	// Write permission level provides push access.
 	Write PermissionsLevel = "push"
 
@@ -93,7 +93,6 @@ type RepoLabel struct {
 	Color       string
 	Emoji       string
 	Description string
-	oldLabel    string
 }
 
 // GitHub token validation errors.
@@ -473,6 +472,7 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 			continue
 		}
 		applyEnhancedBranchProtection(settings, repo, repoID, client)
+		// REST fallback for unsupported fields or existing rule conflicts
 		applyBranchProtectionFallback(settings, repo, client)
 		setRepositoryFeatures(repo, repoID, client)
 		setAdvancedRepoSettings(settings, repo, client)
@@ -590,11 +590,17 @@ func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubCl
 	}
 
 	for _, repo := range settings.Repositories {
+		b := func(p *bool) bool {
+			if p == nil {
+				return false
+			}
+			return *p
+		}
 		log.Info().
 			Str("repository", *repo.Name).
-			Bool("squash-commits", *settings.AllowSquashMerge).
-			Bool("merges", *settings.AllowMergeCommit).
-			Bool("rebase-merge", *settings.AllowRebaseMerge).
+			Bool("squash-commits", b(settings.AllowSquashMerge)).
+			Bool("merges", b(settings.AllowMergeCommit)).
+			Bool("rebase-merge", b(settings.AllowRebaseMerge)).
 			Msg("Updating settings")
 		if err := client.UpdateBranchPermissions(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
 			log.Err(err).Str("repository", *repo.Name).Str("organization", *settings.Organization).Msg("updating repository settings")

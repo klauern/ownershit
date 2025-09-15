@@ -218,6 +218,7 @@ func getBranchProtectionRules(client *GitHubClient, owner, repo string) (*Branch
 	branchPerms := convertBranchProtection(protection)
 
 	// Get merge settings from repository details
+	// TODO: accept repoInfo or merge flags as params to avoid a second API call
 	repoInfo, _, err := client.Repositories.Get(client.Context, owner, repo)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get repository merge settings")

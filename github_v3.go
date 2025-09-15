@@ -116,7 +116,7 @@ func (c *GitHubClient) AddPermissions(organization, repo string, perm *Permissio
 		if resp != nil {
 			logEvent = logEvent.Str("response-status", resp.Status)
 			if resp.Response != nil && log.Debug().Enabled() {
-				dumped, _ := httputil.DumpResponse(resp.Response, true)
+				dumped, _ := httputil.DumpResponse(resp.Response, false)
 				if len(dumped) > 0 {
 					log.Debug().Msg("response body follows")
 					log.Debug().Str("response-body", string(dumped))
@@ -348,7 +348,7 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 		return fmt.Errorf("listing labels for %v/%v: %w", org, repo, err)
 	}
 	if resp != nil && resp.Response != nil && log.Debug().Enabled() {
-		dumpedResp, _ := httputil.DumpResponse(resp.Response, true)
+		dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
 		if len(dumpedResp) > 0 {
 			log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
 		}
@@ -376,7 +376,7 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 			return NewGitHubAPIError(0, "create label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to create label %s", create.Name), err)
 		}
 		if resp != nil && resp.Response != nil && log.Debug().Enabled() {
-			dumpedResp, _ := httputil.DumpResponse(resp.Response, true)
+			dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
 			if len(dumpedResp) > 0 {
 				log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
 			}
@@ -394,7 +394,7 @@ func (c *GitHubClient) SyncLabels(org, repo string, labels []RepoLabel) error {
 			return NewGitHubAPIError(0, "edit label", fmt.Sprintf("%s/%s", org, repo), fmt.Sprintf("failed to edit label %s", edit.Name), err)
 		}
 		if resp != nil && resp.Response != nil && log.Debug().Enabled() {
-			dumpedResp, _ := httputil.DumpResponse(resp.Response, true)
+			dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
 			if len(dumpedResp) > 0 {
 				log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
 			}

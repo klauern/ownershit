@@ -38,7 +38,7 @@ var archiveFlags = []cli.Flag{
 	},
 	&cli.IntFlag{
 		Name:        "forks",
-		Usage:       "maximum number of forks that a repo can have before it is considered archivalable",
+		Usage:       "maximum number of forks that a repo can have before it is considered archivable",
 		Destination: &forks,
 		Value:       0,
 	},
@@ -79,7 +79,7 @@ var ArchiveSubcommands = []*cli.Command{
 }
 
 func userClientSetup(c *cli.Context) error {
-	if username == "" {
+	if strings.TrimSpace(username) == "" {
 		return ErrUsernameNotDefined
 	}
 	secureClient, err := shit.NewSecureGitHubClient(context.Background())
@@ -103,7 +103,7 @@ func queryCommand(c *cli.Context) error {
 			"days":     days,
 			"watchers": watchers,
 		}).
-		Msgf("querying with parms")
+		Msg("querying with parms")
 	repos, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
 		log.Err(err).
@@ -114,7 +114,7 @@ func queryCommand(c *cli.Context) error {
 	}
 	tableBuf := strings.Builder{}
 	table := tablewriter.NewWriter(&tableBuf)
-	table.Header("repository", "forks", "stars", "watchers", "last updated")
+	table.SetHeader([]string{"repository", "forks", "stars", "watchers", "last updated"})
 
 	repos = shit.SortedRepositoryInfo(repos)
 	for _, repo := range repos {
@@ -122,13 +122,9 @@ func queryCommand(c *cli.Context) error {
 		repoStars := strconv.Itoa(int(repo.StargazerCount))
 		repoWatchers := strconv.Itoa(int(repo.Watchers.TotalCount))
 		lastUpdated := repo.UpdatedAt.Time
-		if err := table.Append(string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String()); err != nil {
-			return fmt.Errorf("failed to append row to table: %w", err)
-		}
+		table.Append([]string{string(repo.Name), repoForks, repoStars, repoWatchers, lastUpdated.String()})
 	}
-	if err := table.Render(); err != nil {
-		return fmt.Errorf("failed to render table: %w", err)
-	}
+	table.Render()
 	fmt.Println(tableBuf.String())
 	return nil
 }
@@ -143,7 +139,7 @@ func executeCommand(c *cli.Context) error {
 			"days":     days,
 			"watchers": watchers,
 		}).
-		Msgf("executing Archive with parms")
+		Msg("executing Archive with parms")
 	issues, err := client.QueryArchivableRepos(username, forks, stars, days, watchers)
 	if err != nil {
 		log.Err(err).
@@ -168,7 +164,12 @@ func executeCommand(c *cli.Context) error {
 	repoMapping := mapRepoNames(issues)
 
 	for _, r := range repoNames {
-		err = client.MutateArchiveRepository(repoMapping[r])
+		repo, ok := repoMapping[r]
+		if !ok {
+			log.Warn().Str("repo", r).Msg("selected repository not found in mapping; skipping")
+			continue
+		}
+		err = client.MutateArchiveRepository(repo)
 		if err != nil {
 			return fmt.Errorf("archiving %v: %w", r, err)
 		}

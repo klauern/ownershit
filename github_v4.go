@@ -81,7 +81,11 @@ func (c *GitHubClient) SetBranchRules(
 	requiresApprovingReviews *bool,
 ) error {
 	// Deprecated: Use SetEnhancedBranchProtection instead
-	return c.SetEnhancedBranchProtection(id, "main", &BranchPermissions{
+	pat := "main"
+	if branchPattern != nil && strings.TrimSpace(*branchPattern) != "" {
+		pat = strings.TrimSpace(*branchPattern)
+	}
+	return c.SetEnhancedBranchProtection(id, pat, &BranchPermissions{
 		RequireCodeOwners:         requireCodeOwners,
 		ApproverCount:             approverCount,
 		RequirePullRequestReviews: requiresApprovingReviews,
@@ -123,7 +127,6 @@ func (c *GitHubClient) SetEnhancedBranchProtection(id githubv4.ID, branchPattern
 	logUnsupportedGraphQLFeatures(perms)
 
 	log.Debug().
-		Interface("mutation", mutation).
 		Interface("input", input).
 		Interface("repositoryID", id).
 		Str("pattern", branchPattern).
@@ -168,7 +171,7 @@ func buildBranchProtectionRuleInput(
 ) githubv4.CreateBranchProtectionRuleInput {
 	input := githubv4.CreateBranchProtectionRuleInput{
 		RepositoryID: id,
-		Pattern:      *githubv4.NewString(githubv4.String(branchPattern)),
+		Pattern:      githubv4.String(branchPattern),
 	}
 	if perms == nil {
 		return input

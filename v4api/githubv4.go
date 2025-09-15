@@ -54,7 +54,7 @@ func (c *GitHubV4Client) GetTeams(organization string) (OrganizationTeams, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to get teams (initial request): %w", err)
 	}
-	log.Info().Interface("teams", initResp).Msg("initial teams")
+	log.Debug().Interface("teams", initResp).Msg("initial teams")
 	orgTeams = append(orgTeams, initResp.Organization.Teams.Edges...)
 	hasNextPage := initResp.Organization.Teams.PageInfo.HasNextPage
 	cursor := initResp.Organization.Teams.PageInfo.EndCursor
@@ -84,7 +84,7 @@ func (c *GitHubV4Client) GetRateLimit() (RateLimit, error) {
 	if err != nil {
 		return RateLimit{}, fmt.Errorf("can't get ratelimit: %w", err)
 	}
-	log.Debug().Interface("rate-limit", resp)
+	log.Debug().Interface("rate-limit", resp).Msg("rate limit")
 	return RateLimit(*resp), nil
 }
 
@@ -96,13 +96,12 @@ func (c *GitHubV4Client) fetchExistingLabels(repo, owner string) (existingLabels
 	for {
 		labelResp, err := GetRepositoryIssueLabels(c.Context, c.client, repo, owner, cursor)
 		if err != nil {
-			return nil, "", fmt.Errorf("can't get labels: %w", err)
+			return nil, "", fmt.Errorf("can't get labels for %s/%s: %w", owner, repo, err)
 		}
 		if repoID == "" {
 			repoID = labelResp.Repository.Id
 		}
-		for i := 0; i < len(labelResp.Repository.Labels.Edges); i++ {
-			label := labelResp.Repository.Labels.Edges[i]
+		for _, label := range labelResp.Repository.Labels.Edges {
 			existingLabels[label.Node.Name] = Label(label.Node)
 		}
 		if !labelResp.Repository.Labels.PageInfo.HasNextPage {

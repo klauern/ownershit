@@ -306,9 +306,11 @@ func importCommand(c *cli.Context) error {
 	if len(parts) != 2 {
 		return fmt.Errorf("%w: %s", ErrInvalidRepoPathFormat, repoPath)
 	}
-
-	owner := parts[0]
-	repo := parts[1]
+	owner := strings.TrimSpace(parts[0])
+	repo := strings.TrimSpace(parts[1])
+	if owner == "" || repo == "" {
+		return fmt.Errorf("%w: %s", ErrInvalidRepoPathFormat, repoPath)
+	}
 
 	log.Info().
 		Str("owner", owner).

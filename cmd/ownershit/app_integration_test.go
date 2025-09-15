@@ -21,17 +21,11 @@ const (
 )
 
 func TestAppCommandExecution(t *testing.T) {
-	// Save original environment and globals
-	originalToken := os.Getenv("GITHUB_TOKEN")
+	// Save original globals
 	originalSettings := settings
 	originalClient := githubClient
 
 	defer func() {
-		if originalToken != "" {
-			_ = os.Setenv("GITHUB_TOKEN", originalToken)
-		} else {
-			os.Unsetenv("GITHUB_TOKEN")
-		}
 		settings = originalSettings
 		githubClient = originalClient
 	}()
@@ -116,9 +110,9 @@ default_labels:
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				_ = os.Setenv("GITHUB_TOKEN", tt.token)
+				t.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
-				os.Unsetenv("GITHUB_TOKEN")
+				t.Setenv("GITHUB_TOKEN", "")
 			}
 
 			// Create temporary config file
@@ -397,11 +391,10 @@ func TestErrorHandlingWorkflows(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				_ = os.Setenv("GITHUB_TOKEN", tt.token)
+				t.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
-				os.Unsetenv("GITHUB_TOKEN")
+				t.Setenv("GITHUB_TOKEN", "")
 			}
-			defer os.Unsetenv("GITHUB_TOKEN")
 
 			// Setup config file
 			configPath := "non_existent.yaml"

@@ -84,7 +84,7 @@ func (e *AuthenticationError) Unwrap() error {
 
 // Is reports whether the target error is an authentication error.
 func (e *AuthenticationError) Is(target error) bool {
-	return errors.Is(target, ErrAuthentication)
+	return target == ErrAuthentication
 }
 
 // NewAuthenticationError creates a new authentication error.
@@ -115,7 +115,7 @@ func (e *RateLimitError) Unwrap() error {
 
 // Is reports whether the target error is a rate limit error.
 func (e *RateLimitError) Is(target error) bool {
-	return errors.Is(target, ErrRateLimit)
+	return target == ErrRateLimit
 }
 
 // NewRateLimitError creates a new rate limit error.
@@ -145,7 +145,7 @@ func (e *RepositoryNotFoundError) Unwrap() error {
 
 // Is reports whether the target error is a repository not found error.
 func (e *RepositoryNotFoundError) Is(target error) bool {
-	return errors.Is(target, ErrNotFound)
+	return target == ErrNotFound
 }
 
 // NewRepositoryNotFoundError creates a new repository not found error.
@@ -180,7 +180,7 @@ func (e *PermissionDeniedError) Unwrap() error {
 
 // Is reports whether the target error is a permission denied error.
 func (e *PermissionDeniedError) Is(target error) bool {
-	return errors.Is(target, ErrPermissionDenied)
+	return target == ErrPermissionDenied
 }
 
 // NewPermissionDeniedError creates a new permission denied error.
@@ -225,7 +225,7 @@ func (e *ConfigValidationError) Unwrap() error {
 
 // Is reports whether the target error is a config validation error.
 func (e *ConfigValidationError) Is(target error) bool {
-	return errors.Is(target, ErrConfiguration) || errors.Is(target, ErrValidation)
+	return target == ErrConfiguration || target == ErrValidation
 }
 
 // NewConfigValidationError creates a new configuration validation error.
@@ -256,7 +256,7 @@ func (e *ConfigFileError) Unwrap() error {
 
 // Is reports whether the target error is a config file error.
 func (e *ConfigFileError) Is(target error) bool {
-	return errors.Is(target, ErrConfiguration)
+	return target == ErrConfiguration
 }
 
 // NewConfigFileError creates a new configuration file error.
@@ -287,7 +287,7 @@ func (e *ArchiveEligibilityError) Unwrap() error {
 
 // Is reports whether the target error is an archive eligibility error.
 func (e *ArchiveEligibilityError) Is(target error) bool {
-	return errors.Is(target, ErrValidation)
+	return target == ErrValidation
 }
 
 // NewArchiveEligibilityError creates a new archive eligibility error.
@@ -321,7 +321,7 @@ func (e *NetworkError) Unwrap() error {
 
 // Is reports whether the target error is a network error.
 func (e *NetworkError) Is(target error) bool {
-	return errors.Is(target, ErrNetwork)
+	return target == ErrNetwork
 }
 
 // NewNetworkError creates a new network error.

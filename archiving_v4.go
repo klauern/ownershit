@@ -83,7 +83,7 @@ const (
 	// PerPage defines the default page size for GraphQL queries.
 	PerPage = 100
 	// OneDay represents a 24-hour duration.
-	OneDay  = time.Hour * 24
+	OneDay = time.Hour * 24
 )
 
 // IsArchivable queries a repository to determine if it meets the necessary requirements for being archived.  All
@@ -108,10 +108,10 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 	return false
 }
 
-// QueryArchivableRepos returns repositories for the given user that do not meet the
+// QueryArchivableRepos returns repositories for the given user that meet the
 // archiving criteria defined by maxForks, maxStars, maxDays, and maxWatchers. The
-// function paginates through all results via GraphQL and filters out repositories
-// that should be archived, returning only non-archivable repositories.
+// function paginates through all results via GraphQL and filters repositories
+// that should be archived, returning only archivable repositories.
 func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
 	var query ArchivableRepositoriesQuery
 	variables := map[string]interface{}{
@@ -144,15 +144,14 @@ func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars,
 		}
 		variables["repositoryCursor"] = githubv4.NewString(query.Search.PageInfo.EndCursor)
 	}
-	for i := 0; i < len(repos); i++ {
-		if repos[i].IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
-			log.Debug().Str("repository", string(repos[i].Name)).Msg("repository is archivable")
-			repos = removeElement(repos, i)
-			i--
-			continue
+	var candidates []RepositoryInfo
+	for _, repo := range repos {
+		if repo.IsArchivable(maxForks, maxStars, maxDays, maxWatchers) {
+			log.Debug().Str("repository", string(repo.Name)).Msg("repository is archivable")
+			candidates = append(candidates, repo)
 		}
 	}
-	return repos, nil
+	return candidates, nil
 }
 
 // MutateArchiveRepository archives the provided repository via the GitHub GraphQL
@@ -183,13 +182,15 @@ func removeElement(slice []RepositoryInfo, s int) []RepositoryInfo {
 type (
 	RepositoryInfos []RepositoryInfo
 	// ReposByName allows sorting repositories by name.
-	ReposByName     struct{ RepositoryInfos }
+	ReposByName struct{ RepositoryInfos }
 )
 
 // Len returns the number of repositories in the slice.
-func (r RepositoryInfos) Len() int      { return len(r) }
+func (r RepositoryInfos) Len() int { return len(r) }
+
 // Swap exchanges the repositories at indices i and j.
 func (r RepositoryInfos) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+
 // Less compares repositories by name for sorting.
 func (r ReposByName) Less(i, j int) bool {
 	return string(r.RepositoryInfos[i].Name) < string(r.RepositoryInfos[j].Name)

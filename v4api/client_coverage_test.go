@@ -2,6 +2,7 @@ package v4api
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -57,19 +58,17 @@ func TestAuthedTransport_RoundTrip_Coverage(t *testing.T) {
 		wrapped: http.DefaultTransport,
 	}
 
-	req, _ := http.NewRequest("GET", "https://example.com", http.NoBody)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
+			t.Errorf("Expected Authorization 'Bearer test-token', got '%s'", got)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
 
-	// Test header setting
-	resp, err := transport.RoundTrip(req)
-	if err != nil {
-		t.Errorf("RoundTrip failed: %v", err)
-	}
-	if resp != nil && resp.Body != nil {
-		_ = resp.Body.Close()
-	}
-
-	if auth := req.Header.Get("Authorization"); auth != "bearer test-token" {
-		t.Errorf("Expected Authorization 'bearer test-token', got '%s'", auth)
+	req, _ := http.NewRequest("GET", srv.URL, http.NoBody)
+	if _, err := transport.RoundTrip(req); err != nil {
+		t.Fatalf("RoundTrip failed: %v", err)
 	}
 }
 
@@ -98,7 +97,10 @@ func TestParseEnv_CoverageTest(t *testing.T) {
 		os.Unsetenv(k)
 	}
 
-	params := parseEnv()
+	params, err := parseEnv()
+	if err != nil {
+		t.Fatalf("parseEnv failed: %v", err)
+	}
 	if params.TimeoutSeconds != defaultConfig.timeoutSeconds {
 		t.Errorf("Expected default timeout %d, got %d", defaultConfig.timeoutSeconds, params.TimeoutSeconds)
 	}
@@ -118,7 +120,10 @@ func TestParseEnv_CoverageTest(t *testing.T) {
 	_ = os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "30")
 	_ = os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "3.0")
 
-	params = parseEnv()
+	params, err = parseEnv()
+	if err != nil {
+		t.Fatalf("parseEnv failed: %v", err)
+	}
 	if params.TimeoutSeconds != 60 {
 		t.Errorf("Expected timeout 60, got %d", params.TimeoutSeconds)
 	}
@@ -201,7 +206,10 @@ func TestParseEnv_ErrorPaths(t *testing.T) {
 	_ = os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "")
 	_ = os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "")
 
-	params := parseEnv()
+	params, err := parseEnv()
+	if err != nil {
+		t.Fatalf("parseEnv failed: %v", err)
+	}
 	if params.TimeoutSeconds != defaultConfig.timeoutSeconds {
 		t.Errorf("Expected default timeout with empty string, got %d", params.TimeoutSeconds)
 	}

@@ -100,17 +100,11 @@ func TestAppConfiguration(t *testing.T) {
 }
 
 func TestCompleteWorkflow(t *testing.T) {
-	// Save original environment and globals
-	originalToken := os.Getenv("GITHUB_TOKEN")
+	// Save original globals
 	originalSettings := settings
 	originalClient := githubClient
 
 	defer func() {
-		if originalToken != "" {
-			_ = os.Setenv("GITHUB_TOKEN", originalToken)
-		} else {
-			_ = os.Unsetenv("GITHUB_TOKEN")
-		}
 		settings = originalSettings
 		githubClient = originalClient
 	}()
@@ -135,7 +129,7 @@ repositories:
 team:
   - name: developers
     level: push
-  - name: admins  
+  - name: admins
     level: admin
 default_labels:
   - name: bug
@@ -168,9 +162,9 @@ repositories:
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				_ = os.Setenv("GITHUB_TOKEN", tt.token)
+				t.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
-				_ = os.Unsetenv("GITHUB_TOKEN")
+				t.Setenv("GITHUB_TOKEN", "")
 			}
 
 			// Create temporary config file

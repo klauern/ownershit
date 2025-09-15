@@ -563,7 +563,6 @@ func TestImportRepositoryConfig(t *testing.T) {
 
 	// Execute the function
 	config, err := ImportRepositoryConfig("testowner", "testrepo", client, true)
-
 	// Verify results
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
@@ -602,5 +601,32 @@ func TestImportRepositoryConfig(t *testing.T) {
 
 	if repo.Homepage == nil || *repo.Homepage != "https://example.com" {
 		t.Errorf("expected Homepage to be 'https://example.com', got %v", getStringPointerValue(repo.Homepage))
+	}
+}
+
+func TestImportRepositoryConfig_TeamPermissionsStrictError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mocks.NewMockRepositoriesService(ctrl)
+	mockIssues := mocks.NewMockIssuesService(ctrl)
+
+	client := &GitHubClient{Repositories: mockRepo, Issues: mockIssues, Context: context.Background()}
+
+	// Repo details ok
+	mockRepo.EXPECT().Get(gomock.Any(), "o", "r").Return(&github.Repository{}, nil, nil)
+	// Team permissions fail
+	mockRepo.EXPECT().ListTeams(gomock.Any(), "o", "r", nil).Return(nil, nil, fmt.Errorf("boom"))
+
+	// Branch protection attempts both branches and returns no protection
+	mockRepo.EXPECT().GetBranchProtection(gomock.Any(), "o", "r", "main").Return(nil, nil, fmt.Errorf("no protection"))
+	mockRepo.EXPECT().GetBranchProtection(gomock.Any(), "o", "r", "master").Return(nil, nil, fmt.Errorf("no protection"))
+
+	// Labels ok
+	mockIssues.EXPECT().ListLabels(gomock.Any(), "o", "r", gomock.Any()).Return(nil, &github.Response{}, nil)
+
+	_, err := ImportRepositoryConfig("o", "r", client, false)
+	if err == nil {
+		t.Fatal("expected error when relaxTeamErrors=false and ListTeams fails")
 	}
 }

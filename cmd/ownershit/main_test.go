@@ -85,16 +85,6 @@ repositories:
 }
 
 func TestConfigureClient(t *testing.T) {
-	// Save original environment
-	originalToken := os.Getenv("GITHUB_TOKEN")
-	defer func() {
-		if originalToken != "" {
-			_ = os.Setenv("GITHUB_TOKEN", originalToken)
-		} else {
-			_ = os.Unsetenv("GITHUB_TOKEN")
-		}
-	}()
-
 	tests := []struct {
 		name       string
 		setupToken bool
@@ -133,9 +123,9 @@ func TestConfigureClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				_ = os.Setenv("GITHUB_TOKEN", tt.token)
+				t.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
-				_ = os.Unsetenv("GITHUB_TOKEN")
+				t.Setenv("GITHUB_TOKEN", "")
 			}
 
 			// Create temporary config file if needed
