@@ -165,7 +165,8 @@ func (c *GitHubClient) MutateArchiveRepository(repo RepositoryInfo) error {
 	input := githubv4.ArchiveRepositoryInput{
 		RepositoryID: repo.ID,
 	}
-	err := c.Graph.Mutate(c.Context, &mutation, input, nil)
+	vars := map[string]interface{}{"input": input}
+	err := c.Graph.Mutate(c.Context, mutation, vars, nil)
 	if err != nil {
 		log.Err(err).
 			Interface("repository", repo).
