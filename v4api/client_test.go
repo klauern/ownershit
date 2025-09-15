@@ -1,14 +1,13 @@
 package v4api
 
 import (
-	"context"
-	"errors"
-	"net/http"
-	"os"
-	"reflect"
-	"strings"
-	"testing"
-	"time"
+    "context"
+    "errors"
+    "net/http"
+    "reflect"
+    "strings"
+    "testing"
+    "time"
 
 	"go.uber.org/mock/gomock"
 
@@ -234,18 +233,10 @@ func Test_parseEnv(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup environment
-			oldEnv := make(map[string]string)
+			// Setup environment with isolation
 			for k := range tt.envVars {
-				oldEnv[k] = os.Getenv(k)
-				_ = os.Setenv(k, tt.envVars[k])
+				t.Setenv(k, tt.envVars[k])
 			}
-			// Cleanup
-			defer func() {
-				for k, v := range oldEnv {
-					_ = os.Setenv(k, v)
-				}
-			}()
 
 			got, err := parseEnv()
 			if err != nil {
@@ -588,18 +579,10 @@ func TestParseEnv_ValidValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup environment
-			oldEnv := make(map[string]string)
+			// Setup environment with isolation
 			for k, v := range tt.envVars {
-				oldEnv[k] = os.Getenv(k)
-				_ = os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			// Cleanup
-			defer func() {
-				for k, v := range oldEnv {
-					_ = os.Setenv(k, v)
-				}
-			}()
 
 			got, err := parseEnv()
 			if err != nil {
@@ -827,8 +810,10 @@ func TestAuthedTransport_RoundTrip_VariousRequests(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			transport := &authedTransport{
-				key:     tt.key,
-				wrapped: http.DefaultTransport,
+				key: tt.key,
+				wrapped: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+					return &http.Response{StatusCode: 200, Body: http.NoBody, Header: make(http.Header)}, nil
+				}),
 			}
 
 			req, err := http.NewRequest(tt.method, tt.url, http.NoBody)
@@ -838,7 +823,7 @@ func TestAuthedTransport_RoundTrip_VariousRequests(t *testing.T) {
 
 			resp, err := transport.RoundTrip(req)
 			if err != nil {
-				t.Errorf("RoundTrip failed: %v", err)
+				t.Fatalf("RoundTrip failed: %v", err)
 			}
 			if resp != nil && resp.Body != nil {
 				_ = resp.Body.Close()

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
@@ -290,21 +291,27 @@ type GetRateLimitQuery struct {
 	}
 }
 
+// RateLimitResult is a lightweight struct with relevant rate limit details.
+type RateLimitResult struct {
+	Login     string
+	Limit     int
+	Cost      int
+	Remaining int
+	ResetAt   time.Time
+}
+
 // GetRateLimit queries the current viewer and GraphQL API ratelimit status and
-// logs the results for visibility.
-func (c *GitHubClient) GetRateLimit() {
+// returns the details. Errors are wrapped and returned to the caller.
+func (c *GitHubClient) GetRateLimit() (RateLimitResult, error) {
 	query := &GetRateLimitQuery{}
-	err := c.Graph.Query(c.Context, query, nil)
-	if err != nil {
-		log.Err(err).
-			Msg("error retrieving rate limit")
-		return
+	if err := c.Graph.Query(c.Context, query, nil); err != nil {
+		return RateLimitResult{}, fmt.Errorf("error retrieving rate limit: %w", err)
 	}
-	log.Info().
-		Str("login", string(query.Viewer.Login)).
-		Int("limit", int(query.RateLimit.Limit)).
-		Int("cost", int(query.RateLimit.Cost)).
-		Int("remaining", int(query.RateLimit.Remaining)).
-		Time("resetAt", query.RateLimit.ResetAt.Time).
-		Msg("get rate limit results")
+	return RateLimitResult{
+		Login:     string(query.Viewer.Login),
+		Limit:     int(query.RateLimit.Limit),
+		Cost:      int(query.RateLimit.Cost),
+		Remaining: int(query.RateLimit.Remaining),
+		ResetAt:   query.RateLimit.ResetAt.Time,
+	}, nil
 }

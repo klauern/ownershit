@@ -115,7 +115,7 @@ func (c *GitHubV4Client) fetchExistingLabels(repo, owner string) (existingLabels
 }
 
 // computeLabelDiff determines what labels need to be created, updated, or deleted.
-func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (toCreate, toUpdate, toDelete []Label) {
+func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (toCreate, toUpdate []Label, toDeleteIDs []string) {
 	// Process desired labels to determine creates and updates
 	for i := range desiredLabels {
 		desiredLabel := &desiredLabels[i]
@@ -141,14 +141,14 @@ func computeLabelDiff(desiredLabels []Label, existingLabels map[string]Label) (t
 
 	// Remaining items in existingLabels are deletions
 	for name := range existingLabels {
-		toDelete = append(toDelete, existingLabels[name])
+		toDeleteIDs = append(toDeleteIDs, existingLabels[name].Id)
 	}
 
-	return toCreate, toUpdate, toDelete
+	return toCreate, toUpdate, toDeleteIDs
 }
 
 // executeLabelOperations performs create, update, and delete operations on labels.
-func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdate, toDelete []Label) []LabelOperationError {
+func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdate []Label, toDeleteIDs []string) []LabelOperationError {
 	var errors []LabelOperationError
 
 	// Execute creates
@@ -190,16 +190,15 @@ func (c *GitHubV4Client) executeLabelOperations(repoID string, toCreate, toUpdat
 	}
 
 	// Execute deletions
-	for i := range toDelete {
-		label := &toDelete[i]
-		log.Debug().Interface("label", label).Msg("deleting label")
+	for _, id := range toDeleteIDs {
+		log.Debug().Str("label_id", id).Msg("deleting label")
 		_, err := DeleteLabel(c.Context, c.client, DeleteLabelInput{
-			Id: label.Id,
+			Id: id,
 		})
 		if err != nil {
 			errors = append(errors, LabelOperationError{
 				Operation: "delete",
-				LabelName: label.Name,
+				LabelName: id,
 				Err:       err,
 			})
 		}
@@ -218,10 +217,10 @@ func (c *GitHubV4Client) SyncLabels(repo, owner string, labels []Label) error {
 	}
 
 	// Compute diff: determine what needs to be created, updated, or deleted
-	toCreate, toUpdate, toDelete := computeLabelDiff(labels, existingLabels)
+	toCreate, toUpdate, toDeleteIDs := computeLabelDiff(labels, existingLabels)
 
 	// Execute operations
-	errors := c.executeLabelOperations(repoID, toCreate, toUpdate, toDelete)
+	errors := c.executeLabelOperations(repoID, toCreate, toUpdate, toDeleteIDs)
 
 	// Return aggregated error if any operations failed
 	if len(errors) > 0 {

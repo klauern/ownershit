@@ -267,7 +267,8 @@ func TestErrorHandling(t *testing.T) {
 		{
 			name:        "missing required fields",
 			configData:  `invalid: configuration`,
-			expectError: false, // YAML is valid, just missing expected fields
+			expectError: true, // strict YAML parsing: unknown field should error
+			errorType:   configFileError,
 		},
 		{
 			name: "valid minimal config",

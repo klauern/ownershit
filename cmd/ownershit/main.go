@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -248,7 +249,9 @@ func readConfig(c *cli.Context) error {
 	}
 
 	settings = &shit.PermissionsSettings{}
-	if err := yaml.Unmarshal(file, settings); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(file))
+	dec.KnownFields(true)
+	if err := dec.Decode(settings); err != nil {
 		log.Err(err).
 			Str("configPath", configPath).
 			Str("operation", "parseConfigFile").
@@ -292,7 +295,20 @@ func labelCommand(c *cli.Context) error {
 // rateLimitCommand displays GitHub API rate limit information.
 func rateLimitCommand(c *cli.Context) error {
 	log.Info().Msg("getting ratelimit information")
-	githubClient.GetRateLimit()
+	rl, err := githubClient.GetRateLimit()
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("failed to retrieve GraphQL rate limit; verify network connectivity and GITHUB_TOKEN permissions")
+		return fmt.Errorf("get ratelimit: %w", err)
+	}
+	log.Info().
+		Str("login", rl.Login).
+		Int("limit", rl.Limit).
+		Int("cost", rl.Cost).
+		Int("remaining", rl.Remaining).
+		Time("resetAt", rl.ResetAt).
+		Msg("rate limit")
 	return nil
 }
 
@@ -448,9 +464,21 @@ func importCSVCommand(c *cli.Context) error {
 				Int("failed", batchErr.ErrorCount).
 				Msg("CSV import completed with some failures")
 
-			// Log detailed errors
-			for _, errDetail := range batchErr.GetDetailedErrors() {
-				log.Error().Msg(errDetail)
+			// Log detailed errors without relying on a helper method
+			for _, repoErr := range batchErr.Errors {
+				msg := ""
+				if repoErr.Owner != "" && repoErr.Repository != "" {
+					msg = fmt.Sprintf("%s/%s: %v", repoErr.Owner, repoErr.Repository, repoErr.Error)
+				} else if repoErr.Repository != "" {
+					msg = fmt.Sprintf("%s: %v", repoErr.Repository, repoErr.Error)
+				} else if repoErr.Owner != "" {
+					msg = fmt.Sprintf("%s: %v", repoErr.Owner, repoErr.Error)
+				} else if repoErr.Error != nil {
+					msg = repoErr.Error.Error()
+				}
+				if msg != "" {
+					log.Error().Msg(msg)
+				}
 			}
 
 			// Return success if we had any successful imports

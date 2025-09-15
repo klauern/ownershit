@@ -103,10 +103,13 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 	if bool(r.IsFork) ||
 		(int(r.ForkCount) >= maxForks) ||
 		(int(r.StargazerCount) >= maxStars) ||
-		(r.UpdatedAt.After(time.Now().Add(-time.Duration(maxDays) * OneDay))) ||
 		(int(r.Watchers.TotalCount) >= maxWatchers) {
 		return false // Doesn't meet archiving criteria
 	}
+	staleBefore := time.Now().Add(-time.Duration(maxDays) * OneDay)
+    if r.UpdatedAt.After(staleBefore) {
+        return false // Recently updated; not stale enough
+    }
 	return true // Meets all criteria for archiving
 }
 

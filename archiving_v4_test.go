@@ -333,7 +333,6 @@ func TestRepositoryInfo_IsArchivable(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := createRepositoryInfo(tt.fields)
-			fmt.Println(tt.fields.UpdatedAt.Date())
 			if got := r.IsArchivable(tt.args.forks, tt.args.stars, tt.args.maxDays, tt.args.watchers); got != tt.want {
 				t.Errorf("RepositoryInfo.IsArchivable() = %v, want %v", got, tt.want)
 			}
