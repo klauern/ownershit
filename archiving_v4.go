@@ -113,7 +113,7 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 // QueryArchivableRepos returns repositories for the given user that meet the
 // archiving criteria defined by maxForks, maxStars, maxDays, and maxWatchers. The
 // function paginates through all results via GraphQL and filters repositories
-// that should be archived, returning only archivable repositories.
+// that meet the archiving criteria and should be archived.
 func (c *GitHubClient) QueryArchivableRepos(username string, maxForks, maxStars, maxDays, maxWatchers int) ([]RepositoryInfo, error) {
 	var query ArchivableRepositoriesQuery
 	variables := map[string]interface{}{
