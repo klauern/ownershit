@@ -294,7 +294,7 @@ func TestE2E_CLI_InitCommand(t *testing.T) {
 	}
 
 	// Verify the created config is valid
-	content, err := os.ReadFile(configPath)
+	content, err := os.ReadFile(configPath) // #nosec G304 - test file in temp directory
 	if err != nil {
 		t.Fatalf("Failed to read created config file: %v", err)
 	}

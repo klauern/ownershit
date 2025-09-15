@@ -68,7 +68,8 @@
       "Bash(gh api graphql:*)",
       "Bash(gh api:*)",
       "Bash(./combine_and_import.sh)",
-      "Bash(./ownershit import-csv --batch-file guardians-repos.csv --output imported-configs.csv)"
+      "Bash(./ownershit import-csv --batch-file guardians-repos.csv --output imported-configs.csv)",
+      "mcp__exa__web_search_exa"
     ],
     "deny": [],
     "additionalDirectories": [

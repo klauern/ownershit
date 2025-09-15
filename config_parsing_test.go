@@ -109,7 +109,7 @@ repositories:
 			wantErr:     false,
 			description: "Test minimal configuration parses without error",
 			validate: func(s *PermissionsSettings) error {
-				if s.BranchPermissions.RequirePullRequestReviews == nil {
+				if s.RequirePullRequestReviews == nil {
 					return NewConfigValidationError("require_pull_request_reviews", true, "required field missing", nil)
 				}
 				return nil
@@ -126,10 +126,10 @@ branches:
 			wantErr:     false,
 			description: "Test empty status checks list parses (validation should catch this)",
 			validate: func(s *PermissionsSettings) error {
-				if s.BranchPermissions.RequireStatusChecks == nil || !*s.BranchPermissions.RequireStatusChecks {
+				if s.RequireStatusChecks == nil || !*s.RequireStatusChecks {
 					return NewConfigValidationError("require_status_checks", true, "not parsed correctly", nil)
 				}
-				if len(s.BranchPermissions.StatusChecks) != 0 {
+				if len(s.StatusChecks) != 0 {
 					return NewConfigValidationError("status_checks", 0, "should be empty", nil)
 				}
 				return nil
@@ -420,7 +420,7 @@ organization: minimal-org
 			}
 
 			// Read and parse the file
-			fileContent, err := os.ReadFile(testFile)
+			fileContent, err := os.ReadFile(testFile) // #nosec G304 - test file in temp directory
 			if err != nil {
 				t.Fatalf("Failed to read test file: %v", err)
 			}

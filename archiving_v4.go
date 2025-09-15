@@ -1,3 +1,4 @@
+// Package ownershit provides GitHub repository management and archiving functionality.
 package ownershit
 
 import (
@@ -79,7 +80,9 @@ type RepositoryInfo struct {
 }
 
 const (
+	// PerPage defines the default page size for GraphQL queries.
 	PerPage = 100
+	// OneDay represents a 24-hour duration.
 	OneDay  = time.Hour * 24
 )
 
@@ -98,7 +101,7 @@ func (r *RepositoryInfo) IsArchivable(maxForks, maxStars, maxDays, maxWatchers i
 		bool(r.IsFork) ||
 		(int(r.ForkCount) > maxForks) ||
 		(int(r.StargazerCount) > maxStars) ||
-		(r.UpdatedAt.Time.After(time.Now().Add(-time.Duration(maxDays) * OneDay))) ||
+		(r.UpdatedAt.After(time.Now().Add(-time.Duration(maxDays) * OneDay))) ||
 		(int(r.Watchers.TotalCount) > maxWatchers) {
 		return true
 	}
@@ -176,14 +179,18 @@ func removeElement(slice []RepositoryInfo, s int) []RepositoryInfo {
 	return append(slice[:s], slice[s+1:]...)
 }
 
-// Everything behind this is related to sorting a list of RepositoryInfo.
+// RepositoryInfos represents a slice of RepositoryInfo that can be sorted.
 type (
 	RepositoryInfos []RepositoryInfo
+	// ReposByName allows sorting repositories by name.
 	ReposByName     struct{ RepositoryInfos }
 )
 
+// Len returns the number of repositories in the slice.
 func (r RepositoryInfos) Len() int      { return len(r) }
+// Swap exchanges the repositories at indices i and j.
 func (r RepositoryInfos) Swap(i, j int) { r[i], r[j] = r[j], r[i] }
+// Less compares repositories by name for sorting.
 func (r ReposByName) Less(i, j int) bool {
 	return string(r.RepositoryInfos[i].Name) < string(r.RepositoryInfos[j].Name)
 }

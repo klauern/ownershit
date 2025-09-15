@@ -147,7 +147,7 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 	var (
 		successCount = 0
 		errorCount   = 0
-		errors       []RepositoryError
+		repoErrors   []RepositoryError
 	)
 
 	log.Info().
@@ -162,7 +162,7 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 				Repository: repo,
 				Error:      fmt.Errorf("%w", ErrInvalidRepoFormat),
 			}
-			errors = append(errors, repoErr)
+			repoErrors = append(repoErrors, repoErr)
 			continue
 		}
 
@@ -183,7 +183,7 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 				Repository: repoName,
 				Error:      err,
 			}
-			errors = append(errors, repoErr)
+			repoErrors = append(repoErrors, repoErr)
 
 			// Log error but continue processing
 			log.Warn().
@@ -222,12 +222,12 @@ func ProcessRepositoriesCSV(repos []string, output io.Writer, client *GitHubClie
 	}
 
 	// Report errors if any occurred
-	if len(errors) > 0 {
+	if len(repoErrors) > 0 {
 		return &BatchProcessingError{
 			TotalRepositories: len(repos),
 			SuccessCount:      successCount,
 			ErrorCount:        errorCount,
-			Errors:            errors,
+			Errors:            repoErrors,
 		}
 	}
 
@@ -305,11 +305,15 @@ func validateRepoFormat(repo string) error {
 // an error is returned identifying the offending line number and content. Any I/O or scanning
 // error encountered while reading the file is returned.
 func readBatchFile(filename string) ([]string, error) {
-	file, err := os.Open(filename)
+	file, err := os.Open(filename) // #nosec G304 - filename is validated by caller
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Error().Err(closeErr).Str("filename", filename).Msg("failed to close file")
+		}
+	}()
 
 	var repos []string
 	scanner := bufio.NewScanner(file)
@@ -361,14 +365,18 @@ func removeDuplicates(repos []string) []string {
 // Returns an error if the file cannot be opened, the headers cannot be read, or the
 // existing headers are incompatible with the expected format.
 func ValidateCSVAppendMode(filename string) error {
-	file, err := os.Open(filename)
+	file, err := os.Open(filename) // #nosec G304 - filename is validated by caller
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // File doesn't exist, no validation needed
 		}
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Error().Err(closeErr).Str("filename", filename).Msg("failed to close file")
+		}
+	}()
 
 	reader := csv.NewReader(file)
 	headers, err := reader.Read()

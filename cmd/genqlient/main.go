@@ -1,3 +1,4 @@
+// Package main generates GraphQL client code using genqlient.
 package main
 
 import (

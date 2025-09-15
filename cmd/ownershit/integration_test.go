@@ -107,9 +107,9 @@ func TestCompleteWorkflow(t *testing.T) {
 
 	defer func() {
 		if originalToken != "" {
-			os.Setenv("GITHUB_TOKEN", originalToken)
+			_ = os.Setenv("GITHUB_TOKEN", originalToken)
 		} else {
-			os.Unsetenv("GITHUB_TOKEN")
+			_ = os.Unsetenv("GITHUB_TOKEN")
 		}
 		settings = originalSettings
 		githubClient = originalClient
@@ -168,9 +168,9 @@ repositories:
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				os.Setenv("GITHUB_TOKEN", tt.token)
+				_ = os.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
-				os.Unsetenv("GITHUB_TOKEN")
+				_ = os.Unsetenv("GITHUB_TOKEN")
 			}
 
 			// Create temporary config file

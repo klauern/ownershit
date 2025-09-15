@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-retryablehttp"
 	"go.uber.org/mock/gomock"
 
 	mock_graphql "github.com/klauern/ownershit/v4api/mocks"
@@ -63,11 +62,11 @@ func TestNewGHv4Client(t *testing.T) {
 			oldVals := make(map[string]string)
 			for k, v := range tt.envVars {
 				oldVals[k] = os.Getenv(k)
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 			defer func() {
 				for k, oldVal := range oldVals {
-					os.Setenv(k, oldVal)
+					_ = os.Setenv(k, oldVal)
 				}
 			}()
 
@@ -131,7 +130,7 @@ func Test_authedTransport_RoundTrip(t *testing.T) {
 				t.Fatal(err)
 			}
 			if resp != nil && resp.Body != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 
 			if got := req.Header.Get("Authorization"); got != tt.wantHeader {
@@ -185,7 +184,7 @@ func Test_buildClient(t *testing.T) {
 			}
 
 			// Verify it's the expected type
-			var _ *retryablehttp.Client = client
+			_ = client
 
 			if client.RetryMax != tt.args.params.MaxRetries {
 				t.Errorf("buildClient() RetryMax = %v, want %v", client.RetryMax, tt.args.params.MaxRetries)
@@ -242,12 +241,12 @@ func Test_parseEnv(t *testing.T) {
 			oldEnv := make(map[string]string)
 			for k := range tt.envVars {
 				oldEnv[k] = os.Getenv(k)
-				os.Setenv(k, tt.envVars[k])
+				_ = os.Setenv(k, tt.envVars[k])
 			}
 			// Cleanup
 			defer func() {
 				for k, v := range oldEnv {
-					os.Setenv(k, v)
+					_ = os.Setenv(k, v)
 				}
 			}()
 
@@ -592,12 +591,12 @@ func TestParseEnv_ValidValues(t *testing.T) {
 			oldEnv := make(map[string]string)
 			for k, v := range tt.envVars {
 				oldEnv[k] = os.Getenv(k)
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 			// Cleanup
 			defer func() {
 				for k, v := range oldEnv {
-					os.Setenv(k, v)
+					_ = os.Setenv(k, v)
 				}
 			}()
 
@@ -623,7 +622,7 @@ func TestAuthedTransport_RoundTrip_Error(t *testing.T) {
 
 	resp, err := transport.RoundTrip(req)
 	if resp != nil && resp.Body != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 	if err == nil {
 		t.Error("Expected error from wrapped transport, but got nil")
@@ -836,7 +835,7 @@ func TestAuthedTransport_RoundTrip_VariousRequests(t *testing.T) {
 				t.Errorf("RoundTrip failed: %v", err)
 			}
 			if resp != nil && resp.Body != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 
 			expectedAuth := "bearer " + tt.key

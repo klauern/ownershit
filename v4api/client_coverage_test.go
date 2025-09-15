@@ -65,7 +65,7 @@ func TestAuthedTransport_RoundTrip_Coverage(t *testing.T) {
 		t.Errorf("RoundTrip failed: %v", err)
 	}
 	if resp != nil && resp.Body != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	if auth := req.Header.Get("Authorization"); auth != "bearer test-token" {
@@ -88,7 +88,7 @@ func TestParseEnv_CoverageTest(t *testing.T) {
 			if v == "" {
 				os.Unsetenv(k)
 			} else {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 		}
 	}()
@@ -113,10 +113,10 @@ func TestParseEnv_CoverageTest(t *testing.T) {
 	}
 
 	// Test with environment variables set
-	os.Setenv(EnvVarPrefix+EnvTimeoutSeconds, "60")
-	os.Setenv(EnvVarPrefix+EnvMaxRetries, "10")
-	os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "30")
-	os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "3.0")
+	_ = os.Setenv(EnvVarPrefix+EnvTimeoutSeconds, "60")
+	_ = os.Setenv(EnvVarPrefix+EnvMaxRetries, "10")
+	_ = os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "30")
+	_ = os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "3.0")
 
 	params = parseEnv()
 	if params.TimeoutSeconds != 60 {
@@ -190,16 +190,16 @@ func TestParseEnv_ErrorPaths(t *testing.T) {
 			if v == "" {
 				os.Unsetenv(k)
 			} else {
-				os.Setenv(k, v)
+				_ = os.Setenv(k, v)
 			}
 		}
 	}()
 
 	// Test empty string values (should use defaults)
-	os.Setenv(EnvVarPrefix+EnvTimeoutSeconds, "")
-	os.Setenv(EnvVarPrefix+EnvMaxRetries, "")
-	os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "")
-	os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "")
+	_ = os.Setenv(EnvVarPrefix+EnvTimeoutSeconds, "")
+	_ = os.Setenv(EnvVarPrefix+EnvMaxRetries, "")
+	_ = os.Setenv(EnvVarPrefix+EnvWaitIntervalSeconds, "")
+	_ = os.Setenv(EnvVarPrefix+EnvBackoffMultiplier, "")
 
 	params := parseEnv()
 	if params.TimeoutSeconds != defaultConfig.timeoutSeconds {

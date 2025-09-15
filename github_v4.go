@@ -11,6 +11,7 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
+// GraphQLClient defines the interface for GraphQL operations.
 type GraphQLClient interface {
 	Query(ctx context.Context, q interface{}, variables map[string]interface{}) error
 	Mutate(ctx context.Context, m interface{}, input githubv4.Input, variables map[string]interface{}) error
@@ -88,11 +89,14 @@ func (c *GitHubClient) SetBranchRules(
 	})
 }
 
+// ErrNilBranchPermissions is returned when branch permissions are nil.
+var ErrNilBranchPermissions = fmt.Errorf("nil branch permissions")
+
 // SetEnhancedBranchProtection creates a branch protection rule via GraphQL for the
 // provided repository ID and branch pattern using settings from perms. Some advanced
 // features are logged and handled via REST fallbacks elsewhere.
-var ErrNilBranchPermissions = fmt.Errorf("nil branch permissions")
 
+// SetEnhancedBranchProtection creates a branch protection rule via GraphQL.
 func (c *GitHubClient) SetEnhancedBranchProtection(id githubv4.ID, branchPattern string, perms *BranchPermissions) error {
 	if perms == nil {
 		return ErrNilBranchPermissions
@@ -235,6 +239,7 @@ func logUnsupportedGraphQLFeatures(perms *BranchPermissions) {
 	}
 }
 
+// GetRepoQuery defines the GraphQL query structure for repository information.
 type GetRepoQuery struct {
 	Repository struct {
 		ID                 githubv4.ID
@@ -270,6 +275,7 @@ func (c *GitHubClient) GetRepository(name, owner *string) (githubv4.ID, error) {
 	return query.Repository.ID, nil
 }
 
+// GetRateLimitQuery defines the GraphQL query structure for rate limit information.
 type GetRateLimitQuery struct {
 	Viewer struct {
 		Login githubv4.String

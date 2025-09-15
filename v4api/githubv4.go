@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// V4ClientDefaultPageSize defines the default page size for GraphQL queries.
 const V4ClientDefaultPageSize = 100
 
 // GetTeams returns all teams for the specified organization, handling pagination

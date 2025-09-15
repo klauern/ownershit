@@ -11,11 +11,15 @@ import (
 	"github.com/shurcooL/githubv4"
 )
 
+// PermissionsLevel represents the access level for GitHub repository permissions.
 type PermissionsLevel string
 
 const (
+	// Admin permission level provides full administrative access.
 	Admin PermissionsLevel = "admin"
+	// Read permission level provides pull access.
 	Read  PermissionsLevel = "pull"
+	// Write permission level provides push access.
 	Write PermissionsLevel = "push"
 
 	// MaxApproverCount defines the maximum reasonable number of required approvers.
@@ -28,11 +32,13 @@ const (
 	LegacySchemaVersion = "0.9"
 )
 
+// Permissions defines team access permissions for a repository.
 type Permissions struct {
 	Team  *string `yaml:"name"`
 	Level *string `yaml:"level"`
 }
 
+// BranchPermissions defines protection rules for repository branches.
 type BranchPermissions struct {
 	RequireCodeOwners         *bool `yaml:"require_code_owners"`
 	ApproverCount             *int  `yaml:"require_approving_count"`
@@ -54,6 +60,7 @@ type BranchPermissions struct {
 	AllowDeletions                *bool    `yaml:"allow_deletions"`
 }
 
+// PermissionsSettings contains the complete configuration for repository permissions.
 type PermissionsSettings struct {
 	Version           *string `yaml:"version,omitempty"`
 	BranchPermissions `yaml:"branches"`
@@ -63,6 +70,7 @@ type PermissionsSettings struct {
 	DefaultLabels     []RepoLabel    `yaml:"default_labels"`
 }
 
+// Repository defines the configuration for a single GitHub repository.
 type Repository struct {
 	Name                   *string `yaml:"name"`
 	Wiki                   *bool   `yaml:"wiki"`
@@ -79,6 +87,7 @@ type Repository struct {
 	HasSponsorshipsEnabled *bool   `yaml:"sponsorships_enabled,omitempty"`
 }
 
+// RepoLabel defines a label that can be applied to GitHub repositories.
 type RepoLabel struct {
 	Name        string
 	Color       string

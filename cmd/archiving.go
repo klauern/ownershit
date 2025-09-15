@@ -1,3 +1,4 @@
+// Package cmd provides command-line interface commands for the ownershit tool.
 package cmd
 
 import (
@@ -15,6 +16,7 @@ import (
 )
 
 var (
+	// ErrUsernameNotDefined is returned when no username is provided for a query.
 	ErrUsernameNotDefined = errors.New("username not defined for query")
 	username              string
 )
@@ -60,6 +62,7 @@ var archiveFlags = []cli.Flag{
 	},
 }
 
+// ArchiveSubcommands defines the available archive-related CLI commands.
 var ArchiveSubcommands = []*cli.Command{
 	{
 		Name:   "query",

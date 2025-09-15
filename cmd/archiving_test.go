@@ -17,9 +17,9 @@ func TestUserClientSetup(t *testing.T) {
 	originalUsername := username
 	defer func() {
 		if originalToken != "" {
-			os.Setenv("GITHUB_TOKEN", originalToken)
+			_ = os.Setenv("GITHUB_TOKEN", originalToken)
 		} else {
-			os.Unsetenv("GITHUB_TOKEN")
+			_ = os.Unsetenv("GITHUB_TOKEN")
 		}
 		username = originalUsername
 	}()
@@ -74,7 +74,7 @@ func TestUserClientSetup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup environment
 			if tt.setupToken {
-				os.Setenv("GITHUB_TOKEN", tt.token)
+				_ = os.Setenv("GITHUB_TOKEN", tt.token)
 			} else {
 				os.Unsetenv("GITHUB_TOKEN")
 			}

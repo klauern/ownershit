@@ -1,3 +1,4 @@
+// Package v4api provides GitHub GraphQL API v4 client functionality.
 package v4api
 
 import (
@@ -18,6 +19,7 @@ import (
 
 //go:generate mockgen -destination mocks/client_mocks.go github.com/Khan/genqlient/graphql Client
 
+// GitHubV4Client provides a GraphQL client for GitHub API v4 operations.
 type GitHubV4Client struct {
 	baseClient  *http.Client
 	retryClient *retryablehttp.Client
@@ -25,6 +27,7 @@ type GitHubV4Client struct {
 	Context     context.Context
 }
 
+// EnvVarPrefix is the prefix used for environment variable names.
 const EnvVarPrefix = "OWNERSHIT_"
 
 var defaultConfig = struct {
@@ -40,9 +43,13 @@ var defaultConfig = struct {
 }
 
 const (
+	// EnvTimeoutSeconds is the environment variable for timeout configuration.
 	EnvTimeoutSeconds      = "TIMEOUT_SECONDS"
+	// EnvMaxRetries is the environment variable for retry configuration.
 	EnvMaxRetries          = "MAX_RETRIES"
+	// EnvWaitIntervalSeconds is the environment variable for wait interval configuration.
 	EnvWaitIntervalSeconds = "WAIT_INTERVAL_SECONDS"
+	// EnvBackoffMultiplier is the environment variable for backoff multiplier configuration.
 	EnvBackoffMultiplier   = "BACKOFF_MULTIPLIER"
 )
 
@@ -58,15 +65,18 @@ type authedTransport struct {
 	wrapped http.RoundTripper
 }
 
+// Teams represents a collection of GitHub teams.
 type Teams []struct {
 	Name        string
 	Description string
 }
 
-// Various type aliases around genqlient.
 type (
+	// OrganizationTeams represents teams in a GitHub organization.
 	OrganizationTeams []GetTeamsOrganizationTeamsTeamConnectionEdgesTeamEdge
+	// RateLimit represents GitHub API rate limit information.
 	RateLimit         GetRateLimitResponse
+	// Label represents a GitHub repository label.
 	Label             GetRepositoryIssueLabelsRepositoryLabelsLabelConnectionEdgesLabelEdgeNodeLabel
 )
 

@@ -267,7 +267,7 @@ func configureImportClient(c *cli.Context) error {
 
 func readConfig(c *cli.Context) error {
 	configPath := c.String("config")
-	file, err := os.ReadFile(configPath)
+	file, err := os.ReadFile(configPath) // #nosec G304 - config path validated by CLI
 	if err != nil {
 		if os.IsNotExist(err) {
 			log.Err(err).
@@ -437,7 +437,7 @@ func importCSVCommand(c *cli.Context) error {
 			flag |= os.O_TRUNC
 		}
 
-		output, err = os.OpenFile(outputPath, flag, 0o644)
+		output, err = os.OpenFile(outputPath, flag, 0o600) // #nosec G304 - output path validated by CLI
 		if err != nil {
 			return fmt.Errorf("failed to open output file: %w", err)
 		}
@@ -448,7 +448,11 @@ func importCSVCommand(c *cli.Context) error {
 	}
 
 	if shouldClose {
-		defer output.Close()
+		defer func() {
+			if closeErr := output.Close(); closeErr != nil {
+				log.Error().Err(closeErr).Msg("failed to close output file")
+			}
+		}()
 	}
 
 	// Determine whether to write the CSV header

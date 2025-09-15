@@ -82,6 +82,7 @@ func (e *AuthenticationError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports whether the target error is an authentication error.
 func (e *AuthenticationError) Is(target error) bool {
 	return errors.Is(target, ErrAuthentication)
 }
@@ -112,6 +113,7 @@ func (e *RateLimitError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports whether the target error is a rate limit error.
 func (e *RateLimitError) Is(target error) bool {
 	return errors.Is(target, ErrRateLimit)
 }
@@ -141,6 +143,7 @@ func (e *RepositoryNotFoundError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports whether the target error is a repository not found error.
 func (e *RepositoryNotFoundError) Is(target error) bool {
 	return errors.Is(target, ErrNotFound)
 }
@@ -175,6 +178,7 @@ func (e *PermissionDeniedError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports whether the target error is a permission denied error.
 func (e *PermissionDeniedError) Is(target error) bool {
 	return errors.Is(target, ErrPermissionDenied)
 }
@@ -219,6 +223,7 @@ func (e *ConfigValidationError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports whether the target error is a config validation error.
 func (e *ConfigValidationError) Is(target error) bool {
 	return errors.Is(target, ErrConfiguration) || errors.Is(target, ErrValidation)
 }
@@ -249,6 +254,7 @@ func (e *ConfigFileError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports whether the target error is a config file error.
 func (e *ConfigFileError) Is(target error) bool {
 	return errors.Is(target, ErrConfiguration)
 }
@@ -279,6 +285,7 @@ func (e *ArchiveEligibilityError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports whether the target error is an archive eligibility error.
 func (e *ArchiveEligibilityError) Is(target error) bool {
 	return errors.Is(target, ErrValidation)
 }
@@ -312,6 +319,7 @@ func (e *NetworkError) Unwrap() error {
 	return e.Err
 }
 
+// Is reports whether the target error is a network error.
 func (e *NetworkError) Is(target error) bool {
 	return errors.Is(target, ErrNetwork)
 }

@@ -17,14 +17,10 @@ linters:
     - godot
     - revive
     - err113
-    - gofmt
-    - gofumpt
-    - goimports
     - mnd
     - gomodguard
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - lll
@@ -33,7 +29,6 @@ linters:
     - nolintlint
     - rowserrcheck
     - staticcheck
-    - stylecheck
     - tagalign
     - unconvert
     - unparam
@@ -76,8 +71,6 @@ linters:
         - wrapperFunc
     gocyclo:
       min-complexity: 15
-    goimports:
-      local-prefixes: github.com/golangci/golangci-lint
     mnd:
       settings:
         mnd:
@@ -110,7 +103,6 @@ linters:
           - lll
           - funlen
           - gocyclo
-          - gofumpt
           - godot
       - path: cmd/
         linters:
