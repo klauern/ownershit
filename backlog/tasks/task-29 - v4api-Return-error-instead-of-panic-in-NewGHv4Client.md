@@ -1,11 +1,11 @@
 ---
 id: task-29
 title: 'v4api: Return error instead of panic in NewGHv4Client'
-status: In Progress
+status: Done
 assignee:
   - '@agent'
 created_date: '2025-09-12 19:30'
-updated_date: '2025-09-13 00:47'
+updated_date: '2025-09-16 00:41'
 labels:
   - tech-debt
 dependencies: []
@@ -31,3 +31,5 @@ Change NewGHv4Client to return (*GitHubV4Client, error) and propagate token vali
 ## Implementation Notes
 
 Updated all call sites and tests, including token validation test to expect error rather than panic.
+
+Validated with go test ./...
