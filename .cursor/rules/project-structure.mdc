@@ -1,108 +1,94 @@
 ---
 alwaysApply: true
-description: "Project structure and module organization"
+description: "Project layout and module organization"
 ---
 
 # Project Structure
 
 ## Entry Points
 
-### Runtime CLI
-
-[cmd/ownershit/main.go](mdc:cmd/ownershit/main.go) - Main CLI application
+### CLI Application
+[cmd/ownershit/main.go](mdc:cmd/ownershit/main.go) - Main CLI entry point
 
 ### Code Generation
+[cmd/genqlient/main.go](mdc:cmd/genqlient/main.go) - GraphQL client code generation
 
-[cmd/genqlient/main.go](mdc:cmd/genqlient/main.go) - GraphQL client generation
-
-## Core Modules
+## Core Modules (Root Directory)
 
 ### Configuration
-
-- [config.go](mdc:config.go) - Repository, team, and branch permission structures
+- [config.go](mdc:config.go) - Configuration structures and orchestration functions
 - [example-repositories.yaml](mdc:example-repositories.yaml) - Configuration example
 
-### GitHub API Integration
-
-#### REST API (v3)
-
-- [github_v3.go](mdc:github_v3.go) - REST API operations
-- [github_v3_test.go](mdc:github_v3_test.go) - REST API tests
-- [mocks/github_v3_mocks.go](mdc:mocks/github_v3_mocks.go) - REST API mocks
-
-#### GraphQL API (v4)
-
-- [github_v4.go](mdc:github_v4.go) - GraphQL operations wrapper
+### GitHub API Clients
+- [github_v3.go](mdc:github_v3.go) - REST API v3 client
+- [github_v4.go](mdc:github_v4.go) - GraphQL API v4 wrapper
 - [v4api/client.go](mdc:v4api/client.go) - GraphQL client implementation
-- [v4api/generated.go](mdc:v4api/generated.go) - Auto-generated GraphQL client
-- [genqlient.graphql](mdc:genqlient.graphql) - GraphQL queries
-- [genqlient.yaml](mdc:genqlient.yaml) - Generation config
-- [schema.graphql](mdc:schema.graphql) - GitHub GraphQL schema
+- [v4api/generated.go](mdc:v4api/generated.go) - Auto-generated GraphQL code
 
 ### Feature Modules
-
-- [branch.go](mdc:branch.go) - Branch protection and permissions
-- [archiving_v4.go](mdc:archiving_v4.go) - Repository archiving via GraphQL
-- [import.go](mdc:import.go) - Import existing repository configs
+- [branch.go](mdc:branch.go) - Branch protection and merge strategies
+- [archiving_v4.go](mdc:archiving_v4.go) - Repository archiving (GraphQL)
+- [import.go](mdc:import.go) - Import existing repository configurations
 - [csv_import.go](mdc:csv_import.go) - CSV import functionality
-- [errors.go](mdc:errors.go) - Error handling utilities
+- [errors.go](mdc:errors.go) - Error types and handling utilities
 
 ### CLI Commands
-
 - [cmd/archiving.go](mdc:cmd/archiving.go) - Archive command implementation
+- CLI commands delegate to orchestration functions in [config.go](mdc:config.go)
 
 ## Testing
 
-### Unit Tests
+```
+*_test.go                     # Unit tests (same directory as code)
+*_integration_test.go         # Integration tests (may need GITHUB_TOKEN)
+mocking_test.go               # Mock testing utilities
+test/e2e/e2e_test.go         # End-to-end CLI tests
+testdata/                     # Test fixtures and sample configs
+mocks/                        # Generated mock implementations
+```
 
-- `*_test.go` files alongside production code
-- [mocking_test.go](mdc:mocking_test.go) - Mock testing utilities
+## GraphQL
 
-### Integration Tests
+```
+genqlient.graphql             # GraphQL queries and mutations
+genqlient.yaml                # genqlient configuration
+schema.graphql                # GitHub GraphQL schema
+v4api/generated.go            # Auto-generated client code
+```
 
-- `*_integration_test.go` files for API integration tests
-- [cmd/ownershit/integration_test.go](mdc:cmd/ownershit/integration_test.go)
-
-### E2E Tests
-
-- [test/e2e/e2e_test.go](mdc:test/e2e/e2e_test.go)
-- [scripts/run-e2e-tests.sh](mdc:scripts/run-e2e-tests.sh)
-
-### Test Data
-
-- [testdata/](mdc:testdata/) - Test fixtures and sample configs
-
-## Mocks
-
-- [mocks/](mdc:mocks/) - Generated mock implementations
-- Generated via `go generate` using `go.uber.org/mock`
+Regenerate after changes:
+```bash
+task gql:download-schema      # Update schema from GitHub
+task gql:generate-client      # Regenerate Go client
+```
 
 ## Documentation
 
-### User Documentation
-
-- [README.md](mdc:README.md) - Main project documentation
+### User Docs
+- [README.md](mdc:README.md) - Main documentation
 - [docs/e2e-testing.md](mdc:docs/e2e-testing.md) - E2E testing guide
 
-### Development Documentation
-
+### Development Docs
 - [AGENTS.md](mdc:AGENTS.md) - AI agent collaboration guide
 - [CLAUDE.md](mdc:CLAUDE.md) - Claude-specific guidelines
-- [GITHUB_API_ANALYSIS.md](mdc:GITHUB_API_ANALYSIS.md) - API analysis
-- [IMPROVEMENT_PLAN.md](mdc:IMPROVEMENT_PLAN.md) - Future improvements
+- [GITHUB_API_ANALYSIS.md](mdc:GITHUB_API_ANALYSIS.md) - API design decisions
+- [IMPROVEMENT_PLAN.md](mdc:IMPROVEMENT_PLAN.md) - Future enhancements
 
 ### Task Management (Backlog.md)
+```
+backlog/tasks/           # Active tasks
+backlog/drafts/          # Draft tasks
+backlog/archive/tasks/   # Archived tasks
+backlog/docs/            # Project documentation
+backlog/decisions/       # Architecture decision records
+```
 
-- [backlog/tasks/](mdc:backlog/tasks/) - Active tasks
-- [backlog/drafts/](mdc:backlog/drafts/) - Draft tasks
-- [backlog/archive/tasks/](mdc:backlog/archive/tasks/) - Archived tasks
-- [backlog/docs/](mdc:backlog/docs/) - Project documentation
-- [backlog/decisions/](mdc:backlog/decisions/) - Architecture decision records
+Managed via `backlog` CLI - see [backlog-workflow.mdc](mdc:.cursor/rules/backlog-workflow.mdc)
 
 ## Configuration Files
 
-- [Taskfile.yml](mdc:Taskfile.yml) - Task runner configuration
-- [mise.toml](mdc:mise.toml) - Tool version management
+- [Taskfile.yml](mdc:Taskfile.yml) - Task runner (task commands)
+- [mise.toml](mdc:mise.toml) - Tool version management (Go, golangci-lint)
 - [go.mod](mdc:go.mod) - Go module dependencies
 - [tools.go](mdc:tools.go) - Build tool dependencies
 
@@ -112,10 +98,37 @@ description: "Project structure and module organization"
 
 ## Key Dependencies
 
-- CLI: `github.com/urfave/cli/v2`
-- GitHub REST: `github.com/google/go-github/v66`
-- GitHub GraphQL: `github.com/shurcooL/githubv4`
-- GraphQL Gen: `github.com/Khan/genqlient`
-- Config: `gopkg.in/yaml.v3`
-- Logging: `github.com/rs/zerolog`
-- Mocking: `go.uber.org/mock`
+```go
+// CLI Framework
+github.com/urfave/cli/v2
+
+// GitHub APIs
+github.com/google/go-github/v66        // REST API v3
+github.com/shurcooL/githubv4          // GraphQL API v4
+github.com/Khan/genqlient             // GraphQL code generation
+
+// Utilities
+gopkg.in/yaml.v3                      // YAML parsing
+github.com/rs/zerolog                 // Structured logging
+go.uber.org/mock                      // Mock generation
+```
+
+## Adding New Features
+
+Typical file additions for a new feature:
+
+1. **Core logic:** Add to root (e.g., `topics.go`) or extend existing file
+2. **GitHub client method:** Add to [github_v3.go](mdc:github_v3.go) or [github_v4.go](mdc:github_v4.go)
+3. **Orchestration:** Add function to [config.go](mdc:config.go)
+4. **CLI command:** Add to [cmd/ownershit/main.go](mdc:cmd/ownershit/main.go)
+5. **Tests:** Add `*_test.go` in same directory
+6. **Mocks:** Regenerate with `task mocks`
+7. **Documentation:** Update [README.md](mdc:README.md) and [example-repositories.yaml](mdc:example-repositories.yaml)
+
+## File Naming Conventions
+
+- Production code: `feature.go`
+- Unit tests: `feature_test.go`
+- Integration tests: `feature_integration_test.go`
+- Mocks: `mocks/feature_mocks.go`
+- Test data: `testdata/feature-example.yaml`
