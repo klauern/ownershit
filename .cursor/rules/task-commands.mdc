@@ -1,0 +1,101 @@
+---
+alwaysApply: true
+description: "Task runner commands and development workflow"
+---
+
+# Task Runner Commands
+
+This project uses [Taskfile](https://taskfile.dev) for task management.
+Configuration: [Taskfile.yml](mdc:Taskfile.yml)
+
+## Development Setup
+
+```bash
+task dev       # Set up dev environment (go mod tidy, install mockgen)
+```
+
+## Building
+
+```bash
+task build     # Build binaries locally
+task install   # Install binary to $GOBIN
+```
+
+## Code Quality
+
+```bash
+task fmt       # Format with go fmt and gofumpt
+task lint      # Run golangci-lint
+task mocks     # Generate mocks (go generate ./...)
+```
+
+## Testing
+
+```bash
+task test         # Run tests with race detection and coverage
+task test-cover   # Run tests and open coverage in browser
+task test-all     # Run tests + security checks (govulncheck)
+```
+
+## GraphQL Client
+
+```bash
+task gql:download-schema   # Download GitHub's GraphQL schema
+task gql:generate-client   # Generate GraphQL client code
+```
+
+## Security & Releases
+
+```bash
+task security       # Run govulncheck
+task release        # Show release commands
+task release:patch  # Create patch release
+task release:minor  # Create minor release
+```
+
+## Manual Testing
+
+```bash
+task test-query     # Run test query with hardcoded username
+```
+
+## Development Workflow
+
+### Before Committing
+
+1. `task fmt` - Format code
+2. `task lint` - Check for issues
+3. `task test` - Run all tests
+
+### After Interface Changes
+
+1. Modify interface
+2. `task mocks` - Regenerate mocks
+3. `task test` - Verify tests pass
+
+### After GraphQL Changes
+
+1. Update [genqlient.graphql](mdc:genqlient.graphql)
+2. `task gql:generate-client` - Regenerate client
+3. `task test` - Verify integration
+
+### Before Release
+
+1. `task test-all` - Tests + security checks
+2. Verify all changes committed
+3. `task release:patch` or `task release:minor`
+
+## Recommended Aliases
+
+```bash
+alias tf='task fmt'
+alias tl='task lint'
+alias tt='task test'
+alias ta='task test-all'
+```
+
+## Environment Requirements
+
+- Uses `mise` for tool version management: [mise.toml](mdc:mise.toml)
+- Run `mise trust` to enable automatic tool installation
+- Requires `GITHUB_TOKEN` for API operations

@@ -1,0 +1,78 @@
+---
+globs: "*_test.go"
+description: "Testing guidelines and patterns for the ownershit project"
+---
+
+# Testing Guidelines
+
+## Test Organization
+
+- Test files must end with `_test.go`
+- Place tests in the same package as the code being tested
+- Integration tests: Use `_integration_test.go` suffix
+- E2E tests: Located in [test/e2e/e2e_test.go](mdc:test/e2e/e2e_test.go)
+
+## Test Structure
+
+Use table-driven tests for multiple scenarios:
+
+```go
+func TestFunction(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   Type
+        want    Type
+        wantErr bool
+    }{
+        {
+            name:    "description of test case",
+            input:   value,
+            want:    expected,
+            wantErr: false,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // test implementation
+        })
+    }
+}
+```
+
+## Mocking
+
+- Generate mocks with: `task mocks` (runs `go generate ./...`)
+- Mock interfaces are stored in [mocks/](mdc:mocks/)
+- Use `go.uber.org/mock` for mock generation
+- Always regenerate mocks after interface changes
+
+## Test Commands
+
+- `task test` - Run all tests with race detection and coverage
+- `task test-cover` - Run tests and open coverage report in browser
+- `task test-all` - Run tests + security vulnerability checks
+
+## Test Data
+
+- Store test fixtures in [testdata/](mdc:testdata/)
+- Use YAML files for configuration test cases
+- Example: [testdata/testrepoconfig.yaml](mdc:testdata/testrepoconfig.yaml)
+
+## Integration Tests
+
+- May require `GITHUB_TOKEN` environment variable
+- Should be isolated and not affect production data
+- Use build tags if tests need special setup
+
+## E2E Tests
+
+- Located in [test/e2e/](mdc:test/e2e/)
+- Run with [scripts/run-e2e-tests.sh](mdc:scripts/run-e2e-tests.sh)
+- Test complete CLI workflows
+
+## Coverage Requirements
+
+- Aim for high coverage on critical paths
+- View coverage: `go tool cover -html=coverage.out`
+- CI runs tests with coverage reporting

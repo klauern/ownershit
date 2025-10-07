@@ -1,0 +1,99 @@
+---
+alwaysApply: true
+description: "Task management workflow using Backlog.md CLI"
+---
+
+# Backlog.md Task Management
+
+## ⚠️ CRITICAL RULE
+
+**NEVER edit task markdown files directly. ALWAYS use the `backlog` CLI.**
+
+## Quick Reference
+
+### Viewing Tasks
+
+```bash
+backlog task list --plain              # List all tasks (AI-friendly)
+backlog task list -s "To Do" --plain   # Filter by status
+backlog task 42 --plain                # View specific task
+```
+
+### Creating Tasks
+
+```bash
+backlog task create "Title" -d "Description" --ac "Criterion 1" --ac "Criterion 2"
+```
+
+### Modifying Tasks
+
+```bash
+backlog task edit 42 -s "In Progress" -a @agent    # Start work
+backlog task edit 42 --plan $'1. Step\n2. Step'    # Add plan
+backlog task edit 42 --check-ac 1 --check-ac 2     # Mark AC complete
+backlog task edit 42 --notes "Implementation done" # Add notes
+backlog task edit 42 -s Done                       # Complete task
+```
+
+## Task Workflow
+
+1. **Select Task**: `backlog task list -s "To Do" --plain`
+2. **Start Work**: `backlog task edit 42 -s "In Progress" -a @yourself`
+3. **Add Plan**: `backlog task edit 42 --plan $'Implementation steps'`
+4. **Implement**: Write code, tests, documentation
+5. **Mark AC Complete**: `backlog task edit 42 --check-ac 1`
+6. **Add Notes**: `backlog task edit 42 --notes "PR description"`
+7. **Complete**: `backlog task edit 42 -s Done`
+
+## Task Structure
+
+### Required at Creation
+
+- **Title**: Brief, clear summary
+- **Description**: The "why" - purpose and goal
+- **Acceptance Criteria**: The "what" - verifiable outcomes
+
+### Added During Implementation
+
+- **Implementation Plan**: The "how" - steps to complete
+- **Implementation Notes**: What was done and why
+
+## Definition of Done
+
+✅ All acceptance criteria checked
+✅ Implementation plan followed or deviations documented
+✅ Tests pass (`task test`)
+✅ Linter passes (`task lint`)
+✅ Documentation updated
+✅ Implementation notes added to task
+✅ Task status set to "Done"
+✅ Code self-reviewed
+
+## Multi-line Content
+
+Use ANSI-C quoting in bash/zsh:
+
+```bash
+backlog task edit 42 --notes $'Line 1\nLine 2\n\nFinal'
+```
+
+## Task Locations
+
+- Active tasks: [backlog/tasks/](mdc:backlog/tasks/)
+- Drafts: [backlog/drafts/](mdc:backlog/drafts/)
+- Archive: [backlog/archive/tasks/](mdc:backlog/archive/tasks/)
+- Docs: [backlog/docs/](mdc:backlog/docs/)
+- Decisions: [backlog/decisions/](mdc:backlog/decisions/)
+
+## Common Mistakes to Avoid
+
+❌ Editing markdown files directly
+❌ Manually changing checkboxes
+❌ Implementing beyond acceptance criteria
+❌ Marking tasks Done without all checklist items
+❌ Creating tasks that depend on future tasks
+
+✅ Use CLI for all changes
+✅ Update AC if scope changes
+✅ Create tasks in dependency order
+✅ Keep tasks atomic and testable

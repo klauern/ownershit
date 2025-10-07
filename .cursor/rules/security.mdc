@@ -1,0 +1,106 @@
+---
+description: "Security practices and sensitive data handling"
+---
+
+# Security Guidelines
+
+## Environment Variables
+
+### Required
+
+- `GITHUB_TOKEN` - GitHub Personal Access Token
+  - Required scopes: `repo`, `admin:org`
+  - Never commit tokens to repository
+  - Use `.env` files (gitignored) for local development
+
+### Optional
+
+- `OWNERSHIT_DEBUG` - Enable debug logging (alternative to `--debug` flag)
+
+## Sensitive Data Handling
+
+### Configuration Files
+
+- **Never commit** organization-specific configs
+- Store production configs outside repository
+- Use example configs for documentation: [example-repositories.yaml](mdc:example-repositories.yaml)
+- Parameterize tests with fixtures in [testdata/](mdc:testdata/)
+
+### Logging
+
+- **Limit sensitive HTTP body logging to debug mode only**
+- Production logs should not contain:
+  - OAuth tokens
+  - Full HTTP request/response bodies
+  - Repository secrets
+  - User credentials
+- Use structured logging (zerolog) with appropriate levels
+
+### API Tokens
+
+- Check token validity before operations
+- Implement proper error handling for expired tokens
+- Don't log token values (even partially)
+- Rate limit checks to avoid token exhaustion
+
+## Security Scanning
+
+### Vulnerability Checks
+
+```bash
+task security      # Run govulncheck
+task test-all      # Tests + security checks
+```
+
+### Dependencies
+
+- Keep dependencies up to date
+- Review security advisories
+- Use `govulncheck` before releases: `golang.org/x/vuln/cmd/govulncheck`
+
+## Code Security Practices
+
+### Input Validation
+
+- Validate all configuration file inputs
+- Sanitize repository names and patterns
+- Check for path traversal in file operations
+- Validate team permission levels
+
+### Error Handling
+
+- Don't expose internal errors to users
+- Log detailed errors internally
+- Return generic errors externally
+- Guard against nil pointers and panics
+
+### GitHub API Security
+
+- Use scoped tokens with minimum required permissions
+- Implement proper rate limiting
+- Handle API errors gracefully
+- Verify organization membership before operations
+
+## Testing Security
+
+- Mock external dependencies to avoid real API calls
+- Use test fixtures instead of production data
+- Don't commit test tokens or credentials
+- Isolate integration tests
+
+## Pre-Release Security Checklist
+
+✅ Run `task security` (govulncheck)
+✅ Review dependency updates
+✅ Check for hardcoded credentials
+✅ Verify sensitive data logging is debug-only
+✅ Confirm token scopes are minimal
+✅ Test with invalid/expired tokens
+✅ Review error messages for information leakage
+
+## Reporting Security Issues
+
+- Do not open public issues for security vulnerabilities
+- Contact maintainers privately
+- Provide detailed reproduction steps
+- Allow time for fixes before disclosure

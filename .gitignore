@@ -153,3 +153,5 @@ dist/
 /ownershit
 /ownershit.exe
 !/ownershit/
+
+!.cursor/
