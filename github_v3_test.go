@@ -398,14 +398,14 @@ func TestGitHubClient_SyncTopics(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name:           "error on repository get",
+			name:           "error on listing topics",
 			org:            "testorg",
 			repo:           "testrepo",
 			newTopics:      []string{"golang"},
 			additive:       true,
 			existingTopics: []string{},
 			expectedTopics: nil,
-			getError:       errors.New("get error"),
+			getError:       errors.New("list topics error"),
 			replaceError:   nil,
 			wantErr:        true,
 		},
@@ -432,13 +432,12 @@ func TestGitHubClient_SyncTopics(t *testing.T) {
 			repoSvc := mocks.NewMockRepositoriesService(ctrl)
 			client.Repositories = repoSvc
 
-			// Mock Get call
-			mockRepo := &github.Repository{
-				Topics: tt.existingTopics,
+			// Mock ListAllTopics call for additive mode
+			if tt.additive {
+				repoSvc.EXPECT().
+					ListAllTopics(gomock.Any(), tt.org, tt.repo).
+					Return(tt.existingTopics, defaultGoodResponse, tt.getError)
 			}
-			repoSvc.EXPECT().
-				Get(gomock.Any(), tt.org, tt.repo).
-				Return(mockRepo, defaultGoodResponse, tt.getError)
 
 			if tt.getError == nil {
 				// Mock ReplaceAllTopics call
@@ -446,9 +445,20 @@ func TestGitHubClient_SyncTopics(t *testing.T) {
 					repoSvc.EXPECT().
 						ReplaceAllTopics(gomock.Any(), tt.org, tt.repo, gomock.Any()).
 						DoAndReturn(func(ctx, org, repo interface{}, topics []string) ([]string, *github.Response, error) {
-							// Verify the topics being set (as a set, order doesn't matter)
-							if len(topics) != len(tt.expectedTopics) && !tt.additive {
+							// Verify topics as a set (order doesn't matter)
+							if len(topics) != len(tt.expectedTopics) {
 								t.Errorf("wrong number of topics: got %d, want %d", len(topics), len(tt.expectedTopics))
+							} else {
+								// Verify all expected topics are present
+								topicSet := make(map[string]bool)
+								for _, topic := range topics {
+									topicSet[topic] = true
+								}
+								for _, expected := range tt.expectedTopics {
+									if !topicSet[expected] {
+										t.Errorf("expected topic %q not found in %v", expected, topics)
+									}
+								}
 							}
 							return topics, defaultGoodResponse, tt.replaceError
 						})

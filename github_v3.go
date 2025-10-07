@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http/httputil"
+	"sort"
 	"strings"
 
 	"github.com/google/go-github/v66/github"
@@ -48,6 +49,7 @@ type RepositoriesService interface {
 	Get(ctx context.Context, owner, repo string) (*github.Repository, *github.Response, error)
 	ListTeams(ctx context.Context, owner string, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error)
 	GetBranchProtection(ctx context.Context, owner, repo, branch string) (*github.Protection, *github.Response, error)
+	ListAllTopics(ctx context.Context, owner, repo string) ([]string, *github.Response, error)
 	ReplaceAllTopics(ctx context.Context, owner, repo string, topics []string) ([]string, *github.Response, error)
 }
 
@@ -422,26 +424,24 @@ func findLabel(searchLabel RepoLabel, ghLabels []*github.Label) *github.Label {
 // SyncTopics updates repository topics, either additively or by replacement.
 // When additive is true, new topics are merged with existing ones.
 // When additive is false, all topics are replaced with the new set.
-//
-//nolint:gocyclo // multi-step topic sync handles get/merge/replace flows.
 func (c *GitHubClient) SyncTopics(org, repo string, topics []string, additive bool) error {
-	// Get current repository to fetch existing topics
-	ghRepo, resp, err := c.Repositories.Get(c.Context, org, repo)
-	if err != nil {
-		return fmt.Errorf("getting repository %v/%v: %w", org, repo, err)
-	}
-	if resp != nil && resp.Response != nil && log.Debug().Enabled() {
-		dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
-		if len(dumpedResp) > 0 {
-			log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
-		}
-	}
-
 	var finalTopics []string
-	if additive && ghRepo.Topics != nil {
+	if additive {
+		// Get existing topics using ListAllTopics (Repositories.Get does not return topics)
+		existingTopics, resp, err := c.Repositories.ListAllTopics(c.Context, org, repo)
+		if err != nil {
+			return fmt.Errorf("listing topics for %v/%v: %w", org, repo, err)
+		}
+		if resp != nil && resp.Response != nil && log.Debug().Enabled() {
+			dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
+			if len(dumpedResp) > 0 {
+				log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+			}
+		}
+
 		// Merge existing and new topics, removing duplicates
 		topicSet := make(map[string]bool)
-		for _, topic := range ghRepo.Topics {
+		for _, topic := range existingTopics {
 			topicSet[topic] = true
 		}
 		for _, topic := range topics {
@@ -450,8 +450,10 @@ func (c *GitHubClient) SyncTopics(org, repo string, topics []string, additive bo
 		for topic := range topicSet {
 			finalTopics = append(finalTopics, topic)
 		}
+		// Sort for deterministic output in logs and tests
+		sort.Strings(finalTopics)
 		log.Debug().
-			Strs("existing", ghRepo.Topics).
+			Strs("existing", existingTopics).
 			Strs("new", topics).
 			Strs("merged", finalTopics).
 			Msg("merging topics")
@@ -464,7 +466,7 @@ func (c *GitHubClient) SyncTopics(org, repo string, topics []string, additive bo
 	}
 
 	// Update repository topics
-	_, resp, err = c.Repositories.ReplaceAllTopics(c.Context, org, repo, finalTopics)
+	_, resp, err := c.Repositories.ReplaceAllTopics(c.Context, org, repo, finalTopics)
 	if err != nil {
 		return NewGitHubAPIError(0, "replace topics", fmt.Sprintf("%s/%s", org, repo), "failed to update repository topics", err)
 	}
