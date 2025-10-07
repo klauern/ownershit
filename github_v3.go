@@ -424,6 +424,8 @@ func findLabel(searchLabel RepoLabel, ghLabels []*github.Label) *github.Label {
 // SyncTopics updates repository topics, either additively or by replacement.
 // When additive is true, new topics are merged with existing ones.
 // When additive is false, all topics are replaced with the new set.
+//
+//nolint:gocyclo // Multi-step sync operation with validation
 func (c *GitHubClient) SyncTopics(org, repo string, topics []string, additive bool) error {
 	var finalTopics []string
 	if additive {
@@ -459,6 +461,12 @@ func (c *GitHubClient) SyncTopics(org, repo string, topics []string, additive bo
 			Msg("merging topics")
 	} else {
 		// Replace mode: use only the new topics
+		if len(topics) == 0 {
+			log.Info().
+				Str("repository", fmt.Sprintf("%s/%s", org, repo)).
+				Msg("skipping topic replacement: empty topics list provided (use explicit empty list if you want to clear all topics)")
+			return nil
+		}
 		finalTopics = topics
 		log.Debug().
 			Strs("new", topics).

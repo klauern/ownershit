@@ -421,6 +421,18 @@ func TestGitHubClient_SyncTopics(t *testing.T) {
 			replaceError:   errors.New("replace error"),
 			wantErr:        true,
 		},
+		{
+			name:           "replace mode with empty topics is no-op",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{},
+			additive:       false,
+			existingTopics: []string{"github", "automation"},
+			expectedTopics: nil, // No call to ReplaceAllTopics expected
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -439,30 +451,28 @@ func TestGitHubClient_SyncTopics(t *testing.T) {
 					Return(tt.existingTopics, defaultGoodResponse, tt.getError)
 			}
 
-			if tt.getError == nil {
+			if tt.getError == nil && tt.expectedTopics != nil {
 				// Mock ReplaceAllTopics call
-				if tt.expectedTopics != nil {
-					repoSvc.EXPECT().
-						ReplaceAllTopics(gomock.Any(), tt.org, tt.repo, gomock.Any()).
-						DoAndReturn(func(ctx, org, repo interface{}, topics []string) ([]string, *github.Response, error) {
-							// Verify topics as a set (order doesn't matter)
-							if len(topics) != len(tt.expectedTopics) {
-								t.Errorf("wrong number of topics: got %d, want %d", len(topics), len(tt.expectedTopics))
-							} else {
-								// Verify all expected topics are present
-								topicSet := make(map[string]bool)
-								for _, topic := range topics {
-									topicSet[topic] = true
-								}
-								for _, expected := range tt.expectedTopics {
-									if !topicSet[expected] {
-										t.Errorf("expected topic %q not found in %v", expected, topics)
-									}
+				repoSvc.EXPECT().
+					ReplaceAllTopics(gomock.Any(), tt.org, tt.repo, gomock.Any()).
+					DoAndReturn(func(ctx, org, repo interface{}, topics []string) ([]string, *github.Response, error) {
+						// Verify topics as a set (order doesn't matter)
+						if len(topics) != len(tt.expectedTopics) {
+							t.Errorf("wrong number of topics: got %d, want %d", len(topics), len(tt.expectedTopics))
+						} else {
+							// Verify all expected topics are present
+							topicSet := make(map[string]bool)
+							for _, topic := range topics {
+								topicSet[topic] = true
+							}
+							for _, expected := range tt.expectedTopics {
+								if !topicSet[expected] {
+									t.Errorf("expected topic %q not found in %v", expected, topics)
 								}
 							}
-							return topics, defaultGoodResponse, tt.replaceError
-						})
-				}
+						}
+						return topics, defaultGoodResponse, tt.replaceError
+					})
 			}
 
 			err := client.SyncTopics(tt.org, tt.repo, tt.newTopics, tt.additive)
