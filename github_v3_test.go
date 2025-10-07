@@ -335,3 +335,130 @@ func TestGitHubClient_SetRepositoryAdvancedSettings(t *testing.T) {
 		t.Errorf("SetRepositoryAdvancedSettings() with nil parameter error = %v, wantErr = false", err)
 	}
 }
+
+func TestGitHubClient_SyncTopics(t *testing.T) {
+	tests := []struct {
+		name           string
+		org            string
+		repo           string
+		newTopics      []string
+		additive       bool
+		existingTopics []string
+		expectedTopics []string
+		getError       error
+		replaceError   error
+		wantErr        bool
+	}{
+		{
+			name:           "additive mode merges topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang", "cli"},
+			additive:       true,
+			existingTopics: []string{"github", "automation"},
+			expectedTopics: []string{"github", "automation", "golang", "cli"},
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+		{
+			name:           "additive mode deduplicates topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang", "cli", "github"},
+			additive:       true,
+			existingTopics: []string{"github", "automation"},
+			expectedTopics: []string{"github", "automation", "golang", "cli"},
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+		{
+			name:           "replace mode overwrites all topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang", "cli"},
+			additive:       false,
+			existingTopics: []string{"github", "automation"},
+			expectedTopics: []string{"golang", "cli"},
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+		{
+			name:           "additive mode with no existing topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang", "cli"},
+			additive:       true,
+			existingTopics: []string{},
+			expectedTopics: []string{"golang", "cli"},
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+		{
+			name:           "error on repository get",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang"},
+			additive:       true,
+			existingTopics: []string{},
+			expectedTopics: nil,
+			getError:       errors.New("get error"),
+			replaceError:   nil,
+			wantErr:        true,
+		},
+		{
+			name:           "error on topics replace",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang"},
+			additive:       false,
+			existingTopics: []string{},
+			expectedTopics: []string{"golang"},
+			getError:       nil,
+			replaceError:   errors.New("replace error"),
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			client := defaultGitHubClient()
+			repoSvc := mocks.NewMockRepositoriesService(ctrl)
+			client.Repositories = repoSvc
+
+			// Mock Get call
+			mockRepo := &github.Repository{
+				Topics: tt.existingTopics,
+			}
+			repoSvc.EXPECT().
+				Get(gomock.Any(), tt.org, tt.repo).
+				Return(mockRepo, defaultGoodResponse, tt.getError)
+
+			if tt.getError == nil {
+				// Mock ReplaceAllTopics call
+				if tt.expectedTopics != nil {
+					repoSvc.EXPECT().
+						ReplaceAllTopics(gomock.Any(), tt.org, tt.repo, gomock.Any()).
+						DoAndReturn(func(ctx, org, repo interface{}, topics []string) ([]string, *github.Response, error) {
+							// Verify the topics being set (as a set, order doesn't matter)
+							if len(topics) != len(tt.expectedTopics) && !tt.additive {
+								t.Errorf("wrong number of topics: got %d, want %d", len(topics), len(tt.expectedTopics))
+							}
+							return topics, defaultGoodResponse, tt.replaceError
+						})
+				}
+			}
+
+			err := client.SyncTopics(tt.org, tt.repo, tt.newTopics, tt.additive)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SyncTopics() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
