@@ -110,6 +110,12 @@ repositories:
     issues: true                           # Still need bug tracking
     projects: false                        # No active development
 
+# Default topics applied to all repositories
+default_topics:
+  - "golang"
+  - "cli"
+  - "github-management"
+
 # Default labels applied to all repositories
 default_labels:
   # Bug tracking
@@ -250,4 +256,5 @@ default_labels:
 #   - ownershit sync       # Apply all settings
 #   - ownershit branches   # Update only branch protection rules
 #   - ownershit label      # Sync only labels
+#   - ownershit topics     # Sync repository topics (use --additive=false to replace)
 #   - ownershit ratelimit  # Check API rate limits

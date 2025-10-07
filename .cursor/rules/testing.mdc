@@ -1,78 +1,197 @@
 ---
 globs: "*_test.go"
-description: "Testing guidelines and patterns for the ownershit project"
+description: "Testing patterns and best practices"
 ---
 
 # Testing Guidelines
 
 ## Test Organization
 
-- Test files must end with `_test.go`
-- Place tests in the same package as the code being tested
-- Integration tests: Use `_integration_test.go` suffix
-- E2E tests: Located in [test/e2e/e2e_test.go](mdc:test/e2e/e2e_test.go)
+```
+*_test.go              # Unit tests (same package as code)
+*_integration_test.go  # Integration tests (may need GITHUB_TOKEN)
+test/e2e/e2e_test.go  # End-to-end CLI tests
+```
 
 ## Test Structure
 
-Use table-driven tests for multiple scenarios:
+### Table-Driven Tests
 
 ```go
-func TestFunction(t *testing.T) {
+func TestSyncTopics(t *testing.T) {
     tests := []struct {
-        name    string
-        input   Type
-        want    Type
-        wantErr bool
+        name           string
+        existingTopics []string
+        newTopics      []string
+        expectedTopics []string
+        additive       bool
+        wantErr        bool
     }{
         {
-            name:    "description of test case",
-            input:   value,
-            want:    expected,
-            wantErr: false,
+            name:           "additive mode merges topics",
+            existingTopics: []string{"github", "automation"},
+            newTopics:      []string{"golang", "cli"},
+            expectedTopics: []string{"automation", "cli", "github", "golang"},
+            additive:       true,
+            wantErr:        false,
         },
     }
 
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            // test implementation
+            // Setup
+            ctrl := gomock.NewController(t)
+            defer ctrl.Finish()
+
+            // Test implementation
+            err := client.SyncTopics(tt.org, tt.repo, tt.newTopics, tt.additive)
+            if (err != nil) != tt.wantErr {
+                t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
+            }
         })
     }
 }
 ```
 
-## Mocking
+## Mocking with gomock
 
-- Generate mocks with: `task mocks` (runs `go generate ./...`)
-- Mock interfaces are stored in [mocks/](mdc:mocks/)
-- Use `go.uber.org/mock` for mock generation
-- Always regenerate mocks after interface changes
+### Generate Mocks
+```bash
+task mocks  # Runs: go generate ./...
+```
+
+### Directive in Source
+```go
+//go:generate mockgen -source=github_v3.go -destination mocks/github_v3_mocks.go -package mocks
+```
+
+### Using Mocks in Tests
+```go
+ctrl := gomock.NewController(t)
+defer ctrl.Finish()
+
+mockRepo := mocks.NewMockRepositoriesService(ctrl)
+client.Repositories = mockRepo
+
+// Setup expectations
+mockRepo.EXPECT().
+    ListAllTopics(gomock.Any(), org, repo).
+    Return(existingTopics, response, nil)
+
+mockRepo.EXPECT().
+    ReplaceAllTopics(gomock.Any(), org, repo, gomock.Any()).
+    DoAndReturn(func(ctx, org, repo interface{}, topics []string) ([]string, *github.Response, error) {
+        // Verify topics as a set (order doesn't matter)
+        if len(topics) != len(expectedTopics) {
+            t.Errorf("wrong number of topics: got %d, want %d", len(topics), len(expectedTopics))
+        }
+        // Verify all expected topics are present
+        topicSet := make(map[string]bool)
+        for _, topic := range topics {
+            topicSet[topic] = true
+        }
+        for _, expected := range expectedTopics {
+            if !topicSet[expected] {
+                t.Errorf("expected topic %q not found in %v", expected, topics)
+            }
+        }
+        return topics, response, nil
+    })
+```
 
 ## Test Commands
 
-- `task test` - Run all tests with race detection and coverage
-- `task test-cover` - Run tests and open coverage report in browser
-- `task test-all` - Run tests + security vulnerability checks
+```bash
+task test          # Run tests with race detection and coverage
+task test-cover    # Run tests and open coverage report in browser
+task test-all      # Run tests + govulncheck security scan
+```
 
 ## Test Data
 
-- Store test fixtures in [testdata/](mdc:testdata/)
+- **Location:** [testdata/](mdc:testdata/)
+- **Example:** [testdata/testrepoconfig.yaml](mdc:testdata/testrepoconfig.yaml)
 - Use YAML files for configuration test cases
-- Example: [testdata/testrepoconfig.yaml](mdc:testdata/testrepoconfig.yaml)
+- Use JSON fixtures for API response mocking
+
+## Test Validation Best Practices
+
+### ✅ Verify Sets, Not Order
+```go
+// When order doesn't matter (e.g., topics, labels)
+// Verify as sets using maps
+topicSet := make(map[string]bool)
+for _, topic := range actualTopics {
+    topicSet[topic] = true
+}
+for _, expected := range expectedTopics {
+    if !topicSet[expected] {
+        t.Errorf("expected topic %q not found", expected)
+    }
+}
+```
+
+### ✅ Test Error Conditions
+```go
+{
+    name:    "error on listing topics",
+    getError: errors.New("list topics error"),
+    wantErr: true,
+}
+```
+
+### ✅ Use gomock.Any() for Context
+```go
+// Context values don't need exact matching
+mockRepo.EXPECT().
+    ListAllTopics(gomock.Any(), org, repo).
+    Return(topics, resp, nil)
+```
 
 ## Integration Tests
 
 - May require `GITHUB_TOKEN` environment variable
 - Should be isolated and not affect production data
-- Use build tags if tests need special setup
+- Use dedicated test organization/repositories
+- Clean up created resources
 
 ## E2E Tests
 
-- Located in [test/e2e/](mdc:test/e2e/)
-- Run with [scripts/run-e2e-tests.sh](mdc:scripts/run-e2e-tests.sh)
+- **Location:** [test/e2e/e2e_test.go](mdc:test/e2e/e2e_test.go)
+- **Script:** [scripts/run-e2e-tests.sh](mdc:scripts/run-e2e-tests.sh)
 - Test complete CLI workflows
+- Verify actual GitHub API interactions
+- Run manually before releases
 
-## Coverage Requirements
+## Coverage
 
-- Aim for high coverage on critical paths
-- View coverage: `go tool cover -html=coverage.out`
-- CI runs tests with coverage reporting
+```bash
+task test          # Generates coverage.out
+go tool cover -html=coverage.out  # View in browser
+```
+
+**Current coverage:** 68.1% (aim to maintain or improve)
+
+## Mock Files
+
+- [mocks/github_v3_mocks.go](mdc:mocks/github_v3_mocks.go)
+- [mocks/github_v4_mocks.go](mdc:mocks/github_v4_mocks.go)
+- [mocks/import_mocks.go](mdc:mocks/import_mocks.go)
+
+**Always regenerate after interface changes:**
+```bash
+task mocks
+```
+
+## Testing Checklist
+
+When adding new functionality:
+
+- [ ] Write unit tests with table-driven approach
+- [ ] Mock external dependencies (GitHub API, file system)
+- [ ] Test error conditions
+- [ ] Test edge cases (empty inputs, nil values)
+- [ ] Verify non-deterministic outputs as sets (topics, labels)
+- [ ] Run `task test` to verify coverage
+- [ ] Add integration test if touching GitHub API
+- [ ] Update E2E tests if adding new CLI command

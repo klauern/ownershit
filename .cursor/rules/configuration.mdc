@@ -1,51 +1,60 @@
 ---
-description: "Configuration file format and repository settings"
+description: "Configuration file format and validation"
 globs: "*.yaml,config*.go"
 ---
 
 # Configuration Management
 
-## Configuration File Format
+## Configuration Files
 
-- Primary config: `repositories.yaml` (YAML format)
-- Example: [example-repositories.yaml](mdc:example-repositories.yaml)
-- Parser: [config.go](mdc:config.go)
-- Uses `gopkg.in/yaml.v3` for parsing
+- **Primary:** `repositories.yaml` (YAML format)
+- **Example:** [example-repositories.yaml](mdc:example-repositories.yaml)
+- **Parser:** [config.go](mdc:config.go)
+- **Library:** `gopkg.in/yaml.v3`
 
-## Configuration Structure
+## Structure
 
-### Organization Settings (Required)
-
+### Organization (Required)
 ```yaml
 organization: "org-name"
 ```
 
-### Team Permissions
-
+### Default Topics/Labels
 ```yaml
-teams:
-  - name: "team-name"
-    permission: "admin" | "push" | "pull" | "triage" | "maintain"
+default_topics:
+  - "guardians"
+  - "golang"
+
+default_labels:
+  - name: "bug"
+    color: "d73a4a"
+    description: "Something isn't working"
 ```
 
-### Repository Configuration
+### Team Permissions
+```yaml
+teams:
+  - name: "platform"
+    permission: "admin"  # admin | push | pull | triage | maintain
+```
 
+### Repositories
 ```yaml
 repositories:
-  - name: "repo-name"
+  - name: "my-repo"
     description: "Repository description"
-    private: true | false
-    has_wiki: true | false
-    has_issues: true | false
-    has_projects: true | false
-    default_labels: true | false
+    private: true
+    wiki: false
+    issues: true
+    projects: false
+    topics:  # Reserved for future per-repo customization
+      - "custom-topic"
     teams:
-      - name: "team-name"
-        permission: "admin" | "push" | "pull"
+      - name: "platform"
+        permission: "admin"
 ```
 
 ### Branch Protection
-
 ```yaml
     branch_protections:
       - pattern: "main"
@@ -60,37 +69,69 @@ repositories:
         allow_deletions: false
 ```
 
-### Merge Strategy Controls
-
+### Merge Strategies
 ```yaml
     allow_merge_commit: true
     allow_squash_merge: true
     allow_rebase_merge: false
 ```
 
-## Configuration Validation
+## Configuration Orchestration
+
+Configuration structures in [config.go](mdc:config.go) include orchestration functions:
+
+```go
+// Orchestrate topic synchronization
+func SyncTopics(settings *PermissionsSettings, client *GitHubClient, additive bool) {
+    for _, repo := range settings.Repositories {
+        // Apply default_topics to each repository
+        client.SyncTopics(*settings.Organization, *repo.Name, settings.DefaultTopics, additive)
+    }
+}
+```
+
+## Field Usage
+
+### DefaultTopics vs Repository.Topics
+- **`DefaultTopics`** (PermissionsSettings): Used by `topics` command to apply topics across all repos
+- **`Repository.Topics`**: Reserved for future per-repository topic customization (not currently used)
+
+## Validation
 
 - Type safety via Go structs
 - Required field validation
 - Team permission level validation
 - Future: `validate` command for pre-flight checks (task-28)
 
-## Configuration Import
+## Commands Using Configuration
 
-- Import existing repository settings: `ownershit import`
-- Implementation: [import.go](mdc:import.go)
-- Supports importing branch protection rules (task-27)
+```bash
+ownershit init        # Create stub config
+ownershit sync        # Sync all repository settings
+ownershit branches    # Sync branch merge strategies only
+ownershit label       # Sync default labels only
+ownershit topics      # Sync default topics only
+ownershit import      # Import existing repository settings
+```
 
-## Best Practices
+## Import Operations
 
-- Store organization configs outside the repository (security)
-- Use meaningful team and permission names
-- Enable branch protection for main/production branches
-- Set `default_labels: true` for consistent labeling
-- Validate configuration before syncing
+```bash
+ownershit import --org myorg --repo myrepo
+```
 
-## Testing Configuration
+Implementation: [import.go](mdc:import.go)
+Supports: Team permissions, branch protection, repository settings
 
-- Test fixtures: [testdata/testrepoconfig.yaml](mdc:testdata/testrepoconfig.yaml)
-- Config parsing tests: [config_parsing_test.go](mdc:config_parsing_test.go)
-- Permission tests: [config_permissions_test.go](mdc:config_permissions_test.go)
+## Security Best Practices
+
+- ✅ Store production configs **outside** the repository
+- ✅ Use [example-repositories.yaml](mdc:example-repositories.yaml) for documentation
+- ✅ Parameterize tests with fixtures in [testdata/](mdc:testdata/)
+- ❌ Never commit organization-specific configs with real data
+
+## Testing
+
+- **Test fixtures:** [testdata/testrepoconfig.yaml](mdc:testdata/testrepoconfig.yaml)
+- **Parsing tests:** [config_parsing_test.go](mdc:config_parsing_test.go)
+- **Permission tests:** [config_permissions_test.go](mdc:config_permissions_test.go)

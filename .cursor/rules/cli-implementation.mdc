@@ -1,0 +1,204 @@
+---
+description: "CLI implementation patterns and command structure"
+globs: "cmd/**/*.go"
+---
+
+# CLI Implementation Guide
+
+## Framework & Entry Point
+
+- **Framework:** `github.com/urfave/cli/v2`
+- **Entry point:** [cmd/ownershit/main.go](mdc:cmd/ownershit/main.go)
+- **Commands:** [cmd/archiving.go](mdc:cmd/archiving.go), etc.
+
+## Available Commands
+
+### Core Operations
+```bash
+ownershit init         # Create stub configuration file
+ownershit sync         # Synchronize repository settings (main command)
+ownershit branches     # Update branch merge strategies only
+ownershit label        # Sync default labels across repositories
+ownershit topics       # Manage repository topics/tags
+ownershit ratelimit    # Check GitHub API rate limits
+ownershit import       # Import existing repository configurations
+```
+
+### Archive Operations
+```bash
+ownershit archive query    # Find inactive repositories
+ownershit archive execute  # Archive repositories based on query
+```
+
+### Global Flags
+```bash
+--config FILE    # Configuration file (default: repositories.yaml)
+--debug, -d      # Enable debug logging
+```
+
+## Command Implementation Pattern
+
+```go
+&cli.Command{
+    Name:   "command-name",
+    Usage:  "Brief description of what this command does",
+    Before: configureClient,  // Optional: setup before action
+    Action: commandHandler,
+    Flags: []cli.Flag{
+        &cli.StringFlag{
+            Name:    "flag-name",
+            Value:   "default-value",
+            Usage:   "Flag description",
+            EnvVars: []string{"ENV_VAR_NAME"},
+        },
+        &cli.BoolFlag{
+            Name:  "additive",
+            Value: true,
+            Usage: "add to existing (false replaces all)",
+        },
+    },
+}
+```
+
+## Handler Function Pattern
+
+```go
+func commandHandler(c *cli.Context) error {
+    // Get flag values
+    flagValue := c.String("flag-name")
+    boolFlag := c.Bool("additive")
+
+    // Log operation
+    log.Info().
+        Str("flag", flagValue).
+        Bool("additive", boolFlag).
+        Msg("starting command operation")
+
+    // Call orchestration function
+    err := orchestrateOperation(settings, githubClient, flagValue)
+    if err != nil {
+        return fmt.Errorf("operation failed: %w", err)
+    }
+
+    return nil
+}
+```
+
+## Configuration Integration
+
+```go
+// Read configuration
+settings, err := ReadSettings(configFile)
+if err != nil {
+    return fmt.Errorf("reading config: %w", err)
+}
+
+// Initialize GitHub client
+githubClient := NewGitHubClient(ctx, token)
+
+// Call config orchestration function
+config.SyncTopics(settings, githubClient, additive)
+```
+
+## Error Handling Standards
+
+### ✅ Good Error Handling
+```go
+// Return errors with context
+return fmt.Errorf("syncing topics for %s: %w", repo, err)
+
+// Log errors with structured logging
+log.Error().
+    Err(err).
+    Str("repository", repo).
+    Msg("failed to sync topics")
+
+// Provide helpful messages to users
+fmt.Fprintf(os.Stderr, "Error: unable to sync topics. Check your GITHUB_TOKEN.\n")
+```
+
+### ❌ Bad Error Handling
+```go
+panic(err)                    // Never panic in CLI commands
+log.Fatal(err)                // Don't exit abruptly
+return errors.New("failed")   // Too vague, add context
+```
+
+## Testing
+
+**Test files:**
+- Unit: [cmd/ownershit/main_test.go](mdc:cmd/ownershit/main_test.go)
+- Integration: [cmd/ownershit/integration_test.go](mdc:cmd/ownershit/integration_test.go)
+- E2E: [cmd/ownershit/e2e_cli_test.go](mdc:cmd/ownershit/e2e_cli_test.go)
+
+**Test pattern:**
+```go
+func TestCommandHandler(t *testing.T) {
+    app := &cli.App{
+        Commands: []*cli.Command{
+            {
+                Name:   "test-command",
+                Action: testCommandHandler,
+            },
+        },
+    }
+
+    err := app.Run([]string{"app", "test-command", "--flag=value"})
+    if err != nil {
+        t.Errorf("command failed: %v", err)
+    }
+}
+```
+
+## Orchestration Pattern
+
+CLI commands should delegate to orchestration functions in [config.go](mdc:config.go):
+
+```go
+// In config.go
+func SyncTopics(settings *PermissionsSettings, client *GitHubClient, additive bool) {
+    for _, repo := range settings.Repositories {
+        log.Info().
+            Str("repository", *repo.Name).
+            Msg("syncing topics")
+
+        if err := client.SyncTopics(*settings.Organization, *repo.Name, settings.DefaultTopics, additive); err != nil {
+            log.Err(err).Msg("failed to sync topics")
+        }
+    }
+}
+
+// In cmd/ownershit/main.go
+func topicsCommand(c *cli.Context) error {
+    additive := c.Bool("additive")
+    config.SyncTopics(settings, githubClient, additive)
+    return nil
+}
+```
+
+## Configuration File
+
+- Default: `repositories.yaml`
+- Example: [example-repositories.yaml](mdc:example-repositories.yaml)
+- Structure: [config.go](mdc:config.go)
+
+## Environment Variables
+
+Required:
+- `GITHUB_TOKEN` - GitHub Personal Access Token
+
+Optional:
+- `OWNERSHIT_DEBUG` - Enable debug logging (alternative to `--debug`)
+
+## Command Development Checklist
+
+When adding a new command:
+
+- [ ] Add command definition in [cmd/ownershit/main.go](mdc:cmd/ownershit/main.go)
+- [ ] Implement handler function
+- [ ] Add orchestration function in [config.go](mdc:config.go)
+- [ ] Implement GitHub client method in [github_v3.go](mdc:github_v3.go) or [github_v4.go](mdc:github_v4.go)
+- [ ] Write unit tests
+- [ ] Update [README.md](mdc:README.md) with usage examples
+- [ ] Update [example-repositories.yaml](mdc:example-repositories.yaml) if config changes
+- [ ] Test manually: `go run ./cmd/ownershit command-name --flag=value`
