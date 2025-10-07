@@ -216,6 +216,22 @@ func (mr *MockRepositoriesServiceMockRecorder) GetBranchProtection(ctx, owner, r
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBranchProtection", reflect.TypeOf((*MockRepositoriesService)(nil).GetBranchProtection), ctx, owner, repo, branch)
 }
 
+// ListAllTopics mocks base method.
+func (m *MockRepositoriesService) ListAllTopics(ctx context.Context, owner, repo string) ([]string, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAllTopics", ctx, owner, repo)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListAllTopics indicates an expected call of ListAllTopics.
+func (mr *MockRepositoriesServiceMockRecorder) ListAllTopics(ctx, owner, repo any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAllTopics", reflect.TypeOf((*MockRepositoriesService)(nil).ListAllTopics), ctx, owner, repo)
+}
+
 // ListTeams mocks base method.
 func (m *MockRepositoriesService) ListTeams(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error) {
 	m.ctrl.T.Helper()

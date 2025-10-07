@@ -73,7 +73,9 @@ type PermissionsSettings struct {
 
 // Repository defines the configuration for a single GitHub repository.
 type Repository struct {
-	Name                   *string  `yaml:"name"`
+	Name *string `yaml:"name"`
+	// Topics is reserved for future per-repository topic customization.
+	// Currently, only DefaultTopics in PermissionsSettings is used by the topics command.
 	Topics                 []string `yaml:"topics,omitempty"`
 	Wiki                   *bool    `yaml:"wiki"`
 	Issues                 *bool    `yaml:"issues"`
