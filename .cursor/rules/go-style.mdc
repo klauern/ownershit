@@ -1,54 +1,227 @@
 ---
 globs: "*.go"
-description: "Go coding style and conventions for the ownershit project"
+description: "Go coding style and best practices"
 ---
 
 # Go Style Guide
 
 ## Formatting
 
-- **Always** use `gofumpt` for formatting (stricter than `gofmt`)
-- Run `task fmt` before committing any Go code
-- Both `go fmt` and `gofumpt` are run by the formatter task
+- **Primary formatter:** `gofumpt` (stricter than `gofmt`)
+- **Command:** `task fmt` (runs both `go fmt` and `gofumpt`)
+- **Always** format before committing
 
 ## Naming Conventions
 
-- Packages: `lower_snake_case` or single lowercase words
-- Exported symbols: `PascalCase`
-- Unexported symbols: `camelCase`
-- Test files: Mirror production files (e.g., `branch_test.go` for `branch.go`)
+- **Packages:** lowercase, single word preferred (e.g., `config`, `mocks`)
+- **Exported:** `PascalCase` (e.g., `GitHubClient`, `SyncTopics`)
+- **Unexported:** `camelCase` (e.g., `findLabel`, `topicSet`)
+- **Test files:** `*_test.go` mirroring production files
+- **Integration tests:** `*_integration_test.go`
 
 ## Error Handling
 
-- Always return errors explicitly
-- Prefer wrapping errors with context using `fmt.Errorf` with `%w`
-- Never panic in production code (except in truly unrecoverable situations)
-- Check error ordering in function returns
+```go
+// ✅ Wrap errors with context
+return fmt.Errorf("listing topics for %s/%s: %w", org, repo, err)
+
+// ✅ Check errors immediately
+topics, resp, err := client.ListAllTopics(ctx, org, repo)
+if err != nil {
+    return fmt.Errorf("fetching topics: %w", err)
+}
+
+// ❌ Don't ignore errors
+client.ListAllTopics(ctx, org, repo)  // BAD
+
+// ❌ Don't panic in production
+if err != nil {
+    panic(err)  // BAD - return error instead
+}
+```
+
+## Nil Safety
+
+```go
+// ✅ Guard against nil pointers
+if resp != nil && resp.Response != nil {
+    // Safe to dereference
+}
+
+// ✅ Check nil before map operations
+if ghRepo.Topics != nil {
+    for _, topic := range ghRepo.Topics {
+        // Process topics
+    }
+}
+```
 
 ## Code Organization
 
-- Keep functions small and composable
-- One concept per file when possible
-- Related test files should be in the same package
-- Use table-driven tests for multiple test cases
+- **Small functions:** One clear purpose per function
+- **Composable:** Build complex operations from simple ones
+- **DRY principle:** Extract common patterns
+- **File organization:** Related functions in same file
 
-## Comments
+Example:
+```go
+// Good: Small, focused functions
+func buildTopicSet(existing, new []string) map[string]bool {
+    set := make(map[string]bool)
+    for _, topic := range existing {
+        set[topic] = true
+    }
+    for _, topic := range new {
+        set[topic] = true
+    }
+    return set
+}
 
-- Public functions, types, and constants must have doc comments
-- Doc comments should start with the name being documented
-- Example: `// NewClient creates a new GitHub client with the provided token`
+func topicSetToSlice(set map[string]bool) []string {
+    topics := make([]string, 0, len(set))
+    for topic := range set {
+        topics = append(topics, topic)
+    }
+    sort.Strings(topics)  // Deterministic ordering
+    return topics
+}
+```
 
-## Testing
+## Documentation Comments
 
-- Use Go's standard testing package
-- Mock external dependencies using `go.uber.org/mock`
-- Run `task mocks` after modifying interfaces
-- Include race detection: `go test -race`
-- Aim for high test coverage
+```go
+// ✅ Start with the name being documented
+// SyncTopics updates repository topics, either additively or by replacement.
+// When additive is true, new topics are merged with existing ones.
+// When additive is false, all topics are replaced with the new set.
+func (c *GitHubClient) SyncTopics(org, repo string, topics []string, additive bool) error {
+    // ...
+}
+
+// ✅ Document parameters and behavior
+// NewGitHubClient creates a new GitHub client with OAuth2 authentication.
+// Returns an error if the token is empty or invalid.
+func NewGitHubClient(ctx context.Context, token string) (*GitHubClient, error) {
+    // ...
+}
+```
+
+## Testing Patterns
+
+```go
+// Table-driven tests
+func TestSyncTopics(t *testing.T) {
+    tests := []struct {
+        name           string
+        existingTopics []string
+        newTopics      []string
+        expectedTopics []string
+        additive       bool
+        wantErr        bool
+    }{
+        {
+            name:           "additive mode merges topics",
+            existingTopics: []string{"github", "automation"},
+            newTopics:      []string{"golang", "cli"},
+            expectedTopics: []string{"automation", "cli", "github", "golang"},
+            additive:       true,
+            wantErr:        false,
+        },
+        // More test cases...
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Test implementation
+        })
+    }
+}
+```
 
 ## Common Patterns
 
-- Use context.Context for cancellation and timeouts
-- Prefer functional options pattern for complex constructors
-- Use zerolog for structured logging
-- Check for nil before dereferencing pointers
+### Context Usage
+```go
+// Always accept context as first parameter
+func (c *GitHubClient) SyncTopics(ctx context.Context, ...) error {
+    // Use c.Context from client, not context.Background()
+    topics, _, err := c.Repositories.ListAllTopics(c.Context, org, repo)
+}
+```
+
+### Structured Logging
+```go
+import "github.com/rs/zerolog/log"
+
+// Info level for normal operations
+log.Info().
+    Str("repository", fmt.Sprintf("%s/%s", org, repo)).
+    Strs("topics", finalTopics).
+    Bool("additive", additive).
+    Msg("successfully updated repository topics")
+
+// Debug level for detailed information
+log.Debug().
+    Strs("existing", existingTopics).
+    Strs("new", topics).
+    Strs("merged", finalTopics).
+    Msg("merging topics")
+
+// Error level with error context
+log.Err(err).
+    Str("repository", repo).
+    Msg("failed to sync topics")
+```
+
+### Deterministic Output
+```go
+// Maps iterate in random order - sort for consistency
+finalTopics := make([]string, 0, len(topicSet))
+for topic := range topicSet {
+    finalTopics = append(finalTopics, topic)
+}
+sort.Strings(finalTopics)  // ✅ Deterministic for logs and tests
+```
+
+## Mocking
+
+```go
+// Generate mocks with go:generate directive
+//go:generate mockgen -source=github_v3.go -destination mocks/github_v3_mocks.go -package mocks
+
+// Regenerate after interface changes
+// task mocks
+```
+
+## Performance
+
+- Use `strings.Builder` for string concatenation in loops
+- Pre-allocate slices when size is known: `make([]string, 0, expectedSize)`
+- Avoid unnecessary allocations
+- Profile before optimizing
+
+## Linting
+
+```bash
+task lint  # Runs golangci-lint
+```
+
+Common linter directives:
+```go
+// Use sparingly and only when necessary
+//nolint:gocyclo // Complexity is necessary for this multi-step operation
+
+// Document why you're disabling a linter
+//nolint:err113 // Direct comparison required to avoid infinite recursion
+```
+
+## Anti-Patterns to Avoid
+
+❌ Global mutable state
+❌ Panics in library code
+❌ Ignoring errors
+❌ Not checking for nil
+❌ Non-deterministic output (unsorted maps)
+❌ Magic numbers (use constants)
+❌ Deep nesting (refactor into functions)
+❌ Long functions (split into helpers)

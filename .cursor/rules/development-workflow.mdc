@@ -1,0 +1,123 @@
+---
+alwaysApply: true
+description: "Complete development workflow from code to commit"
+---
+
+# Development Workflow
+
+## Daily Development Cycle
+
+### 1. Before Starting Work
+```bash
+task dev          # Ensure environment is set up
+mise trust        # Enable tool version management
+```
+
+### 2. Code Quality Loop
+```bash
+task fmt          # Format code (gofmt + gofumpt)
+task lint         # Check code quality (golangci-lint)
+task test         # Run tests with race detection
+```
+
+### 3. After Interface Changes
+```bash
+# Edit interface in *.go file
+task mocks        # Regenerate mocks (go generate ./...)
+task test         # Verify tests pass
+```
+
+### 4. After GraphQL Changes
+```bash
+# Edit genqlient.graphql
+task gql:generate-client   # Regenerate GraphQL client
+task test                  # Verify integration
+```
+
+### 5. Before Committing
+```bash
+task fmt          # Format code
+task lint         # Check for issues
+task test         # Run all tests
+git diff          # Review changes
+# Stage and commit with conventional commits format
+```
+
+### 6. Before Releasing
+```bash
+task test-all     # Tests + security checks (govulncheck)
+# Verify all changes committed
+task release:patch  # or task release:minor
+```
+
+## Commit Format
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <subject>
+
+[optional body]
+
+[optional footer]
+```
+
+### Types
+- `feat` - New feature
+- `fix` - Bug fix
+- `docs` - Documentation
+- `test` - Tests
+- `refactor` - Code refactoring
+- `chore` - Maintenance
+
+### Common Scopes
+- `cli`, `api`, `config`, `v3`, `v4`, `branch`, `archive`, `topics`
+
+### Example
+```
+feat(topics): add repository topics management command
+
+Implements additive and replace modes for mass-assigning topics.
+Uses ListAllTopics API for proper topic fetching.
+
+Closes task-42
+```
+
+## Git Workflow Rules
+
+### ✅ Always Do
+- One logical change per commit (atomic commits)
+- Use imperative mood ("Add feature" not "Added feature")
+- Reference task IDs when relevant
+- Commit after tests pass
+- Review changes before staging
+
+### ❌ Never Do
+- `git commit --no-verify` (skip hooks)
+- `git push --force` to main/master
+- `git reset --hard` on shared branches
+- Update git config automatically
+
+## Pull Request Checklist
+
+- [ ] Summarize behavior changes in PR description
+- [ ] List validation steps (`task test` output)
+- [ ] Link Backlog.md task IDs
+- [ ] Attach screenshots for UI/docs changes
+- [ ] Callout breaking changes for release notes
+- [ ] Ensure CI passes before requesting review
+
+## Recommended Aliases
+
+```bash
+alias tf='task fmt'
+alias tl='task lint'
+alias tt='task test'
+alias ta='task test-all'
+```
+
+## Tool Configuration
+
+- Task runner: [Taskfile.yml](mdc:Taskfile.yml)
+- Tool versions: [mise.toml](mdc:mise.toml)
+- Requires: `GITHUB_TOKEN` environment variable

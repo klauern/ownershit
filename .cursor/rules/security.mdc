@@ -1,5 +1,6 @@
 ---
 description: "Security practices and sensitive data handling"
+alwaysApply: true
 ---
 
 # Security Guidelines
@@ -7,100 +8,156 @@ description: "Security practices and sensitive data handling"
 ## Environment Variables
 
 ### Required
-
-- `GITHUB_TOKEN` - GitHub Personal Access Token
-  - Required scopes: `repo`, `admin:org`
-  - Never commit tokens to repository
-  - Use `.env` files (gitignored) for local development
+```bash
+export GITHUB_TOKEN="ghp_..."  # Personal Access Token
+# Required scopes: repo, admin:org
+```
 
 ### Optional
+```bash
+export OWNERSHIT_DEBUG=1  # Enable debug logging
+```
 
-- `OWNERSHIT_DEBUG` - Enable debug logging (alternative to `--debug` flag)
+## Token Security
 
-## Sensitive Data Handling
+- ❌ **Never** commit tokens to repository
+- ❌ **Never** log token values (even partially)
+- ❌ **Never** include tokens in error messages
+- ✅ Use `.env` files (gitignored) for local development
+- ✅ Check token validity before operations
+- ✅ Handle expired token errors gracefully
+- ✅ Use minimum required scopes
 
-### Configuration Files
+## Sensitive Data in Logs
 
-- **Never commit** organization-specific configs
-- Store production configs outside repository
-- Use example configs for documentation: [example-repositories.yaml](mdc:example-repositories.yaml)
-- Parameterize tests with fixtures in [testdata/](mdc:testdata/)
+### ✅ Correct: Debug-Only HTTP Logging
+```go
+if log.Debug().Enabled() {
+    dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
+    if len(dumpedResp) > 0 {
+        log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+    }
+}
+```
 
-### Logging
+### ❌ Wrong: Always Logging Sensitive Data
+```go
+// BAD - Logs sensitive data in production
+log.Info().Str("response", string(body)).Msg("got response")
+```
 
-- **Limit sensitive HTTP body logging to debug mode only**
-- Production logs should not contain:
-  - OAuth tokens
-  - Full HTTP request/response bodies
-  - Repository secrets
-  - User credentials
-- Use structured logging (zerolog) with appropriate levels
+## Configuration Security
 
-### API Tokens
+- ❌ Never commit organization-specific configs
+- ❌ Never commit production repository configurations
+- ✅ Store production configs **outside** repository
+- ✅ Use [example-repositories.yaml](mdc:example-repositories.yaml) for documentation
+- ✅ Parameterize tests with fixtures in [testdata/](mdc:testdata/)
 
-- Check token validity before operations
-- Implement proper error handling for expired tokens
-- Don't log token values (even partially)
-- Rate limit checks to avoid token exhaustion
+## Nil Safety & Error Handling
+
+### Guard Against Nil Responses
+```go
+// ✅ Check before dereferencing
+if resp != nil && resp.Response != nil {
+    // Safe to use resp.Response
+}
+
+// ❌ Potential nil pointer dereference
+log.Debug().Str("status", resp.Response.Status).Msg("response")  // DANGER!
+```
+
+### Proper Error Wrapping
+```go
+// ✅ Wrap errors with context, hide internal details from users
+if err != nil {
+    log.Err(err).Str("org", org).Msg("internal: API call failed")
+    return fmt.Errorf("unable to sync topics: check your GITHUB_TOKEN and permissions")
+}
+
+// ❌ Exposing internal errors to users
+return fmt.Errorf("failed: %v", internalErr)  // May leak sensitive info
+```
+
+## Input Validation
+
+```go
+// Validate organization name
+if settings.Organization == nil || *settings.Organization == "" {
+    return errors.New("organization is required")
+}
+
+// Validate team permission levels
+validPermissions := map[string]bool{
+    "admin": true, "push": true, "pull": true,
+    "triage": true, "maintain": true,
+}
+if !validPermissions[permission] {
+    return fmt.Errorf("invalid permission: %s", permission)
+}
+
+// Sanitize repository names
+if strings.Contains(repo, "..") {
+    return errors.New("invalid repository name")
+}
+```
 
 ## Security Scanning
 
-### Vulnerability Checks
-
 ```bash
-task security      # Run govulncheck
-task test-all      # Tests + security checks
+task security      # Run govulncheck for vulnerability scanning
+task test-all      # Tests + security checks before release
 ```
 
-### Dependencies
+**Before every release:**
+```bash
+task test-all      # Must pass
+```
 
-- Keep dependencies up to date
-- Review security advisories
-- Use `govulncheck` before releases: `golang.org/x/vuln/cmd/govulncheck`
+## API Security
 
-## Code Security Practices
+### Rate Limiting
+```bash
+ownershit ratelimit  # Check API rate limits
+```
 
-### Input Validation
+- Implement backoff for bulk operations
+- GraphQL and REST have different limits
+- Monitor remaining requests
 
-- Validate all configuration file inputs
-- Sanitize repository names and patterns
-- Check for path traversal in file operations
-- Validate team permission levels
+### Token Scopes
+Minimum required scopes:
+- `repo` - Repository management
+- `admin:org` - Organization and team management
 
-### Error Handling
-
-- Don't expose internal errors to users
-- Log detailed errors internally
-- Return generic errors externally
-- Guard against nil pointers and panics
-
-### GitHub API Security
-
-- Use scoped tokens with minimum required permissions
-- Implement proper rate limiting
-- Handle API errors gracefully
-- Verify organization membership before operations
-
-## Testing Security
-
-- Mock external dependencies to avoid real API calls
-- Use test fixtures instead of production data
-- Don't commit test tokens or credentials
-- Isolate integration tests
+Don't request broader scopes than needed.
 
 ## Pre-Release Security Checklist
 
-✅ Run `task security` (govulncheck)
-✅ Review dependency updates
-✅ Check for hardcoded credentials
-✅ Verify sensitive data logging is debug-only
-✅ Confirm token scopes are minimal
-✅ Test with invalid/expired tokens
-✅ Review error messages for information leakage
+- [ ] Run `task security` (govulncheck) ✅
+- [ ] Review dependency updates
+- [ ] Check for hardcoded credentials in code
+- [ ] Verify sensitive data logging is debug-only
+- [ ] Confirm token scopes are minimal
+- [ ] Test with invalid/expired tokens
+- [ ] Review error messages for information leakage
+- [ ] Ensure production configs not committed
+- [ ] Check .gitignore includes sensitive files
+
+## Common Security Pitfalls
+
+❌ Logging HTTP bodies in production (use debug mode only)
+❌ Not checking for nil responses before dereferencing
+❌ Exposing internal errors to users
+❌ Hardcoding tokens or credentials
+❌ Committing production configurations
+❌ Using overly broad token scopes
+❌ Not validating user input
+❌ Panicking and exposing stack traces to users
 
 ## Reporting Security Issues
 
-- Do not open public issues for security vulnerabilities
+- **Do not** open public issues for security vulnerabilities
 - Contact maintainers privately
 - Provide detailed reproduction steps
 - Allow time for fixes before disclosure
