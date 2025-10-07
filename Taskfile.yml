@@ -23,7 +23,8 @@ tasks:
     cmds:
       - go install ./cmd/ownershit
 
-  fmt:
+  format:
+    aliases: [fmt]
     desc: format
     cmds:
       - go fmt
@@ -125,7 +126,7 @@ tasks:
           echo "📦 Available release commands:"
           echo ""
           echo "  task release:patch  - Bug fixes (v0.6.0 → v0.6.1)"
-          echo "  task release:minor  - New features (v0.6.0 → v0.7.0)"  
+          echo "  task release:minor  - New features (v0.6.0 → v0.7.0)"
           echo "  task release:major  - Breaking changes (v0.6.0 → v1.0.0)"
           echo "  task release:rc     - Release candidate (v0.6.0 → v0.7.0-rc1)"
           echo ""

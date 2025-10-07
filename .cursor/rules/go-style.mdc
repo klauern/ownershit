@@ -1,0 +1,54 @@
+---
+globs: "*.go"
+description: "Go coding style and conventions for the ownershit project"
+---
+
+# Go Style Guide
+
+## Formatting
+
+- **Always** use `gofumpt` for formatting (stricter than `gofmt`)
+- Run `task fmt` before committing any Go code
+- Both `go fmt` and `gofumpt` are run by the formatter task
+
+## Naming Conventions
+
+- Packages: `lower_snake_case` or single lowercase words
+- Exported symbols: `PascalCase`
+- Unexported symbols: `camelCase`
+- Test files: Mirror production files (e.g., `branch_test.go` for `branch.go`)
+
+## Error Handling
+
+- Always return errors explicitly
+- Prefer wrapping errors with context using `fmt.Errorf` with `%w`
+- Never panic in production code (except in truly unrecoverable situations)
+- Check error ordering in function returns
+
+## Code Organization
+
+- Keep functions small and composable
+- One concept per file when possible
+- Related test files should be in the same package
+- Use table-driven tests for multiple test cases
+
+## Comments
+
+- Public functions, types, and constants must have doc comments
+- Doc comments should start with the name being documented
+- Example: `// NewClient creates a new GitHub client with the provided token`
+
+## Testing
+
+- Use Go's standard testing package
+- Mock external dependencies using `go.uber.org/mock`
+- Run `task mocks` after modifying interfaces
+- Include race detection: `go test -race`
+- Aim for high test coverage
+
+## Common Patterns
+
+- Use context.Context for cancellation and timeouts
+- Prefer functional options pattern for complex constructors
+- Use zerolog for structured logging
+- Check for nil before dereferencing pointers

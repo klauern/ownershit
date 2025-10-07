@@ -1,0 +1,121 @@
+---
+alwaysApply: true
+description: "Project structure and module organization"
+---
+
+# Project Structure
+
+## Entry Points
+
+### Runtime CLI
+
+[cmd/ownershit/main.go](mdc:cmd/ownershit/main.go) - Main CLI application
+
+### Code Generation
+
+[cmd/genqlient/main.go](mdc:cmd/genqlient/main.go) - GraphQL client generation
+
+## Core Modules
+
+### Configuration
+
+- [config.go](mdc:config.go) - Repository, team, and branch permission structures
+- [example-repositories.yaml](mdc:example-repositories.yaml) - Configuration example
+
+### GitHub API Integration
+
+#### REST API (v3)
+
+- [github_v3.go](mdc:github_v3.go) - REST API operations
+- [github_v3_test.go](mdc:github_v3_test.go) - REST API tests
+- [mocks/github_v3_mocks.go](mdc:mocks/github_v3_mocks.go) - REST API mocks
+
+#### GraphQL API (v4)
+
+- [github_v4.go](mdc:github_v4.go) - GraphQL operations wrapper
+- [v4api/client.go](mdc:v4api/client.go) - GraphQL client implementation
+- [v4api/generated.go](mdc:v4api/generated.go) - Auto-generated GraphQL client
+- [genqlient.graphql](mdc:genqlient.graphql) - GraphQL queries
+- [genqlient.yaml](mdc:genqlient.yaml) - Generation config
+- [schema.graphql](mdc:schema.graphql) - GitHub GraphQL schema
+
+### Feature Modules
+
+- [branch.go](mdc:branch.go) - Branch protection and permissions
+- [archiving_v4.go](mdc:archiving_v4.go) - Repository archiving via GraphQL
+- [import.go](mdc:import.go) - Import existing repository configs
+- [csv_import.go](mdc:csv_import.go) - CSV import functionality
+- [errors.go](mdc:errors.go) - Error handling utilities
+
+### CLI Commands
+
+- [cmd/archiving.go](mdc:cmd/archiving.go) - Archive command implementation
+
+## Testing
+
+### Unit Tests
+
+- `*_test.go` files alongside production code
+- [mocking_test.go](mdc:mocking_test.go) - Mock testing utilities
+
+### Integration Tests
+
+- `*_integration_test.go` files for API integration tests
+- [cmd/ownershit/integration_test.go](mdc:cmd/ownershit/integration_test.go)
+
+### E2E Tests
+
+- [test/e2e/e2e_test.go](mdc:test/e2e/e2e_test.go)
+- [scripts/run-e2e-tests.sh](mdc:scripts/run-e2e-tests.sh)
+
+### Test Data
+
+- [testdata/](mdc:testdata/) - Test fixtures and sample configs
+
+## Mocks
+
+- [mocks/](mdc:mocks/) - Generated mock implementations
+- Generated via `go generate` using `go.uber.org/mock`
+
+## Documentation
+
+### User Documentation
+
+- [README.md](mdc:README.md) - Main project documentation
+- [docs/e2e-testing.md](mdc:docs/e2e-testing.md) - E2E testing guide
+
+### Development Documentation
+
+- [AGENTS.md](mdc:AGENTS.md) - AI agent collaboration guide
+- [CLAUDE.md](mdc:CLAUDE.md) - Claude-specific guidelines
+- [GITHUB_API_ANALYSIS.md](mdc:GITHUB_API_ANALYSIS.md) - API analysis
+- [IMPROVEMENT_PLAN.md](mdc:IMPROVEMENT_PLAN.md) - Future improvements
+
+### Task Management (Backlog.md)
+
+- [backlog/tasks/](mdc:backlog/tasks/) - Active tasks
+- [backlog/drafts/](mdc:backlog/drafts/) - Draft tasks
+- [backlog/archive/tasks/](mdc:backlog/archive/tasks/) - Archived tasks
+- [backlog/docs/](mdc:backlog/docs/) - Project documentation
+- [backlog/decisions/](mdc:backlog/decisions/) - Architecture decision records
+
+## Configuration Files
+
+- [Taskfile.yml](mdc:Taskfile.yml) - Task runner configuration
+- [mise.toml](mdc:mise.toml) - Tool version management
+- [go.mod](mdc:go.mod) - Go module dependencies
+- [tools.go](mdc:tools.go) - Build tool dependencies
+
+## Distribution
+
+- [brew/ownershit.rb](mdc:brew/ownershit.rb) - Homebrew formula
+
+## Key Dependencies
+
+- CLI: `github.com/urfave/cli/v2`
+- GitHub REST: `github.com/google/go-github/v66`
+- GitHub GraphQL: `github.com/shurcooL/githubv4`
+- GraphQL Gen: `github.com/Khan/genqlient`
+- Config: `gopkg.in/yaml.v3`
+- Logging: `github.com/rs/zerolog`
+- Mocking: `go.uber.org/mock`
