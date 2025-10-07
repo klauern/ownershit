@@ -335,3 +335,150 @@ func TestGitHubClient_SetRepositoryAdvancedSettings(t *testing.T) {
 		t.Errorf("SetRepositoryAdvancedSettings() with nil parameter error = %v, wantErr = false", err)
 	}
 }
+
+func TestGitHubClient_SyncTopics(t *testing.T) {
+	tests := []struct {
+		name           string
+		org            string
+		repo           string
+		newTopics      []string
+		additive       bool
+		existingTopics []string
+		expectedTopics []string
+		getError       error
+		replaceError   error
+		wantErr        bool
+	}{
+		{
+			name:           "additive mode merges topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang", "cli"},
+			additive:       true,
+			existingTopics: []string{"github", "automation"},
+			expectedTopics: []string{"github", "automation", "golang", "cli"},
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+		{
+			name:           "additive mode deduplicates topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang", "cli", "github"},
+			additive:       true,
+			existingTopics: []string{"github", "automation"},
+			expectedTopics: []string{"github", "automation", "golang", "cli"},
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+		{
+			name:           "replace mode overwrites all topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang", "cli"},
+			additive:       false,
+			existingTopics: []string{"github", "automation"},
+			expectedTopics: []string{"golang", "cli"},
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+		{
+			name:           "additive mode with no existing topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang", "cli"},
+			additive:       true,
+			existingTopics: []string{},
+			expectedTopics: []string{"golang", "cli"},
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+		{
+			name:           "error on listing topics",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang"},
+			additive:       true,
+			existingTopics: []string{},
+			expectedTopics: nil,
+			getError:       errors.New("list topics error"),
+			replaceError:   nil,
+			wantErr:        true,
+		},
+		{
+			name:           "error on topics replace",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{"golang"},
+			additive:       false,
+			existingTopics: []string{},
+			expectedTopics: []string{"golang"},
+			getError:       nil,
+			replaceError:   errors.New("replace error"),
+			wantErr:        true,
+		},
+		{
+			name:           "replace mode with empty topics is no-op",
+			org:            "testorg",
+			repo:           "testrepo",
+			newTopics:      []string{},
+			additive:       false,
+			existingTopics: []string{"github", "automation"},
+			expectedTopics: nil, // No call to ReplaceAllTopics expected
+			getError:       nil,
+			replaceError:   nil,
+			wantErr:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			client := defaultGitHubClient()
+			repoSvc := mocks.NewMockRepositoriesService(ctrl)
+			client.Repositories = repoSvc
+
+			// Mock ListAllTopics call for additive mode
+			if tt.additive {
+				repoSvc.EXPECT().
+					ListAllTopics(gomock.Any(), tt.org, tt.repo).
+					Return(tt.existingTopics, defaultGoodResponse, tt.getError)
+			}
+
+			if tt.getError == nil && tt.expectedTopics != nil {
+				// Mock ReplaceAllTopics call
+				repoSvc.EXPECT().
+					ReplaceAllTopics(gomock.Any(), tt.org, tt.repo, gomock.Any()).
+					DoAndReturn(func(ctx, org, repo interface{}, topics []string) ([]string, *github.Response, error) {
+						// Verify topics as a set (order doesn't matter)
+						if len(topics) != len(tt.expectedTopics) {
+							t.Errorf("wrong number of topics: got %d, want %d", len(topics), len(tt.expectedTopics))
+						} else {
+							// Verify all expected topics are present
+							topicSet := make(map[string]bool)
+							for _, topic := range topics {
+								topicSet[topic] = true
+							}
+							for _, expected := range tt.expectedTopics {
+								if !topicSet[expected] {
+									t.Errorf("expected topic %q not found in %v", expected, topics)
+								}
+							}
+						}
+						return topics, defaultGoodResponse, tt.replaceError
+					})
+			}
+
+			err := client.SyncTopics(tt.org, tt.repo, tt.newTopics, tt.additive)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SyncTopics() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

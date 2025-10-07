@@ -1,0 +1,146 @@
+---
+description: "GitHub API integration using REST v3 and GraphQL v4"
+globs: "github*.go,v4api/**/*.go"
+---
+
+# GitHub API Integration
+
+## Dual API Strategy
+
+### REST API (v3) - For Standard Operations
+**Files:** [github_v3.go](mdc:github_v3.go), [github_v3_test.go](mdc:github_v3_test.go)
+
+**Use for:**
+- Repository settings (description, visibility, features)
+- Team permissions management
+- Branch protection rules
+- Topic management (`ListAllTopics`, `ReplaceAllTopics`)
+- Single resource operations
+
+**Client:** `github.com/google/go-github/v66`
+
+### GraphQL API (v4) - For Bulk Operations
+**Files:** [github_v4.go](mdc:github_v4.go), [v4api/client.go](mdc:v4api/client.go)
+
+**Use for:**
+- Repository archiving
+- Label synchronization across many repos
+- Complex queries requiring multiple resources
+- Bulk operations
+
+**Client:** `github.com/shurcooL/githubv4` + `github.com/Khan/genqlient`
+
+## GraphQL Code Generation
+
+```bash
+task gql:download-schema     # Update schema from GitHub
+task gql:generate-client     # Regenerate Go client code
+```
+
+**Files:**
+- Schema: [schema.graphql](mdc:schema.graphql)
+- Queries: [genqlient.graphql](mdc:genqlient.graphql)
+- Config: [genqlient.yaml](mdc:genqlient.yaml)
+- Generated: [v4api/generated.go](mdc:v4api/generated.go)
+
+## Client Initialization
+
+```go
+// REST v3
+import "github.com/google/go-github/v66/github"
+client := github.NewClient(oauth2Client)
+
+// GraphQL v4
+import "github.com/shurcooL/githubv4"
+client := githubv4.NewClient(oauth2Client)
+```
+
+**Requirements:**
+- OAuth token via `GITHUB_TOKEN` environment variable
+- Token scopes: `repo`, `admin:org`
+- **Always** return errors instead of panicking in constructors
+- **Always** guard against nil HTTP responses
+
+## Critical API Patterns
+
+### REST v3 Topics API
+```go
+// ❌ WRONG - Repositories.Get() does NOT return topics
+repo, _, err := client.Repositories.Get(ctx, org, name)
+// repo.Topics will be nil!
+
+// ✅ CORRECT - Use ListAllTopics
+topics, _, err := client.Repositories.ListAllTopics(ctx, org, name)
+```
+
+### Error Handling
+```go
+// Check nil responses before dereferencing
+if resp != nil && resp.Response != nil {
+    // Safe to use resp.Response
+}
+
+// Wrap errors with context
+return fmt.Errorf("listing topics for %s/%s: %w", org, repo, err)
+```
+
+### Rate Limiting
+```go
+// Check rate limits
+ownershit ratelimit
+
+// GraphQL and REST have different rate limiting
+// Implement backoff for bulk operations
+```
+
+## Security Best Practices
+
+### Logging
+- **Only log HTTP bodies in debug mode** (contains sensitive data)
+- Never log OAuth tokens (even partially)
+- Use structured logging with zerolog
+
+```go
+if log.Debug().Enabled() {
+    dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
+    log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+}
+```
+
+### Token Management
+- Check token validity before operations
+- Handle expired token errors gracefully
+- Use minimum required scopes
+
+## Testing with Mocks
+
+```go
+// Generate mocks after interface changes
+//go:generate mockgen -source=github_v3.go -destination mocks/github_v3_mocks.go
+
+// In tests
+ctrl := gomock.NewController(t)
+mockRepo := mocks.NewMockRepositoriesService(ctrl)
+mockRepo.EXPECT().ListAllTopics(gomock.Any(), org, repo).Return(topics, resp, nil)
+```
+
+**Mock files:**
+- [mocks/github_v3_mocks.go](mdc:mocks/github_v3_mocks.go)
+- [mocks/github_v4_mocks.go](mdc:mocks/github_v4_mocks.go)
+
+## Common Pitfalls
+
+❌ Using `Get()` to fetch repository topics
+✅ Use `ListAllTopics()` instead
+
+❌ Not checking for nil responses before dereferencing
+✅ Always guard: `if resp != nil && resp.Response != nil`
+
+❌ Logging sensitive data in production
+✅ Limit HTTP body logging to debug mode only
+
+❌ Panicking in client constructors
+✅ Return errors for proper handling
+
+❌ Returning unordered data from maps
+✅ Sort for deterministic output in logs/tests
