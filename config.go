@@ -68,23 +68,25 @@ type PermissionsSettings struct {
 	Repositories      []*Repository  `yaml:"repositories"`
 	Organization      *string        `yaml:"organization"`
 	DefaultLabels     []RepoLabel    `yaml:"default_labels"`
+	DefaultTopics     []string       `yaml:"default_topics,omitempty"`
 }
 
 // Repository defines the configuration for a single GitHub repository.
 type Repository struct {
-	Name                   *string `yaml:"name"`
-	Wiki                   *bool   `yaml:"wiki"`
-	Issues                 *bool   `yaml:"issues"`
-	Projects               *bool   `yaml:"projects"`
-	DefaultBranch          *string `yaml:"default_branch"`
-	Private                *bool   `yaml:"private"`
-	Archived               *bool   `yaml:"archived"`
-	Template               *bool   `yaml:"template"`
-	Description            *string `yaml:"description"`
-	Homepage               *string `yaml:"homepage"`
-	DeleteBranchOnMerge    *bool   `yaml:"delete_branch_on_merge"`
-	HasDiscussionsEnabled  *bool   `yaml:"discussions_enabled"`
-	HasSponsorshipsEnabled *bool   `yaml:"sponsorships_enabled,omitempty"`
+	Name                   *string  `yaml:"name"`
+	Topics                 []string `yaml:"topics,omitempty"`
+	Wiki                   *bool    `yaml:"wiki"`
+	Issues                 *bool    `yaml:"issues"`
+	Projects               *bool    `yaml:"projects"`
+	DefaultBranch          *string  `yaml:"default_branch"`
+	Private                *bool    `yaml:"private"`
+	Archived               *bool    `yaml:"archived"`
+	Template               *bool    `yaml:"template"`
+	Description            *string  `yaml:"description"`
+	Homepage               *string  `yaml:"homepage"`
+	DeleteBranchOnMerge    *bool    `yaml:"delete_branch_on_merge"`
+	HasDiscussionsEnabled  *bool    `yaml:"discussions_enabled"`
+	HasSponsorshipsEnabled *bool    `yaml:"sponsorships_enabled,omitempty"`
 }
 
 // RepoLabel defines a label that can be applied to GitHub repositories.
@@ -617,6 +619,20 @@ func SyncLabels(settings *PermissionsSettings, client *GitHubClient) {
 			Msg("Updating Labels")
 		if err := client.SyncLabels(*settings.Organization, *repo.Name, settings.DefaultLabels); err != nil {
 			log.Err(err).Msg("synchronizing Labels")
+		}
+	}
+}
+
+// SyncTopics synchronizes topics for each repository in the configuration,
+// either additively or by replacement depending on the additive flag.
+func SyncTopics(settings *PermissionsSettings, client *GitHubClient, additive bool) {
+	for _, repo := range settings.Repositories {
+		log.Info().
+			Str("repository", *repo.Name).
+			Bool("additive", additive).
+			Msg("Updating Topics")
+		if err := client.SyncTopics(*settings.Organization, *repo.Name, settings.DefaultTopics, additive); err != nil {
+			log.Err(err).Msg("synchronizing Topics")
 		}
 	}
 }

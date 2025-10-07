@@ -8,6 +8,7 @@ A comprehensive CLI tool for managing GitHub repository ownership, permissions, 
 - **Branch Protection**: Advanced branch protection rules with status checks, admin enforcement, and push restrictions
 - **Repository Settings**: Configure wiki, issues, and projects settings
 - **Label Management**: Sync default labels across repositories with emoji support
+- **Topic Management**: Mass-assign repository topics/tags additively or by replacement
 - **Repository Archiving**: Find and archive inactive repositories based on configurable criteria
 - **Merge Strategy Control**: Configure allowed merge types (merge commits, squash, rebase)
 
@@ -59,35 +60,36 @@ task install
 
 ### Core Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `init` | Create a stub configuration file | `ownershit init` |
-| `sync` | Synchronize all repository settings | `ownershit sync --config repositories.yaml` |
-| `branches` | Update branch merge strategies | `ownershit branches` |
-| `label` | Sync default labels across repositories | `ownershit label` |
-| `import` | Import repository configuration as YAML | `ownershit import owner/repo --output config.yaml` |
-| `permissions` | Show required GitHub token permissions | `ownershit permissions` |
-| `ratelimit` | Check GitHub API rate limits | `ownershit ratelimit` |
+| Command       | Description                             | Example                                            |
+| ------------- | --------------------------------------- | -------------------------------------------------- |
+| `init`        | Create a stub configuration file          | `ownershit init`                                   |
+| `sync`        | Synchronize all repository settings     | `ownershit sync --config repositories.yaml`         |
+| `branches`    | Update branch merge strategies          | `ownershit branches`                               |
+| `label`       | Sync default labels across repositories | `ownershit label`                                  |
+| `topics`      | Sync repository topics/tags             | `ownershit topics --additive=true`                 |
+| `import`      | Import repository configuration as YAML  | `ownershit import owner/repo --output config.yaml`  |
+| `permissions` | Show required GitHub token permissions  | `ownershit permissions`                            |
+| `ratelimit`   | Check GitHub API rate limits            | `ownershit ratelimit`                              |
 
 ### Archive Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `archive query` | Find repositories eligible for archiving | `ownershit archive query --username myuser --days 365` |
+| Command           | Description                                 | Example                                                 |
+| ----------------- | ------------------------------------------- | ------------------------------------------------------- |
+| `archive query`   | Find repositories eligible for archiving    | `ownershit archive query --username myuser --days 365`  |
 | `archive execute` | Archive selected repositories interactively | `ownershit archive execute --username myuser --stars 0` |
 
 ### Import/Export Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
+| Command      | Description                                    | Example                                                           |
+| ------------ | ---------------------------------------------- | ----------------------------------------------------------------- |
 | `import-csv` | Import multiple repositories and export as CSV | `ownershit import-csv owner/repo1 owner/repo2 --output repos.csv` |
 
 ### Global Flags
 
-| Flag | Description | Default | Environment Variable |
-|------|-------------|---------|---------------------|
-| `--config` | Configuration file path | `repositories.yaml` | - |
-| `--debug, -d` | Enable debug logging | `false` | `OWNERSHIT_DEBUG` |
+| Flag          | Description             | Default             | Environment Variable |
+| ------------- | ----------------------- | ------------------- | -------------------- |
+| `--config`    | Configuration file path | `repositories.yaml` | -                    |
+| `--debug, -d` | Enable debug logging    | `false`             | `OWNERSHIT_DEBUG`    |
 
 ## Configuration
 
@@ -130,12 +132,12 @@ branches:
   require_pull_request_reviews: true
   require_approving_count: 2
   require_code_owners: true
-  
+
   # Merge strategy controls
   allow_merge_commit: false
   allow_squash_merge: true
   allow_rebase_merge: true
-  
+
   # Status checks
   require_status_checks: true
   status_checks:
@@ -143,7 +145,7 @@ branches:
     - "ci/test"
     - "security/scan"
   require_up_to_date_branch: true
-  
+
   # Advanced protection
   enforce_admins: true
   restrict_pushes: true
@@ -176,6 +178,18 @@ default_labels:
     description: "Security-related issue"
 ```
 
+### Topic Management
+
+Define default topics to apply across repositories:
+
+```yaml
+default_topics:
+  - "golang"
+  - "cli"
+  - "github-management"
+  - "internal-tool"
+```
+
 ## Development
 
 This project uses [Task](https://taskfile.dev) for task management.
@@ -202,7 +216,7 @@ task build
 # Run tests with coverage
 task test
 
-# View test coverage in browser  
+# View test coverage in browser
 task test-cover
 
 # Run tests with security checks
@@ -231,7 +245,7 @@ task security
 # Download latest GitHub GraphQL schema
 task gql:download-schema
 
-# Generate GraphQL client code  
+# Generate GraphQL client code
 task gql:generate-client
 ```
 
@@ -247,7 +261,7 @@ task release:patch
 # Create minor release (v0.6.0 → v0.7.0)
 task release:minor
 
-# Create major release (v0.6.0 → v1.0.0) 
+# Create major release (v0.6.0 → v1.0.0)
 task release:major
 
 # Create release candidate (v0.6.0 → v0.7.0-rc1)
@@ -270,7 +284,8 @@ repositories.yaml
 ├── branches: BranchPermissions   # Branch protection rules
 ├── team: []TeamPermission        # Team access levels
 ├── repositories: []Repository    # Repository configurations
-└── default_labels: []Label       # Default labels for all repos
+├── default_labels: []Label       # Default labels for all repos
+└── default_topics: []string      # Default topics for all repos
 ```
 
 ### Key Files
@@ -284,7 +299,7 @@ repositories.yaml
 
 ## GitHub Token Setup
 
-1. Create a Personal Access Token at: https://github.com/settings/tokens
+1. Create a Personal Access Token at: <https://github.com/settings/tokens>
 
 1. Required scopes:
 
@@ -333,6 +348,16 @@ ownershit branches --config repositories.yaml
 ```bash
 # Update labels on all configured repositories
 ownershit label --config repositories.yaml
+```
+
+### Sync Topics Across Repositories
+
+```bash
+# Additively merge topics (default) - preserves existing topics
+ownershit topics --config repositories.yaml
+
+# Replace all topics with configured ones
+ownershit topics --config repositories.yaml --additive=false
 ```
 
 ### Import Repository Configuration

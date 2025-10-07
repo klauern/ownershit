@@ -231,3 +231,19 @@ func (mr *MockRepositoriesServiceMockRecorder) ListTeams(ctx, owner, repo, opts 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTeams", reflect.TypeOf((*MockRepositoriesService)(nil).ListTeams), ctx, owner, repo, opts)
 }
+
+// ReplaceAllTopics mocks base method.
+func (m *MockRepositoriesService) ReplaceAllTopics(ctx context.Context, owner, repo string, topics []string) ([]string, *github.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReplaceAllTopics", ctx, owner, repo, topics)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*github.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ReplaceAllTopics indicates an expected call of ReplaceAllTopics.
+func (mr *MockRepositoriesServiceMockRecorder) ReplaceAllTopics(ctx, owner, repo, topics any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplaceAllTopics", reflect.TypeOf((*MockRepositoriesService)(nil).ReplaceAllTopics), ctx, owner, repo, topics)
+}

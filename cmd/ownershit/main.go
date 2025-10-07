@@ -105,6 +105,24 @@ func main() {
 				},
 			},
 			{
+				Name:   "topics",
+				Usage:  "set repository topics/tags",
+				Before: configureClient,
+				Action: topicsCommand,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "config",
+						Value: "repositories.yaml",
+						Usage: "configuration of repository updates to perform",
+					},
+					&cli.BoolFlag{
+						Name:  "additive",
+						Value: true,
+						Usage: "add topics to existing ones (false replaces all topics)",
+					},
+				},
+			},
+			{
 				Name:   "ratelimit",
 				Usage:  "get ratelimit information for the GitHub GraphQL v4 API",
 				Before: configureImportClient,
@@ -279,6 +297,16 @@ func branchCommand(c *cli.Context) error {
 func labelCommand(c *cli.Context) error {
 	log.Info().Msg("synchronizing labels on repositories")
 	shit.SyncLabels(settings, githubClient)
+	return nil
+}
+
+// topicsCommand synchronizes topics across repositories.
+func topicsCommand(c *cli.Context) error {
+	additive := c.Bool("additive")
+	log.Info().
+		Bool("additive", additive).
+		Msg("synchronizing topics on repositories")
+	shit.SyncTopics(settings, githubClient, additive)
 	return nil
 }
 
