@@ -658,9 +658,10 @@ func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *Permi
 		issues = coalesceBoolPtr(repo.Issues, settings.Defaults.Issues)
 		projects = coalesceBoolPtr(repo.Projects, settings.Defaults.Projects)
 	} else {
-		wiki = repo.Wiki
-		issues = repo.Issues
-		projects = repo.Projects
+		// Fallback to legacy default_* fields for backward compatibility
+		wiki = coalesceBoolPtr(repo.Wiki, settings.DefaultWiki)
+		issues = coalesceBoolPtr(repo.Issues, settings.DefaultIssues)
+		projects = coalesceBoolPtr(repo.Projects, settings.DefaultProjects)
 	}
 
 	if dryRun {
