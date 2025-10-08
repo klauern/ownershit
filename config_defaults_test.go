@@ -157,7 +157,7 @@ func TestDefaultRepositoryFeatures(t *testing.T) {
 				Return(nil).
 				Times(1)
 
-			setRepositoryFeatures(repo, repoID, settings, client)
+			setRepositoryFeatures(repo, repoID, settings, client, false)
 
 			// Verify the logic by checking what would be passed to SetRepository
 			wiki := repo.Wiki
@@ -218,7 +218,7 @@ func TestDefaultsBackwardCompatibility(t *testing.T) {
 		Return(nil).
 		Times(1)
 
-	setRepositoryFeatures(repo, repoID, settings, client)
+	setRepositoryFeatures(repo, repoID, settings, client, false)
 
 	// Verify explicit values are preserved
 	wiki := repo.Wiki

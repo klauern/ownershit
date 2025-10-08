@@ -74,7 +74,7 @@ func main() {
 			{
 				Name:      "sync",
 				Usage:     "Synchronize branch, repo, owner and other configs on repositories",
-				UsageText: "ownershit sync --config repositories.yaml",
+				UsageText: "ownershit sync --config repositories.yaml [--dry-run]",
 				Before:    configureClient,
 				Action:    syncCommand,
 				Flags: []cli.Flag{
@@ -82,6 +82,11 @@ func main() {
 						Name:  "config",
 						Value: "repositories.yaml",
 						Usage: "configuration of repository updates to perform",
+					},
+					&cli.BoolFlag{
+						Name:    "dry-run",
+						Aliases: []string{"n"},
+						Usage:   "preview changes without applying them",
 					},
 				},
 			},
@@ -281,8 +286,12 @@ func readConfig(c *cli.Context) error {
 
 // syncCommand synchronizes repository settings based on the configuration file.
 func syncCommand(c *cli.Context) error {
+	dryRun := c.Bool("dry-run")
+	if dryRun {
+		log.Info().Msg("DRY RUN MODE - No changes will be applied")
+	}
 	log.Info().Msg("mapping all permissions for repositories")
-	shit.MapPermissions(settings, githubClient)
+	shit.MapPermissions(settings, githubClient, dryRun)
 	return nil
 }
 
