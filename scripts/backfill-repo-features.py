@@ -20,7 +20,6 @@ differ from the defaults.
 
 Note: Wiki detection is conservative - if a wiki is enabled, we assume it
 has content since GitHub's API doesn't easily expose whether wikis have pages.
-Use --strict-wiki to treat enabled-but-empty wikis as false (requires manual review).
 """
 
 import copy
@@ -31,9 +30,10 @@ from typing import Optional
 
 import yaml
 from github import Auth, Github, GithubException
+import requests
 
 
-def check_repo_features(repo) -> dict:
+def check_repo_features(repo, token: str) -> dict:
     """Check if a repository actually uses wiki, issues, and projects."""
     features = {
         'has_wiki': False,
@@ -49,11 +49,6 @@ def check_repo_features(repo) -> dict:
     # We can check if the wiki has content by making a HEAD request to the wiki repo
     if repo.has_wiki:
         try:
-            import requests
-
-            # Get the token from the GitHub client's auth
-            token = repo._requester.auth.token
-
             # The wiki is accessible as a git repository at owner/repo.wiki
             # We'll check if we can access the wiki home page via the web
             wiki_url = f"https://github.com/{repo.full_name}/wiki"
@@ -77,22 +72,26 @@ def check_repo_features(repo) -> dict:
                 # If we can't access it, be conservative
                 features['has_wiki'] = True
 
-        except Exception:
-            # On any error, be conservative and assume wiki might have content
+        except requests.RequestException:
+            # On any HTTP error, be conservative and assume wiki might have content
             features['has_wiki'] = True
 
     # Check if there are any issues (open or closed)
     if repo.has_issues:
         try:
-            # Get actual issues (excluding PRs)
-            issues = list(repo.get_issues(state='all').get_page(0))
-            # Filter out pull requests (they show up in issues API)
-            actual_issues = [i for i in issues if i.pull_request is None]
-            features['has_issues'] = len(actual_issues) > 0
+            # Check if at least one non-PR issue exists
+            # Iterate through issues to handle pagination properly
+            issues_iter = repo.get_issues(state='all')
+            for issue in issues_iter:
+                if issue.pull_request is None:
+                    features['has_issues'] = True
+                    break
+            # If loop completes without break, no issues found (remains False from init)
         except GithubException:
             features['has_issues'] = False
 
     # Check if there are any projects
+    # Note: This only detects Projects (classic), not Projects (beta/v2)
     if repo.has_projects:
         try:
             projects = list(repo.get_projects(state='all'))
@@ -178,6 +177,7 @@ def main():
     for i, repo_config in enumerate(repositories):
         repo_name = repo_config.get('name')
         if not repo_name:
+            skipped_count += 1
             continue
 
         has_wiki_setting = 'wiki' in repo_config
@@ -186,7 +186,7 @@ def main():
 
         try:
             repo = org.get_repo(repo_name)
-            features = check_repo_features(repo)
+            features = check_repo_features(repo, token)
 
             updated = False
             changes = []
@@ -243,6 +243,7 @@ def main():
             print(f"  [{i+1}/{len(repositories)}] {repo_name}: ERROR - {e.status} {e.data.get('message', 'Unknown error')}")
             error_count += 1
         except Exception as e:
+            # Catch-all for unexpected errors
             print(f"  [{i+1}/{len(repositories)}] {repo_name}: ERROR - {e}")
             error_count += 1
 
