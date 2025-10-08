@@ -137,6 +137,9 @@ func TestDefaultRepositoryFeatures(t *testing.T) {
 				DefaultProjects: tt.defaultProjects,
 			}
 
+			// Migrate legacy defaults to match runtime behavior
+			settings.MigrateToNestedDefaults()
+
 			repo := &Repository{
 				Name:     stringPtr("test-repo"),
 				Wiki:     tt.repoWiki,
@@ -160,17 +163,18 @@ func TestDefaultRepositoryFeatures(t *testing.T) {
 			setRepositoryFeatures(repo, repoID, settings, client, false)
 
 			// Verify the logic by checking what would be passed to SetRepository
+			// Use the migrated Defaults block, not legacy fields
 			wiki := repo.Wiki
-			if wiki == nil {
-				wiki = settings.DefaultWiki
+			if wiki == nil && settings.Defaults != nil {
+				wiki = settings.Defaults.Wiki
 			}
 			issues := repo.Issues
-			if issues == nil {
-				issues = settings.DefaultIssues
+			if issues == nil && settings.Defaults != nil {
+				issues = settings.Defaults.Issues
 			}
 			projects := repo.Projects
-			if projects == nil {
-				projects = settings.DefaultProjects
+			if projects == nil && settings.Defaults != nil {
+				projects = settings.Defaults.Projects
 			}
 
 			if !equalBoolPtr(wiki, tt.expectedWiki) {
