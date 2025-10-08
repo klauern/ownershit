@@ -1,0 +1,107 @@
+---
+description: "Branch protection implementation patterns and repository handling"
+---
+
+# Branch Protection Patterns
+
+## Default Branch Handling
+
+Always use the repository's configured `default_branch` instead of hardcoding branch names:
+
+```go
+// ✅ CORRECT: Use repository's configured branch
+branch := getDefaultBranch(repo)
+client.SetBranchProtection(repoID, branch, perms)
+
+// ❌ WRONG: Never hardcode branch names
+client.SetBranchProtection(repoID, "main", perms)
+```
+
+### getDefaultBranch Helper
+
+Use the `getDefaultBranch()` helper function that:
+- Returns `repo.DefaultBranch` if set
+- Falls back to [DefaultBranchName](mdc:config.go) constant (`"main"`)
+
+## Skip Empty Branch Protection
+
+Always check if branch protection settings are meaningful before applying:
+
+```go
+// Check before applying protection
+if !hasMeaningfulBranchProtection(&settings.BranchPermissions) {
+    log.Debug().Str("repository", *repo.Name).
+        Msg("Skipping branch protection - no meaningful protection rules configured")
+    return
+}
+```
+
+### What is "Meaningful" Protection?
+
+Protection is considered meaningful when ANY of these are true:
+- Pull request reviews required
+- Code owners required
+- Approver count > 0
+- Status checks required
+- Admin enforcement enabled
+- Push restrictions enabled
+- Any advanced protection features enabled
+
+## Archived Repository Handling
+
+**ALWAYS** skip archived repositories in sync operations - they are read-only:
+
+```go
+for _, repo := range settings.Repositories {
+    // Skip archived repositories - they are read-only
+    if repo.Archived != nil && *repo.Archived {
+        log.Info().
+            Str("repository", *repo.Name).
+            Msg("Skipping archived repository (read-only)")
+        continue
+    }
+
+    // ... process repository
+}
+```
+
+### Where to Add Archived Checks
+
+Add archived repository checks in:
+- `MapPermissions()` - main sync function
+- `UpdateBranchMergeStrategies()` - branch settings
+- `SyncLabels()` - label management
+- `SyncTopics()` - topic management
+- Any other functions that iterate through repositories
+
+## Error Handling for Branch Protection
+
+Branch protection may fail for valid reasons:
+- **404**: Branch doesn't exist (expected for repos without the default branch)
+- **403**: Repository is archived (should be caught by skip logic)
+- **GraphQL errors**: May need REST API fallback
+
+Always provide context in error logs:
+
+```go
+log.Err(err).
+    Str("repository", *repo.Name).
+    Str("organization", *settings.Organization).
+    Str("branch", branch).
+    Msg("setting branch protection")
+```
+
+## Testing Branch Protection Logic
+
+When testing branch protection:
+1. Test with nil branch name (should default to "main")
+2. Test with "master" branch
+3. Test with custom branch names
+4. Test empty protection settings (should skip)
+5. Test archived repositories (should skip)
+6. Test each protection feature individually
+
+See [config_test.go](mdc:config_test.go) for examples:
+- `TestGetDefaultBranch()` - branch name resolution
+- `TestHasMeaningfulBranchProtection()` - protection detection
+- `TestMapPermissionsSkipsArchivedRepos()` - archived handling

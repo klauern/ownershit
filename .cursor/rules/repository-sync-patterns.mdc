@@ -1,0 +1,138 @@
+---
+description: "Repository synchronization patterns and best practices"
+---
+
+# Repository Sync Patterns
+
+## Repository Processing Loop
+
+When iterating through repositories in sync operations, follow this pattern:
+
+```go
+for _, repo := range settings.Repositories {
+    // 1. FIRST: Skip archived repositories
+    if repo.Archived != nil && *repo.Archived {
+        log.Info().
+            Str("repository", *repo.Name).
+            Msg("Skipping archived repository (read-only)")
+        continue
+    }
+
+    // 2. SECOND: Handle dry-run mode
+    if dryRun {
+        log.Info().Str("repository", *repo.Name).Msg("Would process repository")
+    }
+
+    // 3. THIRD: Process the repository
+    // ... actual operations
+}
+```
+
+## Order of Operations in MapPermissions
+
+The [MapPermissions](mdc:config.go) function processes repositories in this order:
+
+1. **Skip archived repos** - They're read-only, skip immediately
+2. **Team permissions** - Apply team access levels
+3. **Branch settings** - Update merge strategies
+4. **Get repository ID** - Required for GraphQL operations
+5. **Enhanced branch protection** - Apply via GraphQL (if meaningful)
+6. **Branch protection fallback** - Apply via REST API (if meaningful)
+7. **Repository features** - Update wiki, issues, projects
+8. **Advanced settings** - Update delete_branch_on_merge
+
+## Conditional Processing
+
+### Skip When Not Needed
+
+Only process settings when they're actually configured:
+
+```go
+// Skip branch protection if empty
+if !hasMeaningfulBranchProtection(&settings.BranchPermissions) {
+    return
+}
+
+// Skip delete_branch_on_merge if not set
+if deleteBranchOnMerge == nil {
+    return
+}
+```
+
+### Dry-Run Support
+
+All processing functions should support dry-run mode:
+
+```go
+if dryRun {
+    log.Info().
+        Str("repository", *repo.Name).
+        Str("setting", "value").
+        Msg("Would update setting")
+    return
+}
+
+// Actual operation
+if err := client.UpdateSetting(...); err != nil {
+    log.Err(err).Msg("updating setting")
+}
+```
+
+## Error Handling in Sync Operations
+
+### Log but Continue
+
+Sync operations should be resilient - log errors but continue processing other repositories:
+
+```go
+if err := client.UpdateSetting(repo); err != nil {
+    log.Err(err).
+        Str("repository", *repo.Name).
+        Str("organization", *settings.Organization).
+        Msg("updating setting")
+    // Don't return - continue with next repo
+}
+```
+
+### When to Stop Processing
+
+Only stop processing a repository when:
+- Cannot get repository ID (continue to next repo)
+- Repository is archived (skip to next repo)
+- Fatal configuration error (stop all processing)
+
+## Defaults and Coalescing
+
+Use `coalesceBoolPtr()` to apply defaults:
+
+```go
+// Apply default if repo-level value is nil
+var wiki *bool
+if settings.Defaults != nil {
+    wiki = coalesceBoolPtr(repo.Wiki, settings.Defaults.Wiki)
+} else {
+    // Fallback to legacy fields for backward compatibility
+    wiki = coalesceBoolPtr(repo.Wiki, settings.DefaultWiki)
+}
+```
+
+## Repository State Checks
+
+Before modifying a repository, verify:
+
+1. **Not archived** - Check `repo.Archived` flag
+2. **Has ID** - GraphQL operations need repository ID
+3. **Settings are meaningful** - Don't apply empty settings
+4. **Has required fields** - Check for nil pointers
+
+## Testing Sync Operations
+
+Test sync operations with:
+- Active repositories (normal flow)
+- Archived repositories (should skip)
+- Repositories with nil settings (should use defaults)
+- Repositories with all settings explicit (no defaults needed)
+- Dry-run mode (should not make API calls)
+- API errors (should log and continue)
+
+See integration tests in [config_integration_test.go](mdc:config_integration_test.go)

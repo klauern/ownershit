@@ -1,0 +1,205 @@
+---
+description: "Logging patterns and best practices using zerolog"
+globs: "*.go"
+---
+
+# Logging Patterns
+
+This project uses [zerolog](https://github.com/rs/zerolog) for structured logging.
+
+## Log Levels
+
+### Info - Normal Operations
+Use for successful operations and important state changes:
+
+```go
+log.Info().
+    Str("repository", *repo.Name).
+    Int("statusCode", resp.StatusCode).
+    Msg("Successfully updated repository settings")
+```
+
+### Debug - Detailed Information
+Use for debugging information (only shown when `OWNERSHIT_DEBUG=1`):
+
+```go
+log.Debug().
+    Str("repository", *repo.Name).
+    Msg("Skipping branch protection - no meaningful protection rules configured")
+```
+
+### Error - Operation Failures
+Use for errors that should be visible to users:
+
+```go
+log.Err(err).
+    Str("repository", *repo.Name).
+    Str("organization", *settings.Organization).
+    Str("branch", branch).
+    Msg("setting branch protection")
+```
+
+## Structured Fields
+
+### Required Context Fields
+
+Always include relevant context:
+
+```go
+// Repository operations
+log.Info().
+    Str("repository", *repo.Name).          // Always include repo name
+    Str("organization", *settings.Organization). // Include org when relevant
+    Msg("operation description")
+
+// API operations
+log.Info().
+    Str("operation", "updateBranchProtection"). // Operation identifier
+    Int("statusCode", resp.StatusCode).         // HTTP status code
+    Msg("API call result")
+```
+
+### Field Types
+
+Use appropriate field types:
+
+```go
+Str("field", value)              // Strings
+Int("count", value)              // Integers
+Bool("enabled", value)           // Booleans
+Interface("data", value)         // Complex objects (use sparingly)
+Err(err)                         // Errors (automatically includes error message)
+```
+
+## Logging Patterns by Operation Type
+
+### Skipping Operations
+
+When skipping an operation (archived repos, empty settings):
+
+```go
+// Info level for important skips
+log.Info().
+    Str("repository", *repo.Name).
+    Msg("Skipping archived repository (read-only)")
+
+// Debug level for routine skips
+log.Debug().
+    Str("repository", *repo.Name).
+    Msg("Skipping branch protection - no meaningful protection rules configured")
+```
+
+### API Calls
+
+Before and after API calls:
+
+```go
+// Before (debug only)
+log.Debug().
+    Str("org", org).
+    Str("repo", repo).
+    Str("branch", branch).
+    Msg("Setting branch protection via REST API")
+
+// Success
+log.Info().
+    Str("org", org).
+    Str("repo", repo).
+    Str("branch", branch).
+    Int("statusCode", resp.StatusCode).
+    Msg("Successfully set branch protection via REST API")
+
+// Error
+log.Err(err).
+    Str("org", org).
+    Str("repo", repo).
+    Str("branch", branch).
+    Int("statusCode", statusCode).
+    Str("operation", "updateBranchProtection").
+    Msg("Error updating branch protection via REST API")
+```
+
+### Dry-Run Mode
+
+Log what would be done:
+
+```go
+if dryRun {
+    log.Info().
+        Str("repository", *repo.Name).
+        Str("branch", branch).
+        Msg("Would apply branch protection rules")
+    return
+}
+```
+
+## Security Considerations
+
+### Never Log Sensitive Data
+
+❌ **NEVER log:**
+- GitHub tokens (even partially)
+- User credentials
+- API responses with user data (except in debug mode)
+
+✅ **Safe to log:**
+- Repository names
+- Organization names
+- HTTP status codes
+- Operation types
+- Public settings
+
+### Debug-Only Sensitive Logs
+
+If you must log potentially sensitive data, use debug mode:
+
+```go
+if log.Debug().Enabled() {
+    dumpedResp, _ := httputil.DumpResponse(resp.Response, false)
+    if len(dumpedResp) > 0 {
+        log.Debug().Str("response-body", string(dumpedResp)).Msg("response body")
+    }
+}
+```
+
+## Log Message Guidelines
+
+### Message Format
+
+- Use present tense: "Setting branch protection" not "Set branch protection"
+- Be specific: Include what is being done and why
+- Keep short: Most context goes in structured fields
+- No periods at the end (by convention in this project)
+
+### Good Examples
+
+```go
+"Skipping archived repository (read-only)"
+"Successfully set branch protection via REST API"
+"Would apply enhanced branch protection rules"
+"Skipping branch protection - no meaningful protection rules configured"
+```
+
+### Bad Examples
+
+```go
+"Error."                    // Too vague
+"Updated repo."             // Missing context
+"Setting protection..."     // Unclear what kind
+"Done!"                     // What's done?
+```
+
+## Testing with Logs
+
+In tests, you can capture log output to verify behavior:
+
+```go
+// Tests that verify skip behavior should check logs
+// See TestMapPermissionsSkipsArchivedRepos in config_test.go
+```
+
+For integration tests, use debug mode to see all operations:
+
+```bash
+OWNERSHIT_DEBUG=1 go test -v -run TestIntegration
+```
