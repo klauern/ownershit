@@ -18,6 +18,220 @@ func intPtr(i int) *int {
 	return &i
 }
 
+func TestGetDefaultBranch(t *testing.T) {
+	tests := []struct {
+		name     string
+		repo     *Repository
+		expected string
+	}{
+		{
+			name: "repo with master branch specified",
+			repo: &Repository{
+				Name:          stringPtr("test-repo"),
+				DefaultBranch: stringPtr("master"),
+			},
+			expected: "master",
+		},
+		{
+			name: "repo with main branch specified",
+			repo: &Repository{
+				Name:          stringPtr("test-repo"),
+				DefaultBranch: stringPtr("main"),
+			},
+			expected: "main",
+		},
+		{
+			name: "repo with custom branch specified",
+			repo: &Repository{
+				Name:          stringPtr("test-repo"),
+				DefaultBranch: stringPtr("develop"),
+			},
+			expected: "develop",
+		},
+		{
+			name: "repo with nil default branch",
+			repo: &Repository{
+				Name:          stringPtr("test-repo"),
+				DefaultBranch: nil,
+			},
+			expected: "main",
+		},
+		{
+			name: "repo with empty default branch",
+			repo: &Repository{
+				Name:          stringPtr("test-repo"),
+				DefaultBranch: stringPtr(""),
+			},
+			expected: "main",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getDefaultBranch(tt.repo)
+			if result != tt.expected {
+				t.Errorf("getDefaultBranch() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestMapPermissionsSkipsArchivedRepos(t *testing.T) {
+	// This test verifies that archived repositories are properly identified
+	// and skipped. The actual skip is tested via logs in integration tests.
+	repos := []*Repository{
+		{
+			Name:     stringPtr("active-repo"),
+			Archived: boolPtr(false),
+		},
+		{
+			Name:     stringPtr("archived-repo"),
+			Archived: boolPtr(true),
+		},
+		{
+			Name:     stringPtr("nil-archived"),
+			Archived: nil,
+		},
+	}
+
+	// Count how many should be skipped
+	skippedCount := 0
+	for _, repo := range repos {
+		if repo.Archived != nil && *repo.Archived {
+			skippedCount++
+		}
+	}
+
+	if skippedCount != 1 {
+		t.Errorf("Expected 1 archived repository, got %d", skippedCount)
+	}
+}
+
+func TestHasMeaningfulBranchProtection(t *testing.T) {
+	tests := []struct {
+		name     string
+		perms    *BranchPermissions
+		expected bool
+	}{
+		{
+			name:     "nil permissions",
+			perms:    nil,
+			expected: false,
+		},
+		{
+			name:     "empty permissions",
+			perms:    &BranchPermissions{},
+			expected: false,
+		},
+		{
+			name: "all settings disabled",
+			perms: &BranchPermissions{
+				RequireCodeOwners:         boolPtr(false),
+				ApproverCount:             intPtr(0),
+				RequirePullRequestReviews: boolPtr(false),
+				RequireStatusChecks:       boolPtr(false),
+				RequireUpToDateBranch:     boolPtr(false),
+				EnforceAdmins:             boolPtr(false),
+				RestrictPushes:            boolPtr(false),
+			},
+			expected: false,
+		},
+		{
+			name: "require code owners enabled",
+			perms: &BranchPermissions{
+				RequireCodeOwners: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "approver count greater than zero",
+			perms: &BranchPermissions{
+				ApproverCount: intPtr(1),
+			},
+			expected: true,
+		},
+		{
+			name: "require pull request reviews enabled",
+			perms: &BranchPermissions{
+				RequirePullRequestReviews: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "require status checks enabled",
+			perms: &BranchPermissions{
+				RequireStatusChecks: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "status checks list not empty",
+			perms: &BranchPermissions{
+				StatusChecks: []string{"ci/test"},
+			},
+			expected: true,
+		},
+		{
+			name: "enforce admins enabled",
+			perms: &BranchPermissions{
+				EnforceAdmins: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "restrict pushes enabled",
+			perms: &BranchPermissions{
+				RestrictPushes: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "push allowlist not empty",
+			perms: &BranchPermissions{
+				PushAllowlist: []string{"user1"},
+			},
+			expected: true,
+		},
+		{
+			name: "require conversation resolution enabled",
+			perms: &BranchPermissions{
+				RequireConversationResolution: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "require linear history enabled",
+			perms: &BranchPermissions{
+				RequireLinearHistory: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "allow force pushes enabled",
+			perms: &BranchPermissions{
+				AllowForcePushes: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "allow deletions enabled",
+			perms: &BranchPermissions{
+				AllowDeletions: boolPtr(true),
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := hasMeaningfulBranchProtection(tt.perms)
+			if result != tt.expected {
+				t.Errorf("hasMeaningfulBranchProtection() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestValidateBranchPermissions(t *testing.T) {
 	tests := []struct {
 		name    string

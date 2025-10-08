@@ -25,6 +25,9 @@ const (
 	// MaxApproverCount defines the maximum reasonable number of required approvers.
 	MaxApproverCount = 100
 
+	// DefaultBranchName is the default branch name used when a repository doesn't specify one.
+	DefaultBranchName = "main"
+
 	// CurrentSchemaVersion is the current configuration schema version.
 	CurrentSchemaVersion = "1.0"
 
@@ -525,6 +528,14 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient, dryRun 
 	}
 
 	for _, repo := range settings.Repositories {
+		// Skip archived repositories - they are read-only
+		if repo.Archived != nil && *repo.Archived {
+			log.Info().
+				Str("repository", *repo.Name).
+				Msg("Skipping archived repository (read-only)")
+			continue
+		}
+
 		if dryRun {
 			log.Info().Str("repository", *repo.Name).Msg("Would process repository")
 		}
@@ -610,35 +621,126 @@ func getRepositoryID(settings *PermissionsSettings, repo *Repository, client *Gi
 }
 
 func applyEnhancedBranchProtection(settings *PermissionsSettings, repo *Repository, repoID githubv4.ID, client *GitHubClient, dryRun bool) {
+	// Skip if there are no meaningful branch protection settings
+	if !hasMeaningfulBranchProtection(&settings.BranchPermissions) {
+		log.Debug().
+			Str("repository", *repo.Name).
+			Msg("Skipping branch protection - no meaningful protection rules configured")
+		return
+	}
+
+	branch := getDefaultBranch(repo)
 	if dryRun {
 		log.Info().
 			Str("repository", *repo.Name).
-			Str("branch", "main").
+			Str("branch", branch).
 			Msg("Would apply enhanced branch protection rules")
 		return
 	}
-	if err := client.SetEnhancedBranchProtection(repoID, "main", &settings.BranchPermissions); err != nil {
+	if err := client.SetEnhancedBranchProtection(repoID, branch, &settings.BranchPermissions); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
 			Str("organization", *settings.Organization).
+			Str("branch", branch).
 			Msg("setting enhanced branch protection")
 	}
 }
 
 func applyBranchProtectionFallback(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
+	// Skip if there are no meaningful branch protection settings
+	if !hasMeaningfulBranchProtection(&settings.BranchPermissions) {
+		log.Debug().
+			Str("repository", *repo.Name).
+			Msg("Skipping branch protection fallback - no meaningful protection rules configured")
+		return
+	}
+
+	branch := getDefaultBranch(repo)
 	if dryRun {
 		log.Info().
 			Str("repository", *repo.Name).
-			Str("branch", "main").
+			Str("branch", branch).
 			Msg("Would apply branch protection fallback via REST API")
 		return
 	}
-	if err := client.SetBranchProtectionFallback(*settings.Organization, *repo.Name, "main", &settings.BranchPermissions); err != nil {
+	if err := client.SetBranchProtectionFallback(*settings.Organization, *repo.Name, branch, &settings.BranchPermissions); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
 			Str("organization", *settings.Organization).
+			Str("branch", branch).
 			Msg("setting branch protection fallback via REST API")
 	}
+}
+
+// getDefaultBranch returns the branch name to protect for a repository.
+// It uses the repository's configured default_branch if set, otherwise defaults to "main".
+func getDefaultBranch(repo *Repository) string {
+	if repo.DefaultBranch != nil && *repo.DefaultBranch != "" {
+		return *repo.DefaultBranch
+	}
+	return DefaultBranchName
+}
+
+// hasMeaningfulBranchProtection returns true if the branch permissions contain any actual protection rules.
+// It returns false if all protection settings are disabled or at their default "off" values.
+//
+//nolint:gocyclo // This function intentionally checks all branch protection fields.
+func hasMeaningfulBranchProtection(perms *BranchPermissions) bool {
+	if perms == nil {
+		return false
+	}
+
+	// Check if any PR review requirements are enabled
+	if perms.RequirePullRequestReviews != nil && *perms.RequirePullRequestReviews {
+		return true
+	}
+	if perms.RequireCodeOwners != nil && *perms.RequireCodeOwners {
+		return true
+	}
+	if perms.ApproverCount != nil && *perms.ApproverCount > 0 {
+		return true
+	}
+
+	// Check if status checks are required
+	if perms.RequireStatusChecks != nil && *perms.RequireStatusChecks {
+		return true
+	}
+	if perms.RequireUpToDateBranch != nil && *perms.RequireUpToDateBranch {
+		return true
+	}
+	if len(perms.StatusChecks) > 0 {
+		return true
+	}
+
+	// Check if admin enforcement is enabled
+	if perms.EnforceAdmins != nil && *perms.EnforceAdmins {
+		return true
+	}
+
+	// Check if push restrictions are enabled
+	if perms.RestrictPushes != nil && *perms.RestrictPushes {
+		return true
+	}
+	if len(perms.PushAllowlist) > 0 {
+		return true
+	}
+
+	// Check advanced protection features
+	if perms.RequireConversationResolution != nil && *perms.RequireConversationResolution {
+		return true
+	}
+	if perms.RequireLinearHistory != nil && *perms.RequireLinearHistory {
+		return true
+	}
+	if perms.AllowForcePushes != nil && *perms.AllowForcePushes {
+		return true
+	}
+	if perms.AllowDeletions != nil && *perms.AllowDeletions {
+		return true
+	}
+
+	// If we got here, no meaningful protection is configured
+	return false
 }
 
 // coalesceBoolPtr returns the first non-nil bool pointer, or nil if both are nil.
@@ -753,6 +855,14 @@ func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubCl
 	}
 
 	for _, repo := range settings.Repositories {
+		// Skip archived repositories - they are read-only
+		if repo.Archived != nil && *repo.Archived {
+			log.Debug().
+				Str("repository", *repo.Name).
+				Msg("Skipping archived repository (read-only)")
+			continue
+		}
+
 		b := func(p *bool) bool {
 			if p == nil {
 				return false
@@ -775,6 +885,14 @@ func UpdateBranchMergeStrategies(settings *PermissionsSettings, client *GitHubCl
 // creating, updating, or deleting labels to match the desired state.
 func SyncLabels(settings *PermissionsSettings, client *GitHubClient) {
 	for _, repo := range settings.Repositories {
+		// Skip archived repositories - they are read-only
+		if repo.Archived != nil && *repo.Archived {
+			log.Debug().
+				Str("repository", *repo.Name).
+				Msg("Skipping archived repository (read-only)")
+			continue
+		}
+
 		log.Info().
 			Str("repository", *repo.Name).
 			Msg("Updating Labels")
@@ -788,6 +906,14 @@ func SyncLabels(settings *PermissionsSettings, client *GitHubClient) {
 // either additively or by replacement depending on the additive flag.
 func SyncTopics(settings *PermissionsSettings, client *GitHubClient, additive bool) {
 	for _, repo := range settings.Repositories {
+		// Skip archived repositories - they are read-only
+		if repo.Archived != nil && *repo.Archived {
+			log.Debug().
+				Str("repository", *repo.Name).
+				Msg("Skipping archived repository (read-only)")
+			continue
+		}
+
 		log.Info().
 			Str("repository", *repo.Name).
 			Bool("additive", additive).
