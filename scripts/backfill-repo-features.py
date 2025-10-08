@@ -194,8 +194,14 @@ def main():
 
             # Handle wiki setting
             if has_wiki_setting:
+                current_value = repo_config.get('wiki')
+                # If explicit setting differs from actual usage, update it
+                if current_value != features['has_wiki']:
+                    repo_config['wiki'] = features['has_wiki']
+                    changes.append(f"wiki={features['has_wiki']} (was {current_value})")
+                    updated = True
                 # If explicit setting matches default, remove it
-                if should_remove_explicit_setting(features['has_wiki'], default_wiki):
+                elif should_remove_explicit_setting(features['has_wiki'], default_wiki):
                     del repo_config['wiki']
                     changes.append("removed wiki (matches default)")
                     updated = True
@@ -208,8 +214,14 @@ def main():
 
             # Handle issues setting
             if has_issues_setting:
+                current_value = repo_config.get('issues')
+                # If explicit setting differs from actual usage, update it
+                if current_value != features['has_issues']:
+                    repo_config['issues'] = features['has_issues']
+                    changes.append(f"issues={features['has_issues']} (was {current_value})")
+                    updated = True
                 # If explicit setting matches default, remove it
-                if should_remove_explicit_setting(features['has_issues'], default_issues):
+                elif should_remove_explicit_setting(features['has_issues'], default_issues):
                     del repo_config['issues']
                     changes.append("removed issues (matches default)")
                     updated = True
@@ -222,8 +234,14 @@ def main():
 
             # Handle projects setting
             if has_projects_setting:
+                current_value = repo_config.get('projects')
+                # If explicit setting differs from actual usage, update it
+                if current_value != features['has_projects']:
+                    repo_config['projects'] = features['has_projects']
+                    changes.append(f"projects={features['has_projects']} (was {current_value})")
+                    updated = True
                 # If explicit setting matches default, remove it
-                if should_remove_explicit_setting(features['has_projects'], default_projects):
+                elif should_remove_explicit_setting(features['has_projects'], default_projects):
                     del repo_config['projects']
                     changes.append("removed projects (matches default)")
                     updated = True
