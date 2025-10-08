@@ -65,7 +65,7 @@ repositories:
   # Main application repository - overrides defaults
   - name: web-application
     wiki: true                             # Override: Enable wiki for documentation
-    issues: true                           # Matches default (explicit for clarity)
+    # issues: inherits default (true)      # Bug tracking enabled via default
     projects: true                         # Override: Enable GitHub projects for project management
     delete_branch_on_merge: true           # Automatically delete head branches after merge
     discussions_enabled: true              # Enable GitHub discussions for community Q&A
