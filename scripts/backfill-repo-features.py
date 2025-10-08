@@ -26,6 +26,15 @@ This script checks if repositories actually have:
 It then updates repositories.yaml with explicit settings for repos that
 differ from the defaults.
 
+Environment Variables:
+- GITHUB_TOKEN: Required. GitHub Personal Access Token
+- BACKFILL_SKIP_FIELDS: Optional. Comma-separated list of fields to skip/ignore
+  Example: BACKFILL_SKIP_FIELDS="wiki,delete_branch_on_merge"
+  
+  Use this to prevent the script from adding or modifying certain fields,
+  allowing you to manage those settings manually or enforce them via sync
+  rather than documenting current state.
+
 Note: Wiki detection is conservative - if a wiki is enabled, we assume it
 has content since GitHub's API doesn't easily expose whether wikis have pages.
 """
@@ -156,6 +165,14 @@ def main():
     # Get config file path
     config_path = sys.argv[1] if len(sys.argv) > 1 else 'repositories.yaml'
 
+    # Fields to skip/ignore during backfill (won't be added or modified)
+    # Set via BACKFILL_SKIP_FIELDS environment variable (comma-separated)
+    skip_fields_str = os.environ.get('BACKFILL_SKIP_FIELDS', '')
+    skip_fields = set(f.strip() for f in skip_fields_str.split(',') if f.strip())
+
+    if skip_fields:
+        print(f"Skipping fields: {', '.join(sorted(skip_fields))}")
+
     if not Path(config_path).exists():
         print(f"Error: Config file {config_path} not found", file=sys.stderr)
         sys.exit(1)
@@ -225,24 +242,26 @@ def main():
             changes = []
 
             # Handle wiki setting
-            if has_wiki_setting:
-                current_value = repo_config.get('wiki')
-                # If explicit setting differs from actual usage, update it
-                if current_value != features['has_wiki']:
-                    repo_config['wiki'] = features['has_wiki']
-                    changes.append(f"wiki={features['has_wiki']} (was {current_value})")
-                    updated = True
-                # If explicit setting matches default, remove it
-                elif should_remove_explicit_setting(features['has_wiki'], default_wiki):
-                    del repo_config['wiki']
-                    changes.append("removed wiki (matches default)")
-                    updated = True
-            else:
-                # Add explicit setting if it differs from default
-                if should_override_default(features['has_wiki'], default_wiki):
-                    repo_config['wiki'] = features['has_wiki']
-                    changes.append(f"wiki={features['has_wiki']}")
-                    updated = True
+            if 'wiki' not in skip_fields:
+                # Only keep explicit setting if actual state differs from desired default
+                if has_wiki_setting:
+                    current_value = repo_config.get('wiki')
+                    # Remove setting if it matches the default (desired state)
+                    if should_remove_explicit_setting(features['has_wiki'], default_wiki):
+                        del repo_config['wiki']
+                        changes.append("removed wiki (matches default)")
+                        updated = True
+                    # Update setting if explicit value differs from actual state
+                    elif current_value != features['has_wiki']:
+                        repo_config['wiki'] = features['has_wiki']
+                        changes.append(f"wiki={features['has_wiki']} (was {current_value})")
+                        updated = True
+                else:
+                    # Only add explicit setting if actual state differs from desired default
+                    if should_override_default(features['has_wiki'], default_wiki):
+                        repo_config['wiki'] = features['has_wiki']
+                        changes.append(f"wiki={features['has_wiki']}")
+                        updated = True
 
             # Handle issues setting
             if has_issues_setting:
@@ -285,26 +304,27 @@ def main():
                     updated = True
 
             # Handle delete_branch_on_merge setting
-            has_delete_branch_setting = 'delete_branch_on_merge' in repo_config
-            if features['delete_branch_on_merge'] is not None:
-                if has_delete_branch_setting:
-                    current_value = repo_config.get('delete_branch_on_merge')
-                    # If explicit setting differs from actual value, update it
-                    if current_value != features['delete_branch_on_merge']:
-                        repo_config['delete_branch_on_merge'] = features['delete_branch_on_merge']
-                        changes.append(f"delete_branch_on_merge={features['delete_branch_on_merge']} (was {current_value})")
-                        updated = True
-                    # If explicit setting matches default, remove it
-                    elif should_remove_explicit_setting(features['delete_branch_on_merge'], default_delete_branch):
-                        del repo_config['delete_branch_on_merge']
-                        changes.append("removed delete_branch_on_merge (matches default)")
-                        updated = True
-                else:
-                    # Add explicit setting if it differs from default
-                    if should_override_default(features['delete_branch_on_merge'], default_delete_branch):
-                        repo_config['delete_branch_on_merge'] = features['delete_branch_on_merge']
-                        changes.append(f"delete_branch_on_merge={features['delete_branch_on_merge']}")
-                        updated = True
+            if 'delete_branch_on_merge' not in skip_fields:
+                has_delete_branch_setting = 'delete_branch_on_merge' in repo_config
+                if features['delete_branch_on_merge'] is not None:
+                    if has_delete_branch_setting:
+                        current_value = repo_config.get('delete_branch_on_merge')
+                        # If explicit setting differs from actual value, update it
+                        if current_value != features['delete_branch_on_merge']:
+                            repo_config['delete_branch_on_merge'] = features['delete_branch_on_merge']
+                            changes.append(f"delete_branch_on_merge={features['delete_branch_on_merge']} (was {current_value})")
+                            updated = True
+                        # If explicit setting matches default, remove it
+                        elif should_remove_explicit_setting(features['delete_branch_on_merge'], default_delete_branch):
+                            del repo_config['delete_branch_on_merge']
+                            changes.append("removed delete_branch_on_merge (matches default)")
+                            updated = True
+                    else:
+                        # Add explicit setting if it differs from default
+                        if should_override_default(features['delete_branch_on_merge'], default_delete_branch):
+                            repo_config['delete_branch_on_merge'] = features['delete_branch_on_merge']
+                            changes.append(f"delete_branch_on_merge={features['delete_branch_on_merge']}")
+                            updated = True
 
             # Handle discussions_enabled setting
             has_discussions_setting = 'discussions_enabled' in repo_config
