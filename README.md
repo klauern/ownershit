@@ -359,6 +359,24 @@ task release:major
 task release:rc
 ```
 
+## Utilities
+
+### Backfill Repository Features
+
+The `scripts/backfill-repo-features.py` script helps migrate existing configurations by detecting actual feature usage and updating your YAML file:
+
+```bash
+# Requires uv or Python 3.11+ with PyGithub and PyYAML
+export GITHUB_TOKEN=your_token
+uv run scripts/backfill-repo-features.py repositories.yaml
+```
+
+This script:
+- Checks actual wiki/issues/projects usage for each repository
+- Adds explicit settings where they differ from defaults
+- Removes redundant explicit settings that match defaults
+- Creates a `.backup` file before making changes
+
 ## Architecture
 
 ### Core Components
@@ -372,6 +390,9 @@ task release:rc
 ```
 repositories.yaml
 ├── organization: string          # GitHub organization name
+├── default_wiki: bool            # Global default (optional)
+├── default_issues: bool          # Global default (optional)
+├── default_projects: bool        # Global default (optional)
 ├── branches: BranchPermissions   # Branch protection rules
 ├── team: []TeamPermission        # Team access levels
 ├── repositories: []Repository    # Repository configurations
