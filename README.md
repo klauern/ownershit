@@ -56,6 +56,50 @@ task install
    ownershit sync
    ```
 
+## Dry-Run Mode
+
+Preview changes before applying them using the `--dry-run` flag:
+
+```bash
+# Preview all changes that would be made
+ownershit sync --config repositories.yaml --dry-run
+
+# With debug output for detailed analysis
+ownershit sync --config repositories.yaml --dry-run --debug
+```
+
+### What Dry-Run Shows
+
+Dry-run mode displays all planned changes without making any API calls to GitHub:
+
+- Team permissions that would be added to repositories
+- Repository features that would be changed (wiki, issues, projects)
+- Branch protection rules that would be applied
+- Branch merge strategies that would be updated
+- Delete-branch-on-merge settings that would be configured
+
+### Example Output
+
+```
+INFO DRY RUN MODE - No changes will be applied
+INFO DRY RUN: Analyzing configuration changes...
+INFO Would process repository repository=account_vending_machine
+INFO Would update branch merge strategies repository=account_vending_machine
+INFO Would apply enhanced branch protection rules branch=main repository=account_vending_machine
+INFO Would update repository features issues=false projects=false wiki=false repository=account_vending_machine
+INFO Would update delete_branch_on_merge setting delete_branch_on_merge=true repository=account_vending_machine
+...
+INFO DRY RUN: Complete. No changes were applied.
+```
+
+### Use Cases
+
+- **Safety**: Verify configuration changes before applying them to production repositories
+- **Learning**: Understand what the tool will do without making actual changes
+- **Debugging**: Identify configuration issues or unexpected behavior
+- **CI/CD**: Validate configurations in automated pipelines
+- **Documentation**: Generate reports of planned changes for team review
+
 ## Commands
 
 ### Core Commands
@@ -63,7 +107,7 @@ task install
 | Command       | Description                             | Example                                            |
 | ------------- | --------------------------------------- | -------------------------------------------------- |
 | `init`        | Create a stub configuration file          | `ownershit init`                                   |
-| `sync`        | Synchronize all repository settings     | `ownershit sync --config repositories.yaml`         |
+| `sync`        | Synchronize all repository settings     | `ownershit sync --config repositories.yaml`<br>`ownershit sync --dry-run` |
 | `branches`    | Update branch merge strategies          | `ownershit branches`                               |
 | `label`       | Sync default labels across repositories | `ownershit label`                                  |
 | `topics`      | Sync repository topics/tags             | `ownershit topics --additive=true`                 |

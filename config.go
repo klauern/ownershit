@@ -492,7 +492,8 @@ func (s *PermissionsSettings) MigrateToNestedDefaults() {
 // MapPermissions applies the permissions settings to the target repositories.
 // It validates the configuration, adds team permissions, updates branch settings,
 // applies enhanced branch protection, and sets repository-level features.
-func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
+// If dryRun is true, it logs planned changes without applying them.
+func MapPermissions(settings *PermissionsSettings, client *GitHubClient, dryRun bool) {
 	// Migrate legacy default_* fields to nested defaults block
 	settings.MigrateToNestedDefaults()
 
@@ -502,26 +503,45 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 		return
 	}
 
+	if dryRun {
+		log.Info().Msg("DRY RUN: Analyzing configuration changes...")
+	}
+
 	for _, repo := range settings.Repositories {
-		applyTeamPermissions(settings, repo, client)
-		updateRepoBranchSettings(settings, repo, client)
+		if dryRun {
+			log.Info().Str("repository", *repo.Name).Msg("Would process repository")
+		}
+		applyTeamPermissions(settings, repo, client, dryRun)
+		updateRepoBranchSettings(settings, repo, client, dryRun)
 		repoID, ok := getRepositoryID(settings, repo, client)
 		if !ok {
 			continue
 		}
-		applyEnhancedBranchProtection(settings, repo, repoID, client)
+		applyEnhancedBranchProtection(settings, repo, repoID, client, dryRun)
 		// REST fallback for unsupported fields or existing rule conflicts
-		applyBranchProtectionFallback(settings, repo, client)
-		setRepositoryFeatures(repo, repoID, settings, client)
-		setAdvancedRepoSettings(settings, repo, client)
+		applyBranchProtectionFallback(settings, repo, client, dryRun)
+		setRepositoryFeatures(repo, repoID, settings, client, dryRun)
+		setAdvancedRepoSettings(settings, repo, client, dryRun)
+	}
+
+	if dryRun {
+		log.Info().Msg("DRY RUN: Complete. No changes were applied.")
 	}
 }
 
-func applyTeamPermissions(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+func applyTeamPermissions(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
 	if len(settings.TeamPermissions) == 0 {
 		return
 	}
 	for _, perm := range settings.TeamPermissions {
+		if dryRun {
+			log.Info().
+				Str("repository", *repo.Name).
+				Str("team", *perm.Team).
+				Str("level", *perm.Level).
+				Msg("Would add team permissions")
+			continue
+		}
 		log.Info().Str("repository", *repo.Name).Msg("Adding Permissions to repository")
 		log.Debug().
 			Str("repository", *repo.Name).
@@ -539,7 +559,21 @@ func applyTeamPermissions(settings *PermissionsSettings, repo *Repository, clien
 	}
 }
 
-func updateRepoBranchSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+func updateRepoBranchSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
+	if dryRun {
+		logEvent := log.Info().Str("repository", *repo.Name)
+		if settings.AllowMergeCommit != nil {
+			logEvent = logEvent.Bool("allow_merge_commit", *settings.AllowMergeCommit)
+		}
+		if settings.AllowSquashMerge != nil {
+			logEvent = logEvent.Bool("allow_squash_merge", *settings.AllowSquashMerge)
+		}
+		if settings.AllowRebaseMerge != nil {
+			logEvent = logEvent.Bool("allow_rebase_merge", *settings.AllowRebaseMerge)
+		}
+		logEvent.Msg("Would update branch merge strategies")
+		return
+	}
 	if err := client.UpdateBranchPermissions(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
@@ -558,7 +592,14 @@ func getRepositoryID(settings *PermissionsSettings, repo *Repository, client *Gi
 	return repoID, true
 }
 
-func applyEnhancedBranchProtection(settings *PermissionsSettings, repo *Repository, repoID githubv4.ID, client *GitHubClient) {
+func applyEnhancedBranchProtection(settings *PermissionsSettings, repo *Repository, repoID githubv4.ID, client *GitHubClient, dryRun bool) {
+	if dryRun {
+		log.Info().
+			Str("repository", *repo.Name).
+			Str("branch", "main").
+			Msg("Would apply enhanced branch protection rules")
+		return
+	}
 	if err := client.SetEnhancedBranchProtection(repoID, "main", &settings.BranchPermissions); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
@@ -567,7 +608,14 @@ func applyEnhancedBranchProtection(settings *PermissionsSettings, repo *Reposito
 	}
 }
 
-func applyBranchProtectionFallback(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+func applyBranchProtectionFallback(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
+	if dryRun {
+		log.Info().
+			Str("repository", *repo.Name).
+			Str("branch", "main").
+			Msg("Would apply branch protection fallback via REST API")
+		return
+	}
 	if err := client.SetBranchProtectionFallback(*settings.Organization, *repo.Name, "main", &settings.BranchPermissions); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
@@ -585,7 +633,7 @@ func coalesceBoolPtr(repoValue, defaultValue *bool) *bool {
 	return defaultValue
 }
 
-func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *PermissionsSettings, client *GitHubClient) {
+func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *PermissionsSettings, client *GitHubClient, dryRun bool) {
 	// Apply defaults from settings if repo-level values are nil
 	var wiki, issues, projects *bool
 	if settings.Defaults != nil {
@@ -596,6 +644,27 @@ func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *Permi
 		wiki = repo.Wiki
 		issues = repo.Issues
 		projects = repo.Projects
+	}
+
+	if dryRun {
+		logEvent := log.Info().Str("repository", *repo.Name)
+		if wiki != nil {
+			logEvent = logEvent.Bool("wiki", *wiki)
+		}
+		if issues != nil {
+			logEvent = logEvent.Bool("issues", *issues)
+		}
+		if projects != nil {
+			logEvent = logEvent.Bool("projects", *projects)
+		}
+		if repo.HasDiscussionsEnabled != nil {
+			logEvent = logEvent.Bool("discussions", *repo.HasDiscussionsEnabled)
+		}
+		if repo.HasSponsorshipsEnabled != nil {
+			logEvent = logEvent.Bool("sponsorships", *repo.HasSponsorshipsEnabled)
+		}
+		logEvent.Msg("Would update repository features")
+		return
 	}
 
 	if err := client.SetRepository(
@@ -626,7 +695,7 @@ func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *Permi
 	}
 }
 
-func setAdvancedRepoSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+func setAdvancedRepoSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
 	// Apply default for delete_branch_on_merge if repo-level value is nil
 	var deleteBranchOnMerge *bool
 	if settings.Defaults != nil {
@@ -638,6 +707,15 @@ func setAdvancedRepoSettings(settings *PermissionsSettings, repo *Repository, cl
 	if deleteBranchOnMerge == nil {
 		return
 	}
+
+	if dryRun {
+		log.Info().
+			Str("repository", *repo.Name).
+			Bool("delete_branch_on_merge", *deleteBranchOnMerge).
+			Msg("Would update delete_branch_on_merge setting")
+		return
+	}
+
 	if err := client.SetRepositoryAdvancedSettings(*settings.Organization, *repo.Name, deleteBranchOnMerge); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
