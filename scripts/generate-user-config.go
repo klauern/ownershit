@@ -18,14 +18,14 @@ import (
 
 // Config mirrors the structure from config.go but simplified for generation
 type Config struct {
-	Version           string                 `yaml:"version,omitempty"`
-	Organization      string                 `yaml:"organization"`
-	Defaults          *RepositoryDefaults    `yaml:"defaults,omitempty"`
-	Branches          *BranchPermissions     `yaml:"branches,omitempty"`
-	Team              []*TeamPermission      `yaml:"team,omitempty"`
-	Repositories      []*Repository          `yaml:"repositories"`
-	DefaultLabels     []Label                `yaml:"default_labels,omitempty"`
-	DefaultTopics     []string               `yaml:"default_topics,omitempty"`
+	Version       string              `yaml:"version,omitempty"`
+	Organization  string              `yaml:"organization"`
+	Defaults      *RepositoryDefaults `yaml:"defaults,omitempty"`
+	Branches      *BranchPermissions  `yaml:"branches,omitempty"`
+	Team          []*TeamPermission   `yaml:"team,omitempty"`
+	Repositories  []*Repository       `yaml:"repositories"`
+	DefaultLabels []Label             `yaml:"default_labels,omitempty"`
+	DefaultTopics []string            `yaml:"default_topics,omitempty"`
 }
 
 type RepositoryDefaults struct {
