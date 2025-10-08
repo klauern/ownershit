@@ -60,18 +60,31 @@ type BranchPermissions struct {
 	AllowDeletions                *bool    `yaml:"allow_deletions"`
 }
 
+// RepositoryDefaults defines default settings for repository features.
+// These settings apply to all repositories unless explicitly overridden at the repository level.
+type RepositoryDefaults struct {
+	Wiki                *bool `yaml:"wiki,omitempty"`
+	Issues              *bool `yaml:"issues,omitempty"`
+	Projects            *bool `yaml:"projects,omitempty"`
+	DeleteBranchOnMerge *bool `yaml:"delete_branch_on_merge,omitempty"`
+}
+
 // PermissionsSettings contains the complete configuration for repository permissions.
 type PermissionsSettings struct {
 	Version           *string `yaml:"version,omitempty"`
 	BranchPermissions `yaml:"branches"`
-	TeamPermissions   []*Permissions `yaml:"team"`
-	Repositories      []*Repository  `yaml:"repositories"`
-	Organization      *string        `yaml:"organization"`
-	DefaultLabels     []RepoLabel    `yaml:"default_labels"`
-	DefaultTopics     []string       `yaml:"default_topics,omitempty"`
-	DefaultWiki       *bool          `yaml:"default_wiki,omitempty"`
-	DefaultIssues     *bool          `yaml:"default_issues,omitempty"`
-	DefaultProjects   *bool          `yaml:"default_projects,omitempty"`
+	TeamPermissions   []*Permissions      `yaml:"team"`
+	Repositories      []*Repository       `yaml:"repositories"`
+	Organization      *string             `yaml:"organization"`
+	DefaultLabels     []RepoLabel         `yaml:"default_labels"`
+	DefaultTopics     []string            `yaml:"default_topics,omitempty"`
+	Defaults          *RepositoryDefaults `yaml:"defaults,omitempty"`
+	// Deprecated: Use Defaults.Wiki instead
+	DefaultWiki *bool `yaml:"default_wiki,omitempty"`
+	// Deprecated: Use Defaults.Issues instead
+	DefaultIssues *bool `yaml:"default_issues,omitempty"`
+	// Deprecated: Use Defaults.Projects instead
+	DefaultProjects *bool `yaml:"default_projects,omitempty"`
 }
 
 // Repository defines the configuration for a single GitHub repository.
@@ -458,39 +471,94 @@ func IsCurrentSchemaVersion(settings *PermissionsSettings) bool {
 	return GetSchemaVersion(settings) == CurrentSchemaVersion
 }
 
+// MigrateToNestedDefaults migrates old default_* fields to nested defaults block.
+// This maintains backward compatibility with configurations using the old format.
+// It merges legacy fields into the existing Defaults block if one exists.
+func (s *PermissionsSettings) MigrateToNestedDefaults() {
+	hasOldDefaults := s.DefaultWiki != nil || s.DefaultIssues != nil || s.DefaultProjects != nil
+	if !hasOldDefaults {
+		return
+	}
+
+	if s.Defaults == nil {
+		s.Defaults = &RepositoryDefaults{}
+	}
+
+	merged := false
+	if s.Defaults.Wiki == nil && s.DefaultWiki != nil {
+		s.Defaults.Wiki = s.DefaultWiki
+		merged = true
+	}
+	if s.Defaults.Issues == nil && s.DefaultIssues != nil {
+		s.Defaults.Issues = s.DefaultIssues
+		merged = true
+	}
+	if s.Defaults.Projects == nil && s.DefaultProjects != nil {
+		s.Defaults.Projects = s.DefaultProjects
+		merged = true
+	}
+
+	if merged {
+		log.Info().Msg("migrated legacy default_* fields into defaults block")
+	}
+}
+
 // GitHubTokenEnv was removed for security reasons.
 // Use GetValidatedGitHubToken() for secure token handling instead.
 
 // MapPermissions applies the permissions settings to the target repositories.
 // It validates the configuration, adds team permissions, updates branch settings,
 // applies enhanced branch protection, and sets repository-level features.
-func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
+// If dryRun is true, it logs planned changes without applying them.
+func MapPermissions(settings *PermissionsSettings, client *GitHubClient, dryRun bool) {
+	// Migrate legacy default_* fields to nested defaults block
+	settings.MigrateToNestedDefaults()
+
 	// Validate complete configuration
 	if err := ValidatePermissionsSettings(settings); err != nil {
 		log.Err(err).Msg("configuration validation failed")
 		return
 	}
 
+	if dryRun {
+		log.Info().Msg("DRY RUN: Analyzing configuration changes...")
+	}
+
 	for _, repo := range settings.Repositories {
-		applyTeamPermissions(settings, repo, client)
-		updateRepoBranchSettings(settings, repo, client)
+		if dryRun {
+			log.Info().Str("repository", *repo.Name).Msg("Would process repository")
+		}
+		applyTeamPermissions(settings, repo, client, dryRun)
+		updateRepoBranchSettings(settings, repo, client, dryRun)
 		repoID, ok := getRepositoryID(settings, repo, client)
 		if !ok {
 			continue
 		}
-		applyEnhancedBranchProtection(settings, repo, repoID, client)
+		applyEnhancedBranchProtection(settings, repo, repoID, client, dryRun)
 		// REST fallback for unsupported fields or existing rule conflicts
-		applyBranchProtectionFallback(settings, repo, client)
-		setRepositoryFeatures(repo, repoID, settings, client)
-		setAdvancedRepoSettings(settings, repo, client)
+		applyBranchProtectionFallback(settings, repo, client, dryRun)
+		setRepositoryFeatures(repo, repoID, settings, client, dryRun)
+		setAdvancedRepoSettings(settings, repo, client, dryRun)
+	}
+
+	if dryRun {
+		log.Info().Msg("DRY RUN: Complete. No changes were applied.")
 	}
 }
 
-func applyTeamPermissions(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+func applyTeamPermissions(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
 	if len(settings.TeamPermissions) == 0 {
 		return
 	}
 	for _, perm := range settings.TeamPermissions {
+		if dryRun {
+			log.Info().
+				Str("repository", *repo.Name).
+				Str("team", *perm.Team).
+				Str("level", *perm.Level).
+				Msg("Would add team permissions")
+			continue
+		}
 		log.Info().Str("repository", *repo.Name).Msg("Adding Permissions to repository")
 		log.Debug().
 			Str("repository", *repo.Name).
@@ -508,7 +576,21 @@ func applyTeamPermissions(settings *PermissionsSettings, repo *Repository, clien
 	}
 }
 
-func updateRepoBranchSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+func updateRepoBranchSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
+	if dryRun {
+		logEvent := log.Info().Str("repository", *repo.Name)
+		if settings.AllowMergeCommit != nil {
+			logEvent = logEvent.Bool("allow_merge_commit", *settings.AllowMergeCommit)
+		}
+		if settings.AllowSquashMerge != nil {
+			logEvent = logEvent.Bool("allow_squash_merge", *settings.AllowSquashMerge)
+		}
+		if settings.AllowRebaseMerge != nil {
+			logEvent = logEvent.Bool("allow_rebase_merge", *settings.AllowRebaseMerge)
+		}
+		logEvent.Msg("Would update branch merge strategies")
+		return
+	}
 	if err := client.UpdateBranchPermissions(*settings.Organization, *repo.Name, &settings.BranchPermissions); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
@@ -527,7 +609,14 @@ func getRepositoryID(settings *PermissionsSettings, repo *Repository, client *Gi
 	return repoID, true
 }
 
-func applyEnhancedBranchProtection(settings *PermissionsSettings, repo *Repository, repoID githubv4.ID, client *GitHubClient) {
+func applyEnhancedBranchProtection(settings *PermissionsSettings, repo *Repository, repoID githubv4.ID, client *GitHubClient, dryRun bool) {
+	if dryRun {
+		log.Info().
+			Str("repository", *repo.Name).
+			Str("branch", "main").
+			Msg("Would apply enhanced branch protection rules")
+		return
+	}
 	if err := client.SetEnhancedBranchProtection(repoID, "main", &settings.BranchPermissions); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
@@ -536,7 +625,14 @@ func applyEnhancedBranchProtection(settings *PermissionsSettings, repo *Reposito
 	}
 }
 
-func applyBranchProtectionFallback(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
+func applyBranchProtectionFallback(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
+	if dryRun {
+		log.Info().
+			Str("repository", *repo.Name).
+			Str("branch", "main").
+			Msg("Would apply branch protection fallback via REST API")
+		return
+	}
 	if err := client.SetBranchProtectionFallback(*settings.Organization, *repo.Name, "main", &settings.BranchPermissions); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
@@ -554,11 +650,40 @@ func coalesceBoolPtr(repoValue, defaultValue *bool) *bool {
 	return defaultValue
 }
 
-func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *PermissionsSettings, client *GitHubClient) {
+func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *PermissionsSettings, client *GitHubClient, dryRun bool) {
 	// Apply defaults from settings if repo-level values are nil
-	wiki := coalesceBoolPtr(repo.Wiki, settings.DefaultWiki)
-	issues := coalesceBoolPtr(repo.Issues, settings.DefaultIssues)
-	projects := coalesceBoolPtr(repo.Projects, settings.DefaultProjects)
+	var wiki, issues, projects *bool
+	if settings.Defaults != nil {
+		wiki = coalesceBoolPtr(repo.Wiki, settings.Defaults.Wiki)
+		issues = coalesceBoolPtr(repo.Issues, settings.Defaults.Issues)
+		projects = coalesceBoolPtr(repo.Projects, settings.Defaults.Projects)
+	} else {
+		// Fallback to legacy default_* fields for backward compatibility
+		wiki = coalesceBoolPtr(repo.Wiki, settings.DefaultWiki)
+		issues = coalesceBoolPtr(repo.Issues, settings.DefaultIssues)
+		projects = coalesceBoolPtr(repo.Projects, settings.DefaultProjects)
+	}
+
+	if dryRun {
+		logEvent := log.Info().Str("repository", *repo.Name)
+		if wiki != nil {
+			logEvent = logEvent.Bool("wiki", *wiki)
+		}
+		if issues != nil {
+			logEvent = logEvent.Bool("issues", *issues)
+		}
+		if projects != nil {
+			logEvent = logEvent.Bool("projects", *projects)
+		}
+		if repo.HasDiscussionsEnabled != nil {
+			logEvent = logEvent.Bool("discussions", *repo.HasDiscussionsEnabled)
+		}
+		if repo.HasSponsorshipsEnabled != nil {
+			logEvent = logEvent.Bool("sponsorships", *repo.HasSponsorshipsEnabled)
+		}
+		logEvent.Msg("Would update repository features")
+		return
+	}
 
 	if err := client.SetRepository(
 		repoID,
@@ -588,15 +713,32 @@ func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *Permi
 	}
 }
 
-func setAdvancedRepoSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
-	if repo.DeleteBranchOnMerge == nil {
+func setAdvancedRepoSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient, dryRun bool) {
+	// Apply default for delete_branch_on_merge if repo-level value is nil
+	var deleteBranchOnMerge *bool
+	if settings.Defaults != nil {
+		deleteBranchOnMerge = coalesceBoolPtr(repo.DeleteBranchOnMerge, settings.Defaults.DeleteBranchOnMerge)
+	} else {
+		deleteBranchOnMerge = repo.DeleteBranchOnMerge
+	}
+
+	if deleteBranchOnMerge == nil {
 		return
 	}
-	if err := client.SetRepositoryAdvancedSettings(*settings.Organization, *repo.Name, repo.DeleteBranchOnMerge); err != nil {
+
+	if dryRun {
+		log.Info().
+			Str("repository", *repo.Name).
+			Bool("delete_branch_on_merge", *deleteBranchOnMerge).
+			Msg("Would update delete_branch_on_merge setting")
+		return
+	}
+
+	if err := client.SetRepositoryAdvancedSettings(*settings.Organization, *repo.Name, deleteBranchOnMerge); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
 			Str("organization", *settings.Organization).
-			Bool("deleteBranchOnMerge", *repo.DeleteBranchOnMerge).
+			Bool("deleteBranchOnMerge", *deleteBranchOnMerge).
 			Msg("setting advanced repository settings")
 	}
 }
