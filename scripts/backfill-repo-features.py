@@ -15,6 +15,13 @@ This script checks if repositories actually have:
 - Wiki pages (conservative: assumes enabled wikis have content)
 - Issues (open or closed, excluding PRs)
 - Projects (classic/v1 only; does not detect Projects v2/beta)
+- Delete branch on merge setting
+- Discussions enabled
+- Private/Public visibility
+- Archived status
+- Template repository status
+- Default branch (if not 'main')
+- Description and homepage
 
 It then updates repositories.yaml with explicit settings for repos that
 differ from the defaults.
@@ -35,7 +42,7 @@ from github import Auth, Github, GithubException
 
 
 def check_repo_features(repo) -> dict:
-    """Check if a repository actually uses wiki, issues, projects, and has delete_branch_on_merge enabled."""
+    """Check if a repository actually uses wiki, issues, projects, and other repository-level settings."""
     features = {
         'has_wiki': False,
         'has_issues': False,
@@ -44,6 +51,13 @@ def check_repo_features(repo) -> dict:
         'wiki_enabled': repo.has_wiki,
         'issues_enabled': repo.has_issues,
         'projects_enabled': repo.has_projects,
+        'discussions_enabled': repo.has_discussions if hasattr(repo, 'has_discussions') else None,
+        'private': repo.private,
+        'archived': repo.archived,
+        'template': repo.is_template if hasattr(repo, 'is_template') else None,
+        'default_branch': repo.default_branch,
+        'description': repo.description if repo.description else None,
+        'homepage': repo.homepage if repo.homepage else None,
     }
 
     # Check if wiki has actual pages (not just enabled)
@@ -160,6 +174,7 @@ def main():
     default_issues = defaults.get('issues')
     default_projects = defaults.get('projects')
     default_delete_branch = defaults.get('delete_branch_on_merge')
+    default_discussions = defaults.get('discussions_enabled')
 
     # Fallback to old format for backward compatibility
     if not defaults:
@@ -168,7 +183,7 @@ def main():
         default_projects = config.get('default_projects')
         print("Note: Using legacy default_* fields. Consider migrating to nested 'defaults' block.")
 
-    print(f"Defaults: wiki={default_wiki}, issues={default_issues}, projects={default_projects}, delete_branch_on_merge={default_delete_branch}")
+    print(f"Defaults: wiki={default_wiki}, issues={default_issues}, projects={default_projects}, delete_branch_on_merge={default_delete_branch}, discussions_enabled={default_discussions}")
     print(f"Checking repositories in {org_name}...")
 
     # Initialize GitHub client with modern auth
@@ -279,6 +294,135 @@ def main():
                         repo_config['delete_branch_on_merge'] = features['delete_branch_on_merge']
                         changes.append(f"delete_branch_on_merge={features['delete_branch_on_merge']}")
                         updated = True
+
+            # Handle discussions_enabled setting
+            has_discussions_setting = 'discussions_enabled' in repo_config
+            if features['discussions_enabled'] is not None:
+                if has_discussions_setting:
+                    current_value = repo_config.get('discussions_enabled')
+                    if current_value != features['discussions_enabled']:
+                        repo_config['discussions_enabled'] = features['discussions_enabled']
+                        changes.append(f"discussions_enabled={features['discussions_enabled']} (was {current_value})")
+                        updated = True
+                    elif should_remove_explicit_setting(features['discussions_enabled'], default_discussions):
+                        del repo_config['discussions_enabled']
+                        changes.append("removed discussions_enabled (matches default)")
+                        updated = True
+                else:
+                    if should_override_default(features['discussions_enabled'], default_discussions):
+                        repo_config['discussions_enabled'] = features['discussions_enabled']
+                        changes.append(f"discussions_enabled={features['discussions_enabled']}")
+                        updated = True
+
+            # Handle private setting (always set explicitly since it's important)
+            has_private_setting = 'private' in repo_config
+            if features['private'] is not None:
+                if has_private_setting:
+                    current_value = repo_config.get('private')
+                    if current_value != features['private']:
+                        repo_config['private'] = features['private']
+                        changes.append(f"private={features['private']} (was {current_value})")
+                        updated = True
+                else:
+                    # Always add private setting if repository is private
+                    if features['private']:
+                        repo_config['private'] = features['private']
+                        changes.append(f"private={features['private']}")
+                        updated = True
+
+            # Handle archived setting (always set explicitly if true)
+            has_archived_setting = 'archived' in repo_config
+            if features['archived'] is not None:
+                if has_archived_setting:
+                    current_value = repo_config.get('archived')
+                    if current_value != features['archived']:
+                        repo_config['archived'] = features['archived']
+                        changes.append(f"archived={features['archived']} (was {current_value})")
+                        updated = True
+                else:
+                    # Always add archived setting if repository is archived
+                    if features['archived']:
+                        repo_config['archived'] = features['archived']
+                        changes.append(f"archived={features['archived']}")
+                        updated = True
+
+            # Handle template setting (always set explicitly if true)
+            has_template_setting = 'template' in repo_config
+            if features['template'] is not None:
+                if has_template_setting:
+                    current_value = repo_config.get('template')
+                    if current_value != features['template']:
+                        repo_config['template'] = features['template']
+                        changes.append(f"template={features['template']} (was {current_value})")
+                        updated = True
+                else:
+                    # Always add template setting if repository is a template
+                    if features['template']:
+                        repo_config['template'] = features['template']
+                        changes.append(f"template={features['template']}")
+                        updated = True
+
+            # Handle default_branch (always set explicitly)
+            has_default_branch_setting = 'default_branch' in repo_config
+            if features['default_branch'] is not None:
+                # Only update if it's not 'main' (the GitHub default)
+                if features['default_branch'] != 'main':
+                    if has_default_branch_setting:
+                        current_value = repo_config.get('default_branch')
+                        if current_value != features['default_branch']:
+                            repo_config['default_branch'] = features['default_branch']
+                            changes.append(f"default_branch={features['default_branch']} (was {current_value})")
+                            updated = True
+                    else:
+                        repo_config['default_branch'] = features['default_branch']
+                        changes.append(f"default_branch={features['default_branch']}")
+                        updated = True
+                else:
+                    # Remove default_branch if it's set to 'main' (the default)
+                    if has_default_branch_setting:
+                        del repo_config['default_branch']
+                        changes.append("removed default_branch (is default 'main')")
+                        updated = True
+
+            # Handle description
+            has_description_setting = 'description' in repo_config
+            if features['description'] is not None:
+                if has_description_setting:
+                    current_value = repo_config.get('description')
+                    if current_value != features['description']:
+                        repo_config['description'] = features['description']
+                        changes.append("description updated")
+                        updated = True
+                else:
+                    repo_config['description'] = features['description']
+                    changes.append("description added")
+                    updated = True
+            else:
+                # Remove description if it's empty
+                if has_description_setting:
+                    del repo_config['description']
+                    changes.append("removed empty description")
+                    updated = True
+
+            # Handle homepage
+            has_homepage_setting = 'homepage' in repo_config
+            if features['homepage'] is not None:
+                if has_homepage_setting:
+                    current_value = repo_config.get('homepage')
+                    if current_value != features['homepage']:
+                        repo_config['homepage'] = features['homepage']
+                        changes.append("homepage updated")
+                        updated = True
+                else:
+                    repo_config['homepage'] = features['homepage']
+                    changes.append("homepage added")
+                    updated = True
+            else:
+                # Remove homepage if it's empty
+                if has_homepage_setting:
+                    del repo_config['homepage']
+                    changes.append("removed empty homepage")
+                    updated = True
 
             if updated:
                 print(f"  [{i+1}/{len(repositories)}] {repo_name}: {', '.join(changes)}")
