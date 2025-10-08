@@ -245,6 +245,101 @@ func TestDefaultsBackwardCompatibility(t *testing.T) {
 	}
 }
 
+// TestMigrationWithMixedDefaults tests that legacy defaults are properly merged
+// when a partial new-style defaults block exists (e.g., only delete_branch_on_merge set).
+func TestMigrationWithMixedDefaults(t *testing.T) {
+	tests := []struct {
+		name                 string
+		legacyWiki           *bool
+		legacyIssues         *bool
+		legacyProjects       *bool
+		newWiki              *bool
+		newIssues            *bool
+		newProjects          *bool
+		newDeleteBranch      *bool
+		expectedWiki         *bool
+		expectedIssues       *bool
+		expectedProjects     *bool
+		expectedDeleteBranch *bool
+	}{
+		{
+			name:                 "new delete_branch_on_merge with legacy wiki/issues/projects",
+			legacyWiki:           boolPtr(false),
+			legacyIssues:         boolPtr(true),
+			legacyProjects:       boolPtr(false),
+			newWiki:              nil,
+			newIssues:            nil,
+			newProjects:          nil,
+			newDeleteBranch:      boolPtr(true),
+			expectedWiki:         boolPtr(false),
+			expectedIssues:       boolPtr(true),
+			expectedProjects:     boolPtr(false),
+			expectedDeleteBranch: boolPtr(true),
+		},
+		{
+			name:                 "new defaults take precedence over legacy",
+			legacyWiki:           boolPtr(false),
+			legacyIssues:         boolPtr(false),
+			legacyProjects:       boolPtr(false),
+			newWiki:              boolPtr(true),
+			newIssues:            boolPtr(true),
+			newProjects:          boolPtr(true),
+			newDeleteBranch:      boolPtr(true),
+			expectedWiki:         boolPtr(true),
+			expectedIssues:       boolPtr(true),
+			expectedProjects:     boolPtr(true),
+			expectedDeleteBranch: boolPtr(true),
+		},
+		{
+			name:                 "partial new defaults merge with legacy",
+			legacyWiki:           boolPtr(false),
+			legacyIssues:         boolPtr(true),
+			legacyProjects:       boolPtr(false),
+			newWiki:              boolPtr(true), // Override legacy
+			newIssues:            nil,           // Use legacy
+			newProjects:          nil,           // Use legacy
+			newDeleteBranch:      boolPtr(true),
+			expectedWiki:         boolPtr(true),
+			expectedIssues:       boolPtr(true),
+			expectedProjects:     boolPtr(false),
+			expectedDeleteBranch: boolPtr(true),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settings := &PermissionsSettings{
+				DefaultWiki:     tt.legacyWiki,
+				DefaultIssues:   tt.legacyIssues,
+				DefaultProjects: tt.legacyProjects,
+				Defaults: &RepositoryDefaults{
+					Wiki:                tt.newWiki,
+					Issues:              tt.newIssues,
+					Projects:            tt.newProjects,
+					DeleteBranchOnMerge: tt.newDeleteBranch,
+				},
+			}
+
+			// Run migration
+			settings.MigrateToNestedDefaults()
+
+			// Verify merged results
+			if !equalBoolPtr(settings.Defaults.Wiki, tt.expectedWiki) {
+				t.Errorf("wiki: got %v, want %v", ptrToStr(settings.Defaults.Wiki), ptrToStr(tt.expectedWiki))
+			}
+			if !equalBoolPtr(settings.Defaults.Issues, tt.expectedIssues) {
+				t.Errorf("issues: got %v, want %v", ptrToStr(settings.Defaults.Issues), ptrToStr(tt.expectedIssues))
+			}
+			if !equalBoolPtr(settings.Defaults.Projects, tt.expectedProjects) {
+				t.Errorf("projects: got %v, want %v", ptrToStr(settings.Defaults.Projects), ptrToStr(tt.expectedProjects))
+			}
+			if !equalBoolPtr(settings.Defaults.DeleteBranchOnMerge, tt.expectedDeleteBranch) {
+				t.Errorf("delete_branch_on_merge: got %v, want %v", ptrToStr(settings.Defaults.DeleteBranchOnMerge), ptrToStr(tt.expectedDeleteBranch))
+			}
+		})
+	}
+}
+
 // Helper functions for tests
 
 func equalBoolPtr(a, b *bool) bool {
