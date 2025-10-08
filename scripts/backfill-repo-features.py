@@ -23,8 +23,8 @@ Note: Wiki detection is conservative - if a wiki is enabled, we assume it
 has content since GitHub's API doesn't easily expose whether wikis have pages.
 """
 
-import copy
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Optional
@@ -148,10 +148,6 @@ def main():
     print(f"Loading configuration from {config_path}")
     config = load_config(config_path)
 
-    # Create backup of original config before any mutations
-    backup_path = f"{config_path}.backup"
-    original_config = copy.deepcopy(config)
-
     org_name = config.get('organization')
     if not org_name:
         print("Error: No organization specified in config", file=sys.stderr)
@@ -264,15 +260,16 @@ def main():
                 detail = e.data.get('message', detail)
             print(f"  [{i+1}/{len(repositories)}] {repo_name}: ERROR - {e.status} {detail}")
             error_count += 1
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             # Catch-all for unexpected errors
             print(f"  [{i+1}/{len(repositories)}] {repo_name}: ERROR - {e}")
             error_count += 1
 
     # Save updated configuration
     if updated_count > 0:
+        backup_path = f"{config_path}.backup"
         print(f"\nSaving backup of original configuration to {backup_path}")
-        save_config(backup_path, original_config)
+        shutil.copyfile(config_path, backup_path)
 
         print(f"Saving updated configuration to {config_path}")
         save_config(config_path, config)
