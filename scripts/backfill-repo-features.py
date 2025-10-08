@@ -28,9 +28,9 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+import requests
 import yaml
 from github import Auth, Github, GithubException
-import requests
 
 
 def check_repo_features(repo, token: str) -> dict:
