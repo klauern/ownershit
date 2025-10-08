@@ -4,6 +4,12 @@
 # Organization name (REQUIRED)
 organization: my-awesome-org
 
+# Global defaults for repository features
+# These apply to all repositories unless explicitly overridden at the repository level
+default_wiki: false      # Disable wikis by default
+default_issues: true     # Enable issues by default
+default_projects: false  # Disable projects by default
+
 # Branch protection rules applied to all repositories
 branches:
   # Pull request requirements
@@ -56,59 +62,57 @@ team:
 
 # Repository configurations (wiki, issues, projects)
 repositories:
-  # Main application repository
+  # Main application repository - overrides defaults
   - name: web-application
-    wiki: true                             # Enable wiki for documentation
-    issues: true                           # Enable GitHub issues for bug tracking
-    projects: true                         # Enable GitHub projects for project management
+    wiki: true                             # Override: Enable wiki for documentation
+    # issues: inherits default (true)      # Bug tracking enabled via default
+    projects: true                         # Override: Enable GitHub projects for project management
     delete_branch_on_merge: true           # Automatically delete head branches after merge
     discussions_enabled: true              # Enable GitHub discussions for community Q&A
     sponsorships_enabled: false            # Disable sponsorship button
 
-  # API service repository
+  # API service repository - overrides wiki default
   - name: user-api-service
-    wiki: true                             # API documentation in wiki
-    issues: true                           # Bug tracking enabled
-    projects: false                        # No project management needed
+    wiki: true                             # Override: API documentation in wiki
+    # issues: inherits default (true)      # Bug tracking enabled via default
+    # projects: inherits default (false)   # No project management needed
     delete_branch_on_merge: true           # Clean up branches automatically
     discussions_enabled: false             # API discussions handled elsewhere
     sponsorships_enabled: false            # Internal service, no sponsorships
 
-  # Mobile applications
+  # Mobile applications - override projects default
   - name: mobile-app-ios
-    wiki: false                            # Documentation elsewhere
-    issues: true                           # Bug tracking for mobile issues
-    projects: true                         # Sprint planning with projects
+    # wiki: inherits default (false)       # Documentation elsewhere
+    # issues: inherits default (true)      # Bug tracking for mobile issues
+    projects: true                         # Override: Sprint planning with projects
 
   - name: mobile-app-android
-    wiki: false                            # Shared docs with iOS
-    issues: true                           # Separate Android issue tracking
-    projects: true                         # Android-specific project board
+    # wiki: inherits default (false)       # Shared docs with iOS
+    # issues: inherits default (true)      # Separate Android issue tracking
+    projects: true                         # Override: Android-specific project board
 
-  # Infrastructure & DevOps
+  # Infrastructure & DevOps - override wiki default
   - name: terraform-infrastructure
-    wiki: true                             # Infrastructure documentation
-    issues: true                           # Infrastructure issues/requests
-    projects: false                        # No projects needed for IaC
+    wiki: true                             # Override: Infrastructure documentation
+    # issues: inherits default (true)      # Infrastructure issues/requests
+    # projects: inherits default (false)   # No projects needed for IaC
 
+  # Uses all defaults (wiki: false, issues: true, projects: false)
   - name: internal-cli-tools
-    wiki: false                            # Simple tools, no wiki needed
-    issues: true                           # Bug reports for internal tools
-    projects: false                        # No project management
+    # All settings inherit from defaults
 
   # Documentation & Legacy
   - name: company-docs
-    wiki: false                            # Content is the repository itself
-    issues: true                           # Documentation improvement requests
-    projects: true                         # Editorial calendar in projects
+    # wiki: inherits default (false)       # Content is the repository itself
+    # issues: inherits default (true)      # Documentation improvement requests
+    projects: true                         # Override: Editorial calendar in projects
     delete_branch_on_merge: true           # Keep repository clean
     discussions_enabled: true              # Enable community discussions about docs
     sponsorships_enabled: true             # Allow sponsorship for open-source docs
 
+  # Uses all defaults
   - name: legacy-java-app
-    wiki: false                            # Deprecated, no new docs
-    issues: true                           # Still need bug tracking
-    projects: false                        # No active development
+    # All settings inherit from defaults (wiki: false, issues: true, projects: false)
 
 # Default topics applied to all repositories
 default_topics:

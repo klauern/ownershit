@@ -69,6 +69,9 @@ type PermissionsSettings struct {
 	Organization      *string        `yaml:"organization"`
 	DefaultLabels     []RepoLabel    `yaml:"default_labels"`
 	DefaultTopics     []string       `yaml:"default_topics,omitempty"`
+	DefaultWiki       *bool          `yaml:"default_wiki,omitempty"`
+	DefaultIssues     *bool          `yaml:"default_issues,omitempty"`
+	DefaultProjects   *bool          `yaml:"default_projects,omitempty"`
 }
 
 // Repository defines the configuration for a single GitHub repository.
@@ -478,7 +481,7 @@ func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
 		applyEnhancedBranchProtection(settings, repo, repoID, client)
 		// REST fallback for unsupported fields or existing rule conflicts
 		applyBranchProtectionFallback(settings, repo, client)
-		setRepositoryFeatures(repo, repoID, client)
+		setRepositoryFeatures(repo, repoID, settings, client)
 		setAdvancedRepoSettings(settings, repo, client)
 	}
 }
@@ -542,24 +545,38 @@ func applyBranchProtectionFallback(settings *PermissionsSettings, repo *Reposito
 	}
 }
 
-func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, client *GitHubClient) {
+// coalesceBoolPtr returns the first non-nil bool pointer, or nil if both are nil.
+// This is used to apply default values when repository-specific settings are not provided.
+func coalesceBoolPtr(repoValue, defaultValue *bool) *bool {
+	if repoValue != nil {
+		return repoValue
+	}
+	return defaultValue
+}
+
+func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *PermissionsSettings, client *GitHubClient) {
+	// Apply defaults from settings if repo-level values are nil
+	wiki := coalesceBoolPtr(repo.Wiki, settings.DefaultWiki)
+	issues := coalesceBoolPtr(repo.Issues, settings.DefaultIssues)
+	projects := coalesceBoolPtr(repo.Projects, settings.DefaultProjects)
+
 	if err := client.SetRepository(
 		repoID,
-		repo.Wiki,
-		repo.Issues,
-		repo.Projects,
+		wiki,
+		issues,
+		projects,
 		repo.HasDiscussionsEnabled,
 		repo.HasSponsorshipsEnabled,
 	); err != nil {
 		logEvent := log.Err(err).Interface("repoID", repoID)
-		if repo.Wiki != nil {
-			logEvent = logEvent.Bool("wikiEnabled", *repo.Wiki)
+		if wiki != nil {
+			logEvent = logEvent.Bool("wikiEnabled", *wiki)
 		}
-		if repo.Issues != nil {
-			logEvent = logEvent.Bool("issuesEnabled", *repo.Issues)
+		if issues != nil {
+			logEvent = logEvent.Bool("issuesEnabled", *issues)
 		}
-		if repo.Projects != nil {
-			logEvent = logEvent.Bool("projectsEnabled", *repo.Projects)
+		if projects != nil {
+			logEvent = logEvent.Bool("projectsEnabled", *projects)
 		}
 		if repo.HasDiscussionsEnabled != nil {
 			logEvent = logEvent.Bool("discussionsEnabled", *repo.HasDiscussionsEnabled)
