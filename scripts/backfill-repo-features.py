@@ -240,7 +240,10 @@ def main():
                 print(f"  [{i+1}/{len(repositories)}] {repo_name}: matches defaults, no changes needed")
 
         except GithubException as e:
-            print(f"  [{i+1}/{len(repositories)}] {repo_name}: ERROR - {e.status} {e.data.get('message', 'Unknown error')}")
+            detail = str(e)
+            if isinstance(e.data, dict):
+                detail = e.data.get('message', detail)
+            print(f"  [{i+1}/{len(repositories)}] {repo_name}: ERROR - {e.status} {detail}")
             error_count += 1
         except Exception as e:
             # Catch-all for unexpected errors
