@@ -56,6 +56,36 @@ task install
    ownershit sync
    ```
 
+## Generate Configuration from Existing Repositories
+
+If you already have repositories on GitHub and want to generate a configuration file automatically:
+
+```bash
+# Set your GitHub token
+export GITHUB_TOKEN=your_github_token_here
+
+# Generate configuration for your user
+./scripts/generate-config.sh klauern
+
+# Or specify a custom output file
+./scripts/generate-config.sh klauern my-repositories.yaml
+```
+
+This will:
+- Fetch all repositories you own (not forked repos)
+- Analyze settings to determine sensible defaults
+- Generate a complete YAML configuration file
+- Include all repository metadata (descriptions, settings, etc.)
+
+After generation, you should:
+1. Review the generated file
+2. Add team permissions (if working with an organization)
+3. Configure branch protection rules
+4. Add default labels and topics
+5. Test with `--dry-run` before applying
+
+For more details, see [scripts/README.md](scripts/README.md).
+
 ## Dry-Run Mode
 
 Preview changes before applying them using the `--dry-run` flag:
