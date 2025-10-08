@@ -545,20 +545,20 @@ func applyBranchProtectionFallback(settings *PermissionsSettings, repo *Reposito
 	}
 }
 
+// coalesceBoolPtr returns the first non-nil bool pointer, or nil if both are nil.
+// This is used to apply default values when repository-specific settings are not provided.
+func coalesceBoolPtr(repoValue, defaultValue *bool) *bool {
+	if repoValue != nil {
+		return repoValue
+	}
+	return defaultValue
+}
+
 func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *PermissionsSettings, client *GitHubClient) {
 	// Apply defaults from settings if repo-level values are nil
-	wiki := repo.Wiki
-	if wiki == nil {
-		wiki = settings.DefaultWiki
-	}
-	issues := repo.Issues
-	if issues == nil {
-		issues = settings.DefaultIssues
-	}
-	projects := repo.Projects
-	if projects == nil {
-		projects = settings.DefaultProjects
-	}
+	wiki := coalesceBoolPtr(repo.Wiki, settings.DefaultWiki)
+	issues := coalesceBoolPtr(repo.Issues, settings.DefaultIssues)
+	projects := coalesceBoolPtr(repo.Projects, settings.DefaultProjects)
 
 	if err := client.SetRepository(
 		repoID,
