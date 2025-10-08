@@ -473,16 +473,33 @@ func IsCurrentSchemaVersion(settings *PermissionsSettings) bool {
 
 // MigrateToNestedDefaults migrates old default_* fields to nested defaults block.
 // This maintains backward compatibility with configurations using the old format.
+// It merges legacy fields into the existing Defaults block if one exists.
 func (s *PermissionsSettings) MigrateToNestedDefaults() {
-	// Only migrate if we have old-style defaults and no new-style defaults
 	hasOldDefaults := s.DefaultWiki != nil || s.DefaultIssues != nil || s.DefaultProjects != nil
-	if s.Defaults == nil && hasOldDefaults {
-		s.Defaults = &RepositoryDefaults{
-			Wiki:     s.DefaultWiki,
-			Issues:   s.DefaultIssues,
-			Projects: s.DefaultProjects,
-		}
-		log.Info().Msg("migrated legacy default_* fields to defaults block")
+	if !hasOldDefaults {
+		return
+	}
+
+	if s.Defaults == nil {
+		s.Defaults = &RepositoryDefaults{}
+	}
+
+	merged := false
+	if s.Defaults.Wiki == nil && s.DefaultWiki != nil {
+		s.Defaults.Wiki = s.DefaultWiki
+		merged = true
+	}
+	if s.Defaults.Issues == nil && s.DefaultIssues != nil {
+		s.Defaults.Issues = s.DefaultIssues
+		merged = true
+	}
+	if s.Defaults.Projects == nil && s.DefaultProjects != nil {
+		s.Defaults.Projects = s.DefaultProjects
+		merged = true
+	}
+
+	if merged {
+		log.Info().Msg("migrated legacy default_* fields into defaults block")
 	}
 }
 

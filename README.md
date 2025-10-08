@@ -80,7 +80,7 @@ Dry-run mode displays all planned changes without making any API calls to GitHub
 
 ### Example Output
 
-```
+```text
 INFO DRY RUN MODE - No changes will be applied
 INFO DRY RUN: Analyzing configuration changes...
 INFO Would process repository repository=account_vending_machine
