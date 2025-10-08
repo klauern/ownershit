@@ -189,7 +189,18 @@ def main():
     # Initialize GitHub client with modern auth
     auth = Auth.Token(token)
     g = Github(auth=auth)
-    org = g.get_organization(org_name)
+    
+    # Try to get as organization first, fall back to user
+    try:
+        owner = g.get_organization(org_name)
+        print(f"Found organization: {org_name}")
+    except GithubException:
+        try:
+            owner = g.get_user(org_name)
+            print(f"Found user account: {org_name}")
+        except GithubException as e:
+            print(f"Error: Could not find organization or user '{org_name}': {e}", file=sys.stderr)
+            sys.exit(1)
 
     repositories = config.get('repositories', [])
     updated_count = 0
@@ -207,7 +218,7 @@ def main():
         has_projects_setting = 'projects' in repo_config
 
         try:
-            repo = org.get_repo(repo_name)
+            repo = owner.get_repo(repo_name)
             features = check_repo_features(repo)
 
             updated = False
