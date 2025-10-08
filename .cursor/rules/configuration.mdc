@@ -19,6 +19,26 @@ globs: "*.yaml,config*.go"
 organization: "org-name"
 ```
 
+### Repository Defaults (Optional)
+
+Use the nested `defaults` block to set global defaults for repository features:
+
+```yaml
+defaults:
+  wiki: false                   # Disable wikis by default
+  issues: true                  # Enable issues by default
+  projects: false               # Disable projects by default
+  delete_branch_on_merge: true  # Auto-delete head branches after PR merge
+```
+
+**Backward Compatibility:** Old-style `default_wiki`, `default_issues`, and `default_projects` fields are still supported and automatically migrated to the nested `defaults` block at runtime.
+
+**How Defaults Work:**
+1. Set global defaults in the `defaults` block
+2. Individual repositories inherit these defaults unless explicitly overridden
+3. Use `nil` (omit field) at repository level to inherit the default
+4. Specify a value at repository level to override the default
+
 ### Default Topics/Labels
 ```yaml
 default_topics:
@@ -28,52 +48,101 @@ default_topics:
 default_labels:
   - name: "bug"
     color: "d73a4a"
+    emoji: "🐛"
     description: "Something isn't working"
 ```
 
 ### Team Permissions
 ```yaml
-teams:
+team:
   - name: "platform"
-    permission: "admin"  # admin | push | pull | triage | maintain
+    level: "admin"  # admin | push | pull | triage | maintain
 ```
 
 ### Repositories
 ```yaml
 repositories:
-  - name: "my-repo"
-    description: "Repository description"
-    private: true
-    wiki: false
-    issues: true
-    projects: false
-    topics:  # Reserved for future per-repo customization
-      - "custom-topic"
-    teams:
-      - name: "platform"
-        permission: "admin"
+  # Inherits all defaults
+  - name: "simple-repo"
+
+  # Override specific defaults
+  - name: "docs-repo"
+    wiki: true  # Override: enable wiki for this repo
+    # issues: inherits from defaults
+    # projects: inherits from defaults
+    delete_branch_on_merge: false  # Override: keep branches
+
+  # Override all defaults
+  - name: "special-repo"
+    wiki: true
+    issues: false
+    projects: true
+    delete_branch_on_merge: true
+    discussions_enabled: true
+    sponsorships_enabled: false
 ```
 
 ### Branch Protection
 ```yaml
-    branch_protections:
-      - pattern: "main"
-        required_reviews: 2
-        dismiss_stale_reviews: true
-        require_code_owner_reviews: true
-        required_status_checks:
-          - "ci/test"
-          - "ci/lint"
-        enforce_admins: true
-        allow_force_pushes: false
-        allow_deletions: false
+branches:
+  # Pull request requirements
+  require_pull_request_reviews: true
+  require_approving_count: 2
+  require_code_owners: true
+
+  # Merge strategy controls
+  allow_merge_commit: false
+  allow_squash_merge: true
+  allow_rebase_merge: true
+
+  # Status checks
+  require_status_checks: true
+  status_checks:
+    - "ci/build"
+    - "ci/test"
+  require_up_to_date_branch: true
+
+  # Advanced protection
+  enforce_admins: true
+  restrict_pushes: true
+  push_allowlist:
+    - "admin-team"
+  require_conversation_resolution: true
+  require_linear_history: true
+  allow_force_pushes: false
+  allow_deletions: false
 ```
 
-### Merge Strategies
-```yaml
-    allow_merge_commit: true
-    allow_squash_merge: true
-    allow_rebase_merge: false
+## Configuration Structs
+
+### RepositoryDefaults
+```go
+type RepositoryDefaults struct {
+    Wiki                *bool `yaml:"wiki,omitempty"`
+    Issues              *bool `yaml:"issues,omitempty"`
+    Projects            *bool `yaml:"projects,omitempty"`
+    DeleteBranchOnMerge *bool `yaml:"delete_branch_on_merge,omitempty"`
+}
+```
+
+### PermissionsSettings
+```go
+type PermissionsSettings struct {
+    Organization      *string             `yaml:"organization"`
+    Defaults          *RepositoryDefaults `yaml:"defaults,omitempty"`
+    BranchPermissions BranchPermissions   `yaml:"branches"`
+    TeamPermissions   []*Permissions      `yaml:"team"`
+    Repositories      []*Repository       `yaml:"repositories"`
+    DefaultLabels     []RepoLabel         `yaml:"default_labels"`
+    DefaultTopics     []string            `yaml:"default_topics,omitempty"`
+
+    // Deprecated: Use Defaults.Wiki instead
+    DefaultWiki       *bool               `yaml:"default_wiki,omitempty"`
+    // Deprecated: Use Defaults.Issues instead
+    DefaultIssues     *bool               `yaml:"default_issues,omitempty"`
+    // Deprecated: Use Defaults.Projects instead
+    DefaultProjects   *bool               `yaml:"default_projects,omitempty"`
+}
 ```
 
 ## Configuration Orchestration
@@ -81,12 +150,31 @@ repositories:
 Configuration structures in [config.go](mdc:config.go) include orchestration functions:
 
 ```go
-// Orchestrate topic synchronization
-func SyncTopics(settings *PermissionsSettings, client *GitHubClient, additive bool) {
-    for _, repo := range settings.Repositories {
-        // Apply default_topics to each repository
-        client.SyncTopics(*settings.Organization, *repo.Name, settings.DefaultTopics, additive)
+// Migrate legacy default_* fields to nested defaults block
+func (s *PermissionsSettings) MigrateToNestedDefaults() {
+    if s.Defaults == nil && (s.DefaultWiki != nil || s.DefaultIssues != nil || s.DefaultProjects != nil) {
+        s.Defaults = &RepositoryDefaults{
+            Wiki:     s.DefaultWiki,
+            Issues:   s.DefaultIssues,
+            Projects: s.DefaultProjects,
+        }
+        log.Info().Msg("migrated legacy default_* fields to defaults block")
     }
+}
+
+// Apply defaults using coalescing
+func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *PermissionsSettings, client *GitHubClient) {
+    var wiki, issues, projects *bool
+    if settings.Defaults != nil {
+        wiki = coalesceBoolPtr(repo.Wiki, settings.Defaults.Wiki)
+        issues = coalesceBoolPtr(repo.Issues, settings.Defaults.Issues)
+        projects = coalesceBoolPtr(repo.Projects, settings.Defaults.Projects)
+    } else {
+        wiki = repo.Wiki
+        issues = repo.Issues
+        projects = repo.Projects
+    }
+    // Apply settings...
 }
 ```
 
@@ -96,11 +184,19 @@ func SyncTopics(settings *PermissionsSettings, client *GitHubClient, additive bo
 - **`DefaultTopics`** (PermissionsSettings): Used by `topics` command to apply topics across all repos
 - **`Repository.Topics`**: Reserved for future per-repository topic customization (not currently used)
 
+### Defaults Inheritance Pattern
+- **Global defaults** in `PermissionsSettings.Defaults` apply to all repositories
+- **Per-repository values** in `Repository` struct override global defaults
+- **Nil values** at repository level inherit from global defaults
+- **coalesceBoolPtr** function handles the inheritance logic
+
 ## Validation
 
 - Type safety via Go structs
-- Required field validation
+- Required field validation (organization, repository names)
 - Team permission level validation
+- Branch protection consistency checks
+- Schema version migration support
 - Future: `validate` command for pre-flight checks (task-28)
 
 ## Commands Using Configuration
@@ -117,11 +213,29 @@ ownershit import      # Import existing repository settings
 ## Import Operations
 
 ```bash
-ownershit import --org myorg --repo myrepo
+ownershit import org/repo --output config.yaml
 ```
 
 Implementation: [import.go](mdc:import.go)
-Supports: Team permissions, branch protection, repository settings
+Supports: Team permissions, branch protection, repository settings, delete_branch_on_merge
+
+## Utility Scripts
+
+### Backfill Repository Features
+
+[scripts/backfill-repo-features.py](mdc:scripts/backfill-repo-features.py) helps migrate existing configurations:
+
+```bash
+export GITHUB_TOKEN=your_token
+uv run scripts/backfill-repo-features.py repositories.yaml
+```
+
+Features:
+- Detects actual wiki/issues/projects/delete_branch_on_merge usage
+- Supports both old (`default_*`) and new (`defaults` block) formats
+- Adds explicit settings where they differ from defaults
+- Removes redundant settings that match defaults
+- Creates `.backup` file before changes
 
 ## Security Best Practices
 
@@ -135,3 +249,37 @@ Supports: Team permissions, branch protection, repository settings
 - **Test fixtures:** [testdata/testrepoconfig.yaml](mdc:testdata/testrepoconfig.yaml)
 - **Parsing tests:** [config_parsing_test.go](mdc:config_parsing_test.go)
 - **Permission tests:** [config_permissions_test.go](mdc:config_permissions_test.go)
+- **Defaults tests:** Test both old and new format, migration logic, inheritance
+
+## Migration Guide
+
+To migrate from old format to new format:
+
+**Before:**
+```yaml
+organization: my-org
+default_wiki: false
+default_issues: true
+default_projects: false
+
+repositories:
+  - name: repo1
+    wiki: false
+    issues: true
+    projects: false
+```
+
+**After:**
+```yaml
+organization: my-org
+defaults:
+  wiki: false
+  issues: true
+  projects: false
+  delete_branch_on_merge: true
+
+repositories:
+  - name: repo1  # Inherits all defaults, no explicit settings needed
+```
+
+The old format continues to work with automatic migration at runtime.

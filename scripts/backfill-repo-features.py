@@ -35,11 +35,12 @@ from github import Auth, Github, GithubException
 
 
 def check_repo_features(repo) -> dict:
-    """Check if a repository actually uses wiki, issues, and projects."""
+    """Check if a repository actually uses wiki, issues, projects, and has delete_branch_on_merge enabled."""
     features = {
         'has_wiki': False,
         'has_issues': False,
         'has_projects': False,
+        'delete_branch_on_merge': repo.delete_branch_on_merge if hasattr(repo, 'delete_branch_on_merge') else None,
         'wiki_enabled': repo.has_wiki,
         'issues_enabled': repo.has_issues,
         'projects_enabled': repo.has_projects,
@@ -153,12 +154,21 @@ def main():
         print("Error: No organization specified in config", file=sys.stderr)
         sys.exit(1)
 
-    # Get defaults from config
-    default_wiki = config.get('default_wiki')
-    default_issues = config.get('default_issues')
-    default_projects = config.get('default_projects')
+    # Get defaults from config (supports both old and new format)
+    defaults = config.get('defaults', {})
+    default_wiki = defaults.get('wiki')
+    default_issues = defaults.get('issues')
+    default_projects = defaults.get('projects')
+    default_delete_branch = defaults.get('delete_branch_on_merge')
 
-    print(f"Defaults: wiki={default_wiki}, issues={default_issues}, projects={default_projects}")
+    # Fallback to old format for backward compatibility
+    if not defaults:
+        default_wiki = config.get('default_wiki')
+        default_issues = config.get('default_issues')
+        default_projects = config.get('default_projects')
+        print("Note: Using legacy default_* fields. Consider migrating to nested 'defaults' block.")
+
+    print(f"Defaults: wiki={default_wiki}, issues={default_issues}, projects={default_projects}, delete_branch_on_merge={default_delete_branch}")
     print(f"Checking repositories in {org_name}...")
 
     # Initialize GitHub client with modern auth
@@ -247,6 +257,28 @@ def main():
                     repo_config['projects'] = features['has_projects']
                     changes.append(f"projects={features['has_projects']}")
                     updated = True
+
+            # Handle delete_branch_on_merge setting
+            has_delete_branch_setting = 'delete_branch_on_merge' in repo_config
+            if features['delete_branch_on_merge'] is not None:
+                if has_delete_branch_setting:
+                    current_value = repo_config.get('delete_branch_on_merge')
+                    # If explicit setting differs from actual value, update it
+                    if current_value != features['delete_branch_on_merge']:
+                        repo_config['delete_branch_on_merge'] = features['delete_branch_on_merge']
+                        changes.append(f"delete_branch_on_merge={features['delete_branch_on_merge']} (was {current_value})")
+                        updated = True
+                    # If explicit setting matches default, remove it
+                    elif should_remove_explicit_setting(features['delete_branch_on_merge'], default_delete_branch):
+                        del repo_config['delete_branch_on_merge']
+                        changes.append("removed delete_branch_on_merge (matches default)")
+                        updated = True
+                else:
+                    # Add explicit setting if it differs from default
+                    if should_override_default(features['delete_branch_on_merge'], default_delete_branch):
+                        repo_config['delete_branch_on_merge'] = features['delete_branch_on_merge']
+                        changes.append(f"delete_branch_on_merge={features['delete_branch_on_merge']}")
+                        updated = True
 
             if updated:
                 print(f"  [{i+1}/{len(repositories)}] {repo_name}: {', '.join(changes)}")
