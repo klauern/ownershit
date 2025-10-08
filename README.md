@@ -101,6 +101,12 @@ Create a `repositories.yaml` file with your organization settings:
 # Your GitHub organization name (REQUIRED)
 organization: your-org-name
 
+# Global defaults for repository features (optional)
+# These apply to all repositories unless explicitly overridden
+default_wiki: false      # Disable wikis by default
+default_issues: true     # Enable issues by default
+default_projects: false  # Disable projects by default
+
 # Team permissions for repositories
 team:
   - name: developers
@@ -113,13 +119,13 @@ team:
 # Repository configurations
 repositories:
   - name: my-app
-    wiki: true
-    issues: true
-    projects: false
+    wiki: true           # Override: enable wiki for this repo
+    # issues: inherits default (true)
+    # projects: inherits default (false)
   - name: internal-tool
-    wiki: false
-    issues: true
-    projects: true
+    # wiki: inherits default (false)
+    # issues: inherits default (true)
+    projects: true       # Override: enable projects for this repo
 ```
 
 ### Advanced Branch Protection
@@ -189,6 +195,91 @@ default_topics:
   - "github-management"
   - "internal-tool"
 ```
+
+### Repository Feature Defaults
+
+Configure global defaults for repository features. These defaults apply to all repositories unless explicitly overridden at the repository level.
+
+#### Available Default Settings
+
+- `default_wiki` - Enable/disable wikis for all repositories
+- `default_issues` - Enable/disable issue tracking for all repositories
+- `default_projects` - Enable/disable GitHub projects for all repositories
+
+#### How It Works
+
+1. **Global Defaults**: Set default values at the top level of your configuration
+2. **Per-Repository Overrides**: Specify values at the repository level to override defaults
+3. **Inheritance**: If a repository doesn't specify a value, it inherits from the default
+4. **Nil Behavior**: If no default is set and no repository value is provided, no change is made
+
+#### Example Configuration
+
+```yaml
+organization: my-org
+
+# Set defaults - most repos don't need wikis or projects
+default_wiki: false
+default_issues: true
+default_projects: false
+
+repositories:
+  # Inherits all defaults (wiki: false, issues: true, projects: false)
+  - name: simple-tool
+
+  # Override wiki only - enable for documentation
+  - name: main-app
+    wiki: true
+    # issues: inherits default (true)
+    # projects: inherits default (false)
+
+  # Override projects only - needs project board
+  - name: team-planning
+    # wiki: inherits default (false)
+    # issues: inherits default (true)
+    projects: true
+
+  # Override all defaults
+  - name: special-repo
+    wiki: true
+    issues: false
+    projects: true
+```
+
+#### Migration from Explicit Settings
+
+If you have an existing configuration with explicit settings on every repository, you can migrate to using defaults:
+
+**Before** (explicit settings everywhere):
+```yaml
+repositories:
+  - name: repo1
+    wiki: false
+    issues: true
+    projects: false
+  - name: repo2
+    wiki: false
+    issues: true
+    projects: false
+  - name: repo3
+    wiki: false
+    issues: true
+    projects: false
+```
+
+**After** (using defaults):
+```yaml
+default_wiki: false
+default_issues: true
+default_projects: false
+
+repositories:
+  - name: repo1
+  - name: repo2
+  - name: repo3
+```
+
+This feature is fully backward compatible - existing configurations continue to work unchanged.
 
 ## Development
 
