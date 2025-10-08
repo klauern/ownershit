@@ -34,7 +34,7 @@ import yaml
 from github import Auth, Github, GithubException
 
 
-def check_repo_features(repo, token: str) -> dict:
+def check_repo_features(repo) -> dict:
     """Check if a repository actually uses wiki, issues, and projects."""
     features = {
         'has_wiki': False,
@@ -183,7 +183,7 @@ def main():
 
         try:
             repo = org.get_repo(repo_name)
-            features = check_repo_features(repo, token)
+            features = check_repo_features(repo)
 
             updated = False
             changes = []
