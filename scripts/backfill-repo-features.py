@@ -30,13 +30,14 @@ Environment Variables:
 - GITHUB_TOKEN: Required. GitHub Personal Access Token
 - BACKFILL_SKIP_FIELDS: Optional. Comma-separated list of fields to skip/ignore
   Example: BACKFILL_SKIP_FIELDS="wiki,delete_branch_on_merge"
-  
+
   Use this to prevent the script from adding or modifying certain fields,
   allowing you to manage those settings manually or enforce them via sync
   rather than documenting current state.
 
-Note: Wiki detection is conservative - if a wiki is enabled, we assume it
-has content since GitHub's API doesn't easily expose whether wikis have pages.
+Note: Wiki detection requires verification - only wikis with actual content
+pages are marked as true. If a wiki is enabled but empty, or if content
+cannot be verified, it's treated as false to avoid false positives.
 """
 
 import os
@@ -93,13 +94,12 @@ def check_repo_features(repo) -> dict:
                 # Empty wikis show "Create the first page" button
                 is_empty = 'Create the first page' in response.text
                 features['has_wiki'] = not is_empty
-            else:
-                # If we can't access it, be conservative
-                features['has_wiki'] = True
+            # else: leave has_wiki as False (unverified/inaccessible = treat as empty)
 
         except requests.RequestException:
-            # On any HTTP error, be conservative and assume wiki might have content
-            features['has_wiki'] = True
+            # On any HTTP error, treat as empty (can't verify content exists)
+            # This prevents false positives for wikis that are enabled but unused
+            pass  # has_wiki remains False
 
     # Check if there are any issues (open or closed)
     if repo.has_issues:
