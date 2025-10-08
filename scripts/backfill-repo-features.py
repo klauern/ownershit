@@ -4,6 +4,7 @@
 # dependencies = [
 #     "pygithub>=2.1.1",
 #     "pyyaml>=6.0.1",
+#     "requests>=2.32.3",
 # ]
 # ///
 
@@ -13,7 +14,7 @@ Backfill repository feature settings based on actual usage.
 This script checks if repositories actually have:
 - Wiki pages (conservative: assumes enabled wikis have content)
 - Issues (open or closed, excluding PRs)
-- Projects (v1 or v2)
+- Projects (classic/v1 only; does not detect Projects v2/beta)
 
 It then updates repositories.yaml with explicit settings for repos that
 differ from the defaults.
@@ -53,10 +54,10 @@ def check_repo_features(repo, token: str) -> dict:
             # We'll check if we can access the wiki home page via the web
             wiki_url = f"https://github.com/{repo.full_name}/wiki"
 
-            # Make an authenticated request
+            # Make an unauthenticated request (PATs don't authenticate HTML endpoints)
             headers = {
-                'Authorization': f'token {token}',
-                'User-Agent': 'ownershit-backfill-script'
+                'User-Agent': 'ownershit-backfill-script',
+                'Accept': 'text/html',
             }
 
             response = requests.get(wiki_url, headers=headers, timeout=10, allow_redirects=True)
