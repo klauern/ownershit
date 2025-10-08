@@ -189,7 +189,7 @@ def main():
     # Initialize GitHub client with modern auth
     auth = Auth.Token(token)
     g = Github(auth=auth)
-    
+
     # Try to get as organization first, fall back to user
     try:
         owner = g.get_organization(org_name)
