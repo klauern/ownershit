@@ -60,18 +60,31 @@ type BranchPermissions struct {
 	AllowDeletions                *bool    `yaml:"allow_deletions"`
 }
 
+// RepositoryDefaults defines default settings for repository features.
+// These settings apply to all repositories unless explicitly overridden at the repository level.
+type RepositoryDefaults struct {
+	Wiki                *bool `yaml:"wiki,omitempty"`
+	Issues              *bool `yaml:"issues,omitempty"`
+	Projects            *bool `yaml:"projects,omitempty"`
+	DeleteBranchOnMerge *bool `yaml:"delete_branch_on_merge,omitempty"`
+}
+
 // PermissionsSettings contains the complete configuration for repository permissions.
 type PermissionsSettings struct {
 	Version           *string `yaml:"version,omitempty"`
 	BranchPermissions `yaml:"branches"`
-	TeamPermissions   []*Permissions `yaml:"team"`
-	Repositories      []*Repository  `yaml:"repositories"`
-	Organization      *string        `yaml:"organization"`
-	DefaultLabels     []RepoLabel    `yaml:"default_labels"`
-	DefaultTopics     []string       `yaml:"default_topics,omitempty"`
-	DefaultWiki       *bool          `yaml:"default_wiki,omitempty"`
-	DefaultIssues     *bool          `yaml:"default_issues,omitempty"`
-	DefaultProjects   *bool          `yaml:"default_projects,omitempty"`
+	TeamPermissions   []*Permissions      `yaml:"team"`
+	Repositories      []*Repository       `yaml:"repositories"`
+	Organization      *string             `yaml:"organization"`
+	DefaultLabels     []RepoLabel         `yaml:"default_labels"`
+	DefaultTopics     []string            `yaml:"default_topics,omitempty"`
+	Defaults          *RepositoryDefaults `yaml:"defaults,omitempty"`
+	// Deprecated: Use Defaults.Wiki instead
+	DefaultWiki *bool `yaml:"default_wiki,omitempty"`
+	// Deprecated: Use Defaults.Issues instead
+	DefaultIssues *bool `yaml:"default_issues,omitempty"`
+	// Deprecated: Use Defaults.Projects instead
+	DefaultProjects *bool `yaml:"default_projects,omitempty"`
 }
 
 // Repository defines the configuration for a single GitHub repository.
@@ -458,6 +471,21 @@ func IsCurrentSchemaVersion(settings *PermissionsSettings) bool {
 	return GetSchemaVersion(settings) == CurrentSchemaVersion
 }
 
+// MigrateToNestedDefaults migrates old default_* fields to nested defaults block.
+// This maintains backward compatibility with configurations using the old format.
+func (s *PermissionsSettings) MigrateToNestedDefaults() {
+	// Only migrate if we have old-style defaults and no new-style defaults
+	hasOldDefaults := s.DefaultWiki != nil || s.DefaultIssues != nil || s.DefaultProjects != nil
+	if s.Defaults == nil && hasOldDefaults {
+		s.Defaults = &RepositoryDefaults{
+			Wiki:     s.DefaultWiki,
+			Issues:   s.DefaultIssues,
+			Projects: s.DefaultProjects,
+		}
+		log.Info().Msg("migrated legacy default_* fields to defaults block")
+	}
+}
+
 // GitHubTokenEnv was removed for security reasons.
 // Use GetValidatedGitHubToken() for secure token handling instead.
 
@@ -465,6 +493,9 @@ func IsCurrentSchemaVersion(settings *PermissionsSettings) bool {
 // It validates the configuration, adds team permissions, updates branch settings,
 // applies enhanced branch protection, and sets repository-level features.
 func MapPermissions(settings *PermissionsSettings, client *GitHubClient) {
+	// Migrate legacy default_* fields to nested defaults block
+	settings.MigrateToNestedDefaults()
+
 	// Validate complete configuration
 	if err := ValidatePermissionsSettings(settings); err != nil {
 		log.Err(err).Msg("configuration validation failed")
@@ -556,9 +587,16 @@ func coalesceBoolPtr(repoValue, defaultValue *bool) *bool {
 
 func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *PermissionsSettings, client *GitHubClient) {
 	// Apply defaults from settings if repo-level values are nil
-	wiki := coalesceBoolPtr(repo.Wiki, settings.DefaultWiki)
-	issues := coalesceBoolPtr(repo.Issues, settings.DefaultIssues)
-	projects := coalesceBoolPtr(repo.Projects, settings.DefaultProjects)
+	var wiki, issues, projects *bool
+	if settings.Defaults != nil {
+		wiki = coalesceBoolPtr(repo.Wiki, settings.Defaults.Wiki)
+		issues = coalesceBoolPtr(repo.Issues, settings.Defaults.Issues)
+		projects = coalesceBoolPtr(repo.Projects, settings.Defaults.Projects)
+	} else {
+		wiki = repo.Wiki
+		issues = repo.Issues
+		projects = repo.Projects
+	}
 
 	if err := client.SetRepository(
 		repoID,
@@ -589,14 +627,22 @@ func setRepositoryFeatures(repo *Repository, repoID githubv4.ID, settings *Permi
 }
 
 func setAdvancedRepoSettings(settings *PermissionsSettings, repo *Repository, client *GitHubClient) {
-	if repo.DeleteBranchOnMerge == nil {
+	// Apply default for delete_branch_on_merge if repo-level value is nil
+	var deleteBranchOnMerge *bool
+	if settings.Defaults != nil {
+		deleteBranchOnMerge = coalesceBoolPtr(repo.DeleteBranchOnMerge, settings.Defaults.DeleteBranchOnMerge)
+	} else {
+		deleteBranchOnMerge = repo.DeleteBranchOnMerge
+	}
+
+	if deleteBranchOnMerge == nil {
 		return
 	}
-	if err := client.SetRepositoryAdvancedSettings(*settings.Organization, *repo.Name, repo.DeleteBranchOnMerge); err != nil {
+	if err := client.SetRepositoryAdvancedSettings(*settings.Organization, *repo.Name, deleteBranchOnMerge); err != nil {
 		log.Err(err).
 			Str("repository", *repo.Name).
 			Str("organization", *settings.Organization).
-			Bool("deleteBranchOnMerge", *repo.DeleteBranchOnMerge).
+			Bool("deleteBranchOnMerge", *deleteBranchOnMerge).
 			Msg("setting advanced repository settings")
 	}
 }

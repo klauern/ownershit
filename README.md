@@ -103,9 +103,11 @@ organization: your-org-name
 
 # Global defaults for repository features (optional)
 # These apply to all repositories unless explicitly overridden
-default_wiki: false      # Disable wikis by default
-default_issues: true     # Enable issues by default
-default_projects: false  # Disable projects by default
+defaults:
+  wiki: false                   # Disable wikis by default
+  issues: true                  # Enable issues by default
+  projects: false               # Disable projects by default
+  delete_branch_on_merge: true  # Auto-delete head branches after PR merge
 
 # Team permissions for repositories
 team:
@@ -202,13 +204,16 @@ Configure global defaults for repository features. These defaults apply to all r
 
 #### Available Default Settings
 
-- `default_wiki` - Enable/disable wikis for all repositories
-- `default_issues` - Enable/disable issue tracking for all repositories
-- `default_projects` - Enable/disable GitHub projects for all repositories
+Within the `defaults` block, you can configure:
+
+- `wiki` - Enable/disable wikis for all repositories
+- `issues` - Enable/disable issue tracking for all repositories
+- `projects` - Enable/disable GitHub projects for all repositories
+- `delete_branch_on_merge` - Automatically delete head branches after pull request merge
 
 #### How It Works
 
-1. **Global Defaults**: Set default values at the top level of your configuration
+1. **Global Defaults**: Set default values in the `defaults` block of your configuration
 2. **Per-Repository Overrides**: Specify values at the repository level to override defaults
 3. **Inheritance**: If a repository doesn't specify a value, it inherits from the default
 4. **Nil Behavior**: If no default is set and no repository value is provided, no change is made
@@ -219,9 +224,11 @@ Configure global defaults for repository features. These defaults apply to all r
 organization: my-org
 
 # Set defaults - most repos don't need wikis or projects
-default_wiki: false
-default_issues: true
-default_projects: false
+defaults:
+  wiki: false
+  issues: true
+  projects: false
+  delete_branch_on_merge: true
 
 repositories:
   # Inherits all defaults (wiki: false, issues: true, projects: false)
@@ -267,11 +274,13 @@ repositories:
     projects: false
 ```
 
-**After** (using defaults):
+**After** (using nested defaults):
 ```yaml
-default_wiki: false
-default_issues: true
-default_projects: false
+defaults:
+  wiki: false
+  issues: true
+  projects: false
+  delete_branch_on_merge: true
 
 repositories:
   - name: repo1
@@ -279,7 +288,27 @@ repositories:
   - name: repo3
 ```
 
-This feature is fully backward compatible - existing configurations continue to work unchanged.
+#### Backward Compatibility
+
+This feature is fully backward compatible. Old-style `default_*` fields are automatically migrated to the new nested `defaults` block at runtime:
+
+**Old format** (still supported):
+```yaml
+default_wiki: false
+default_issues: true
+default_projects: false
+```
+
+**New format** (recommended):
+```yaml
+defaults:
+  wiki: false
+  issues: true
+  projects: false
+  delete_branch_on_merge: true
+```
+
+When using the old format, you'll see a migration message in the logs, but everything will continue to work seamlessly.
 
 ## Development
 
@@ -389,15 +418,17 @@ This script:
 
 ```
 repositories.yaml
-├── organization: string          # GitHub organization name
-├── default_wiki: bool            # Global default (optional)
-├── default_issues: bool          # Global default (optional)
-├── default_projects: bool        # Global default (optional)
-├── branches: BranchPermissions   # Branch protection rules
-├── team: []TeamPermission        # Team access levels
-├── repositories: []Repository    # Repository configurations
-├── default_labels: []Label       # Default labels for all repos
-└── default_topics: []string      # Default topics for all repos
+├── organization: string            # GitHub organization name
+├── defaults: RepositoryDefaults    # Global defaults (optional)
+│   ├── wiki: bool                  # Default wiki setting
+│   ├── issues: bool                # Default issues setting
+│   ├── projects: bool              # Default projects setting
+│   └── delete_branch_on_merge: bool # Default auto-delete branches
+├── branches: BranchPermissions     # Branch protection rules
+├── team: []TeamPermission          # Team access levels
+├── repositories: []Repository      # Repository configurations
+├── default_labels: []Label         # Default labels for all repos
+└── default_topics: []string        # Default topics for all repos
 ```
 
 ### Key Files
