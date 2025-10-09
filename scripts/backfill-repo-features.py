@@ -128,34 +128,104 @@ def check_repo_features(repo) -> dict:
 
 
 def load_config(config_path: str) -> dict:
-    """Load the repositories.yaml configuration."""
+    """
+    Load the repositories.yaml configuration from disk.
+
+    Args:
+        config_path: Path to the YAML configuration file.
+
+    Returns:
+        Dictionary containing the parsed configuration.
+
+    Raises:
+        FileNotFoundError: If the config file doesn't exist.
+        yaml.YAMLError: If the YAML is malformed.
+    """
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
 
 
 def save_config(config_path: str, config: dict) -> None:
-    """Save the updated configuration."""
+    """
+    Save the updated configuration to disk.
+
+    Args:
+        config_path: Path where the YAML configuration should be saved.
+        config: Configuration dictionary to serialize.
+
+    Note:
+        Uses default_flow_style=False for readable block-style YAML,
+        sort_keys=False to preserve key order, and width=120 for line wrapping.
+    """
     with open(config_path, 'w') as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False, width=120)
 
 
-def should_override_default(feature_in_use: bool, default_value: Optional[bool]) -> bool:
-    """Determine if we need to explicitly set a value to override the default."""
+def should_override_default(feature_enabled: bool, default_value: Optional[bool]) -> bool:
+    """
+    Determine if we need to explicitly set a value to override the default.
+
+    Args:
+        feature_enabled: Whether the feature is enabled in the repository.
+        default_value: The default value configured at the organization level,
+                      or None if no default is set.
+
+    Returns:
+        True if an explicit setting should be added to override the default,
+        False otherwise.
+
+    Logic:
+        - If no default is set (None), add explicit setting only if enabled.
+        - If default exists, add explicit setting only if it differs from default.
+    """
     if default_value is None:
-        # No default set, only add if feature is in use
-        return feature_in_use
-    return feature_in_use != default_value
+        # No default set, only add if feature is enabled
+        return feature_enabled
+    return feature_enabled != default_value
 
 
-def should_remove_explicit_setting(feature_in_use: bool, default_value: Optional[bool]) -> bool:
-    """Determine if we should remove an explicit setting because it matches the default."""
+def should_remove_explicit_setting(feature_enabled: bool, default_value: Optional[bool]) -> bool:
+    """
+    Determine if we should remove an explicit setting because it matches the default.
+
+    Args:
+        feature_enabled: Whether the feature is enabled in the repository.
+        default_value: The default value configured at the organization level,
+                      or None if no default is set.
+
+    Returns:
+        True if the explicit setting should be removed (matches default),
+        False if it should be kept.
+
+    Logic:
+        - If no default is set (None), keep all explicit settings.
+        - If default exists and matches the enabled state, remove redundant setting.
+    """
     if default_value is None:
         # No default, keep explicit settings
         return False
-    return feature_in_use == default_value
+    return feature_enabled == default_value
 
 
 def main():
+    """
+    Main entry point for the backfill script.
+
+    Process:
+        1. Validate GITHUB_TOKEN environment variable
+        2. Load repositories.yaml configuration
+        3. For each repository, check if features are enabled
+        4. Add/remove explicit settings based on defaults
+        5. Create backup and save updated configuration
+
+    Environment Variables:
+        GITHUB_TOKEN: Required. GitHub Personal Access Token
+        BACKFILL_SKIP_FIELDS: Optional. Comma-separated list of fields to skip
+
+    Exit codes:
+        0: Success (with or without updates)
+        1: Error (missing token, config not found, API errors, etc.)
+    """
     # Check for GitHub token
     token = os.environ.get('GITHUB_TOKEN')
     if not token:
