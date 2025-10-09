@@ -6,9 +6,11 @@ organization: my-awesome-org
 
 # Global defaults for repository features
 # These apply to all repositories unless explicitly overridden at the repository level
-default_wiki: false      # Disable wikis by default
-default_issues: true     # Enable issues by default
-default_projects: false  # Disable projects by default
+defaults:
+  wiki: false                   # Disable wikis by default
+  issues: true                  # Enable issues by default
+  projects: false               # Disable projects by default
+  delete_branch_on_merge: true  # Auto-delete head branches after PR merge
 
 # Branch protection rules applied to all repositories
 branches:
@@ -65,7 +67,7 @@ repositories:
   # Main application repository - overrides defaults
   - name: web-application
     wiki: true                             # Override: Enable wiki for documentation
-    issues: true                           # Matches default (explicit for clarity)
+    # issues: inherits default (true)      # Bug tracking enabled via default
     projects: true                         # Override: Enable GitHub projects for project management
     delete_branch_on_merge: true           # Automatically delete head branches after merge
     discussions_enabled: true              # Enable GitHub discussions for community Q&A

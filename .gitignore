@@ -147,6 +147,8 @@ fabric.properties
 .idea/
 
 repositories.yaml
+klauern-repositories.yaml
+*.yaml.backup
 dist/
 .aider*
 
