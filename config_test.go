@@ -132,6 +132,262 @@ func TestValidateBranchPermissions(t *testing.T) {
 	}
 }
 
+func TestValidateTeamPermissions(t *testing.T) {
+	tests := []struct {
+		name    string
+		teams   []*Permissions
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "empty team list should be valid",
+			teams:   []*Permissions{},
+			wantErr: false,
+		},
+		{
+			name:    "nil team list should be valid",
+			teams:   nil,
+			wantErr: false,
+		},
+		{
+			name: "valid team permissions",
+			teams: []*Permissions{
+				{Team: stringPtr("developers"), Level: stringPtr("push")},
+				{Team: stringPtr("maintainers"), Level: stringPtr("admin")},
+			},
+			wantErr: false,
+		},
+		{
+			name: "nil team entry should error",
+			teams: []*Permissions{
+				{Team: stringPtr("developers"), Level: stringPtr("push")},
+				nil,
+			},
+			wantErr: true,
+			errMsg:  "team entry cannot be nil",
+		},
+		{
+			name: "missing team name should error",
+			teams: []*Permissions{
+				{Team: nil, Level: stringPtr("push")},
+			},
+			wantErr: true,
+			errMsg:  "team name must be specified",
+		},
+		{
+			name: "empty team name should error",
+			teams: []*Permissions{
+				{Team: stringPtr(""), Level: stringPtr("push")},
+			},
+			wantErr: true,
+			errMsg:  "team name must be specified",
+		},
+		{
+			name: "whitespace team name should error",
+			teams: []*Permissions{
+				{Team: stringPtr("  "), Level: stringPtr("push")},
+			},
+			wantErr: true,
+			errMsg:  "team name cannot be empty or whitespace",
+		},
+		{
+			name: "duplicate team name should error",
+			teams: []*Permissions{
+				{Team: stringPtr("developers"), Level: stringPtr("push")},
+				{Team: stringPtr("developers"), Level: stringPtr("admin")},
+			},
+			wantErr: true,
+			errMsg:  "duplicate team name",
+		},
+		{
+			name: "missing permission level should error",
+			teams: []*Permissions{
+				{Team: stringPtr("developers"), Level: nil},
+			},
+			wantErr: true,
+			errMsg:  "team permission level must be specified",
+		},
+		{
+			name: "empty permission level should error",
+			teams: []*Permissions{
+				{Team: stringPtr("developers"), Level: stringPtr("")},
+			},
+			wantErr: true,
+			errMsg:  "team permission level must be specified",
+		},
+		{
+			name: "invalid permission level should error",
+			teams: []*Permissions{
+				{Team: stringPtr("developers"), Level: stringPtr("superuser")},
+			},
+			wantErr: true,
+			errMsg:  "invalid permission level",
+		},
+		{
+			name: "valid permission levels should pass",
+			teams: []*Permissions{
+				{Team: stringPtr("team1"), Level: stringPtr("admin")},
+				{Team: stringPtr("team2"), Level: stringPtr("push")},
+				{Team: stringPtr("team3"), Level: stringPtr("pull")},
+				{Team: stringPtr("team4"), Level: stringPtr("triage")},
+				{Team: stringPtr("team5"), Level: stringPtr("maintain")},
+			},
+			wantErr: false,
+		},
+		{
+			name: "permission level case insensitive",
+			teams: []*Permissions{
+				{Team: stringPtr("developers"), Level: stringPtr("PUSH")},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateTeamPermissions(tt.teams)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateTeamPermissions() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && tt.errMsg != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("ValidateTeamPermissions() error = %v, want error containing %v", err, tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateDefaultLabels(t *testing.T) {
+	tests := []struct {
+		name    string
+		labels  []RepoLabel
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "empty label list should be valid",
+			labels:  []RepoLabel{},
+			wantErr: false,
+		},
+		{
+			name:    "nil label list should be valid",
+			labels:  nil,
+			wantErr: false,
+		},
+		{
+			name: "valid labels",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "d73a4a", Description: "Something isn't working"},
+				{Name: "enhancement", Color: "a2eeef", Description: "New feature"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid label with # prefix in color",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "#d73a4a", Description: "Something isn't working"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty label name should error",
+			labels: []RepoLabel{
+				{Name: "", Color: "d73a4a"},
+			},
+			wantErr: true,
+			errMsg:  "label name cannot be empty",
+		},
+		{
+			name: "whitespace label name should error",
+			labels: []RepoLabel{
+				{Name: "  ", Color: "d73a4a"},
+			},
+			wantErr: true,
+			errMsg:  "label name cannot be empty",
+		},
+		{
+			name: "duplicate label name should error",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "d73a4a"},
+				{Name: "bug", Color: "ff0000"},
+			},
+			wantErr: true,
+			errMsg:  "duplicate label name",
+		},
+		{
+			name: "empty color should error",
+			labels: []RepoLabel{
+				{Name: "bug", Color: ""},
+			},
+			wantErr: true,
+			errMsg:  "label color cannot be empty",
+		},
+		{
+			name: "invalid color format should error - too short",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "d73a"},
+			},
+			wantErr: true,
+			errMsg:  "label color must be a 6-character hexadecimal",
+		},
+		{
+			name: "invalid color format should error - too long",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "d73a4a99"},
+			},
+			wantErr: true,
+			errMsg:  "label color must be a 6-character hexadecimal",
+		},
+		{
+			name: "invalid color format should error - invalid characters",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "gggggg"},
+			},
+			wantErr: true,
+			errMsg:  "label color must be a 6-character hexadecimal",
+		},
+		{
+			name: "description too long should error",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "d73a4a", Description: strings.Repeat("a", 101)},
+			},
+			wantErr: true,
+			errMsg:  "label description cannot exceed 100 characters",
+		},
+		{
+			name: "description at limit should pass",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "d73a4a", Description: strings.Repeat("a", 100)},
+			},
+			wantErr: false,
+		},
+		{
+			name: "emoji field should be valid",
+			labels: []RepoLabel{
+				{Name: "bug", Color: "d73a4a", Emoji: "🐛", Description: "Something isn't working"},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateDefaultLabels(tt.labels)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateDefaultLabels() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && tt.errMsg != "" && err != nil {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("ValidateDefaultLabels() error = %v, want error containing %v", err, tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
 func generateDefaultPermissionsSettings() *PermissionsSettings {
 	return &PermissionsSettings{
 		BranchPermissions: BranchPermissions{
@@ -208,8 +464,19 @@ func TestMapPermissions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			MapPermissions(tt.args.settings, tt.args.client)
+			if err := MapPermissions(tt.args.settings, tt.args.client, OperationOptions{}); err != nil {
+				t.Errorf("MapPermissions() unexpected error = %v", err)
+			}
 		})
+	}
+}
+
+func TestMapPermissions_DryRunSkipsMutations(t *testing.T) {
+	mocks := setupMocks(t)
+	settings := generateDefaultPermissionsSettings()
+
+	if err := MapPermissions(settings, mocks.client, OperationOptions{DryRun: true}); err != nil {
+		t.Fatalf("MapPermissions() dry run returned error: %v", err)
 	}
 }
 
@@ -264,8 +531,36 @@ func TestUpdateBranchMergeStrategies(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			UpdateBranchMergeStrategies(tt.args.settings, tt.args.client)
+			if err := UpdateBranchMergeStrategies(tt.args.settings, tt.args.client, OperationOptions{}); err != nil {
+				t.Errorf("UpdateBranchMergeStrategies() unexpected error = %v", err)
+			}
 		})
+	}
+}
+
+func TestUpdateBranchMergeStrategies_DryRunSkipsMutations(t *testing.T) {
+	mocks := setupMocks(t)
+	settings := generateDefaultPermissionsSettings()
+
+	if err := UpdateBranchMergeStrategies(settings, mocks.client, OperationOptions{DryRun: true}); err != nil {
+		t.Fatalf("UpdateBranchMergeStrategies() dry run returned error: %v", err)
+	}
+}
+
+func TestCollectConfigWarnings(t *testing.T) {
+	settings := generateDefaultPermissionsSettings()
+	warnings := CollectConfigWarnings(settings, LegacySchemaVersion)
+	if len(warnings) == 0 {
+		t.Fatal("expected warnings when original version is legacy")
+	}
+
+	// Current schema version should not have deprecation warnings,
+	// but may have security/best practice warnings
+	warnings = CollectConfigWarnings(settings, CurrentSchemaVersion)
+	for _, warning := range warnings {
+		if strings.Contains(warning, "deprecated") || strings.Contains(warning, "migrated") {
+			t.Fatalf("expected no deprecation warnings for current schema, got %v", warnings)
+		}
 	}
 }
 
