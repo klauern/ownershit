@@ -91,6 +91,7 @@ linters:
   exclusions:
     paths:
       - mocks
+      - scripts
     rules:
       - path: _test\.go
         linters:
