@@ -54,6 +54,7 @@ type RepositoriesService interface {
 }
 
 // NewGitHubClient creates a new GitHub context using OAuth2.
+//
 // Deprecated: Use NewSecureGitHubClient() for secure token handling.
 func NewGitHubClient(ctx context.Context, staticToken string) *GitHubClient {
 	ts := oauth2.StaticTokenSource(
