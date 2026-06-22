@@ -8,7 +8,7 @@ require (
 	github.com/Khan/genqlient v0.8.1
 	github.com/google/go-github/v66 v66.0.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/olekukonko/tablewriter v1.1.3
+	github.com/olekukonko/tablewriter v1.1.4
 	github.com/rs/zerolog v1.34.0
 	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/urfave/cli/v2 v2.27.7
@@ -22,9 +22,9 @@ require (
 	github.com/alexflint/go-arg v1.5.1 // indirect
 	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
-	github.com/clipperhouse/displaywidth v0.6.2 // indirect
-	github.com/clipperhouse/stringish v0.1.1 // indirect
-	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/clipperhouse/displaywidth v0.10.0 // indirect
+	github.com/clipperhouse/uax29/v2 v2.6.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
@@ -36,8 +36,8 @@ require (
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
-	github.com/olekukonko/errors v1.1.0 // indirect
-	github.com/olekukonko/ll v0.1.4-0.20260115111900-9e59c2286df0 // indirect
+	github.com/olekukonko/errors v1.2.0 // indirect
+	github.com/olekukonko/ll v0.1.6 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
